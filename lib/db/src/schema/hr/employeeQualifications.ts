@@ -4,30 +4,26 @@ import {
   text,
   integer,
   timestamp,
+  date,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
 import { employeesTable } from "./employees";
+import { qualificationTypesTable } from "./qualificationTypes";
 
 export const employeeQualificationsTable = pgTable("employee_qualifications", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id")
     .notNull()
     .references(() => employeesTable.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  institution: text("institution"),
-  yearObtained: integer("year_obtained"),
+  qualificationTypeId: integer("qualification_type_id")
+    .notNull()
+    .references(() => qualificationTypesTable.id),
+  dateAchieved: date("date_achieved").notNull(),
+  expiryDate: date("expiry_date"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
 
-export const insertEmployeeQualificationSchema = createInsertSchema(
-  employeeQualificationsTable,
-).omit({ id: true, createdAt: true });
-export type InsertEmployeeQualification = z.infer<
-  typeof insertEmployeeQualificationSchema
->;
 export type EmployeeQualification =
   typeof employeeQualificationsTable.$inferSelect;

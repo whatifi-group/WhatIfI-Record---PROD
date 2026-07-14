@@ -681,9 +681,11 @@ export const ListEmployeeQualificationsParams = zod.object({
 export const ListEmployeeQualificationsResponseItem = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
-  "title": zod.string(),
-  "institution": zod.string().nullish(),
-  "yearObtained": zod.number().nullish(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -697,22 +699,20 @@ export const CreateEmployeeQualificationParams = zod.object({
   "id": zod.coerce.number()
 })
 
-
-
-
 export const CreateEmployeeQualificationBody = zod.object({
-  "title": zod.string().min(1),
-  "institution": zod.string().optional(),
-  "yearObtained": zod.number().optional(),
+  "qualificationTypeId": zod.number(),
+  "dateAchieved": zod.coerce.date(),
   "notes": zod.string().optional()
 })
 
 export const CreateEmployeeQualificationResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
-  "title": zod.string(),
-  "institution": zod.string().nullish(),
-  "yearObtained": zod.number().nullish(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -726,22 +726,20 @@ export const UpdateEmployeeQualificationParams = zod.object({
   "qualId": zod.coerce.number()
 })
 
-
-
-
 export const UpdateEmployeeQualificationBody = zod.object({
-  "title": zod.string().min(1).optional(),
-  "institution": zod.string().nullish(),
-  "yearObtained": zod.number().nullish(),
+  "qualificationTypeId": zod.number().optional(),
+  "dateAchieved": zod.coerce.date().optional(),
   "notes": zod.string().nullish()
 })
 
 export const UpdateEmployeeQualificationResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
-  "title": zod.string(),
-  "institution": zod.string().nullish(),
-  "yearObtained": zod.number().nullish(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -756,6 +754,106 @@ export const DeleteEmployeeQualificationParams = zod.object({
 })
 
 export const DeleteEmployeeQualificationResponse = zod.void()
+
+
+/**
+ * @summary Revalidate a qualification (update dates and record history)
+ */
+export const RevalidateEmployeeQualificationParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const RevalidateEmployeeQualificationBody = zod.object({
+  "dateAchieved": zod.coerce.date(),
+  "notes": zod.string().nullish()
+})
+
+export const RevalidateEmployeeQualificationResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List revalidation history for a qualification
+ */
+export const ListQualificationRevalidationsParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const ListQualificationRevalidationsResponseItem = zod.object({
+  "id": zod.number(),
+  "qualificationId": zod.number(),
+  "previousDateAchieved": zod.coerce.date(),
+  "previousExpiryDate": zod.coerce.date().nullish(),
+  "revalidatedAt": zod.coerce.date(),
+  "notes": zod.string().nullish()
+})
+export const ListQualificationRevalidationsResponse = zod.array(ListQualificationRevalidationsResponseItem)
+
+
+/**
+ * @summary List certificate attachments for a qualification
+ */
+export const ListQualificationCertificatesParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const ListQualificationCertificatesResponseItem = zod.object({
+  "id": zod.number(),
+  "qualificationId": zod.number(),
+  "fileName": zod.string(),
+  "fileUrl": zod.string(),
+  "mimeType": zod.string().nullish(),
+  "uploadedAt": zod.coerce.date()
+})
+export const ListQualificationCertificatesResponse = zod.array(ListQualificationCertificatesResponseItem)
+
+
+/**
+ * @summary Attach a certificate to a qualification
+ */
+export const CreateQualificationCertificateParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const CreateQualificationCertificateBody = zod.object({
+  "fileName": zod.string(),
+  "fileUrl": zod.string(),
+  "mimeType": zod.string().optional()
+})
+
+export const CreateQualificationCertificateResponse = zod.object({
+  "id": zod.number(),
+  "qualificationId": zod.number(),
+  "fileName": zod.string(),
+  "fileUrl": zod.string(),
+  "mimeType": zod.string().nullish(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove a certificate attachment from a qualification
+ */
+export const DeleteQualificationCertificateParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number(),
+  "certId": zod.coerce.number()
+})
+
+export const DeleteQualificationCertificateResponse = zod.void()
 
 
 /**
@@ -1289,5 +1387,85 @@ export const GetSysadminSummaryResponse = zod.object({
   "createdAt": zod.coerce.date()
 }))
 })
+
+
+/**
+ * @summary List all qualification types ordered alphabetically
+ */
+export const ListQualificationTypesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "awardingBody": zod.string().nullish(),
+  "validityValue": zod.number().nullish(),
+  "validityUnit": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListQualificationTypesResponse = zod.array(ListQualificationTypesResponseItem)
+
+
+/**
+ * @summary Create a qualification type
+ */
+
+
+
+
+export const CreateQualificationTypeBody = zod.object({
+  "name": zod.string().min(1),
+  "awardingBody": zod.string().optional(),
+  "validityValue": zod.number().min(1).optional(),
+  "validityUnit": zod.enum(['days', 'months', 'years']).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const CreateQualificationTypeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "awardingBody": zod.string().nullish(),
+  "validityValue": zod.number().nullish(),
+  "validityUnit": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a qualification type
+ */
+export const UpdateQualificationTypeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateQualificationTypeBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "awardingBody": zod.string().nullish(),
+  "validityValue": zod.number().nullish(),
+  "validityUnit": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateQualificationTypeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "awardingBody": zod.string().nullish(),
+  "validityValue": zod.number().nullish(),
+  "validityUnit": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a qualification type
+ */
+export const DeleteQualificationTypeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteQualificationTypeResponse = zod.void()
 
 

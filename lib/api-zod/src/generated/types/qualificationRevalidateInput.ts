@@ -6,9 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface EmployeeQualificationUpdate {
-  qualificationTypeId?: number;
-  dateAchieved?: Date;
+export interface QualificationRevalidateInput {
+  dateAchieved: Date;
   /** @nullable */
   notes?: string | null;
 }

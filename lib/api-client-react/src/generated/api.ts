@@ -58,6 +58,13 @@ import type {
   LovItem,
   LovItemInput,
   LovItemUpdate,
+  QualificationCertificate,
+  QualificationCertificateInput,
+  QualificationRevalidateInput,
+  QualificationRevalidation,
+  QualificationType,
+  QualificationTypeInput,
+  QualificationTypeUpdate,
   Role,
   RoleInput,
   RoleUpdate,
@@ -2691,6 +2698,393 @@ export const useDeleteEmployeeQualification = <TError = ErrorType<void>,
       return useMutation(getDeleteEmployeeQualificationMutationOptions(options));
     }
 
+export const getRevalidateEmployeeQualificationUrl = (id: number,
+    qualId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/qualifications/${qualId}/revalidate`
+}
+
+/**
+ * @summary Revalidate a qualification (update dates and record history)
+ */
+export const revalidateEmployeeQualification = async (id: number,
+    qualId: number,
+    qualificationRevalidateInput: QualificationRevalidateInput, options?: RequestInit): Promise<EmployeeQualification> => {
+
+  return customFetch<EmployeeQualification>(getRevalidateEmployeeQualificationUrl(id,qualId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(qualificationRevalidateInput)
+  }
+);}
+
+
+
+
+
+export const getRevalidateEmployeeQualificationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revalidateEmployeeQualification>>, TError,{id: number;qualId: number;data: BodyType<QualificationRevalidateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revalidateEmployeeQualification>>, TError,{id: number;qualId: number;data: BodyType<QualificationRevalidateInput>}, TContext> => {
+
+const mutationKey = ['revalidateEmployeeQualification'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revalidateEmployeeQualification>>, {id: number;qualId: number;data: BodyType<QualificationRevalidateInput>}> = (props) => {
+          const {id,qualId,data} = props ?? {};
+
+          return  revalidateEmployeeQualification(id,qualId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevalidateEmployeeQualificationMutationResult = NonNullable<Awaited<ReturnType<typeof revalidateEmployeeQualification>>>
+    export type RevalidateEmployeeQualificationMutationBody = BodyType<QualificationRevalidateInput>
+    export type RevalidateEmployeeQualificationMutationError = ErrorType<void>
+
+    /**
+ * @summary Revalidate a qualification (update dates and record history)
+ */
+export const useRevalidateEmployeeQualification = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revalidateEmployeeQualification>>, TError,{id: number;qualId: number;data: BodyType<QualificationRevalidateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revalidateEmployeeQualification>>,
+        TError,
+        {id: number;qualId: number;data: BodyType<QualificationRevalidateInput>},
+        TContext
+      > => {
+      return useMutation(getRevalidateEmployeeQualificationMutationOptions(options));
+    }
+
+export const getListQualificationRevalidationsUrl = (id: number,
+    qualId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/qualifications/${qualId}/revalidations`
+}
+
+/**
+ * @summary List revalidation history for a qualification
+ */
+export const listQualificationRevalidations = async (id: number,
+    qualId: number, options?: RequestInit): Promise<QualificationRevalidation[]> => {
+
+  return customFetch<QualificationRevalidation[]>(getListQualificationRevalidationsUrl(id,qualId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListQualificationRevalidationsQueryKey = (id: number,
+    qualId: number,) => {
+    return [
+    `/api/employees/${id}/qualifications/${qualId}/revalidations`
+    ] as const;
+    }
+
+
+export const getListQualificationRevalidationsQueryOptions = <TData = Awaited<ReturnType<typeof listQualificationRevalidations>>, TError = ErrorType<unknown>>(id: number,
+    qualId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationRevalidations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListQualificationRevalidationsQueryKey(id,qualId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listQualificationRevalidations>>> = ({ signal }) => listQualificationRevalidations(id,qualId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && qualId !== null && qualId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listQualificationRevalidations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListQualificationRevalidationsQueryResult = NonNullable<Awaited<ReturnType<typeof listQualificationRevalidations>>>
+export type ListQualificationRevalidationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List revalidation history for a qualification
+ */
+
+export function useListQualificationRevalidations<TData = Awaited<ReturnType<typeof listQualificationRevalidations>>, TError = ErrorType<unknown>>(
+ id: number,
+    qualId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationRevalidations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListQualificationRevalidationsQueryOptions(id,qualId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListQualificationCertificatesUrl = (id: number,
+    qualId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/qualifications/${qualId}/certificates`
+}
+
+/**
+ * @summary List certificate attachments for a qualification
+ */
+export const listQualificationCertificates = async (id: number,
+    qualId: number, options?: RequestInit): Promise<QualificationCertificate[]> => {
+
+  return customFetch<QualificationCertificate[]>(getListQualificationCertificatesUrl(id,qualId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListQualificationCertificatesQueryKey = (id: number,
+    qualId: number,) => {
+    return [
+    `/api/employees/${id}/qualifications/${qualId}/certificates`
+    ] as const;
+    }
+
+
+export const getListQualificationCertificatesQueryOptions = <TData = Awaited<ReturnType<typeof listQualificationCertificates>>, TError = ErrorType<unknown>>(id: number,
+    qualId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListQualificationCertificatesQueryKey(id,qualId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listQualificationCertificates>>> = ({ signal }) => listQualificationCertificates(id,qualId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && qualId !== null && qualId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listQualificationCertificates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListQualificationCertificatesQueryResult = NonNullable<Awaited<ReturnType<typeof listQualificationCertificates>>>
+export type ListQualificationCertificatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List certificate attachments for a qualification
+ */
+
+export function useListQualificationCertificates<TData = Awaited<ReturnType<typeof listQualificationCertificates>>, TError = ErrorType<unknown>>(
+ id: number,
+    qualId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListQualificationCertificatesQueryOptions(id,qualId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateQualificationCertificateUrl = (id: number,
+    qualId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/qualifications/${qualId}/certificates`
+}
+
+/**
+ * @summary Attach a certificate to a qualification
+ */
+export const createQualificationCertificate = async (id: number,
+    qualId: number,
+    qualificationCertificateInput: QualificationCertificateInput, options?: RequestInit): Promise<QualificationCertificate> => {
+
+  return customFetch<QualificationCertificate>(getCreateQualificationCertificateUrl(id,qualId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(qualificationCertificateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateQualificationCertificateMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createQualificationCertificate>>, TError,{id: number;qualId: number;data: BodyType<QualificationCertificateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createQualificationCertificate>>, TError,{id: number;qualId: number;data: BodyType<QualificationCertificateInput>}, TContext> => {
+
+const mutationKey = ['createQualificationCertificate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createQualificationCertificate>>, {id: number;qualId: number;data: BodyType<QualificationCertificateInput>}> = (props) => {
+          const {id,qualId,data} = props ?? {};
+
+          return  createQualificationCertificate(id,qualId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateQualificationCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof createQualificationCertificate>>>
+    export type CreateQualificationCertificateMutationBody = BodyType<QualificationCertificateInput>
+    export type CreateQualificationCertificateMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Attach a certificate to a qualification
+ */
+export const useCreateQualificationCertificate = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createQualificationCertificate>>, TError,{id: number;qualId: number;data: BodyType<QualificationCertificateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createQualificationCertificate>>,
+        TError,
+        {id: number;qualId: number;data: BodyType<QualificationCertificateInput>},
+        TContext
+      > => {
+      return useMutation(getCreateQualificationCertificateMutationOptions(options));
+    }
+
+export const getDeleteQualificationCertificateUrl = (id: number,
+    qualId: number,
+    certId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/qualifications/${qualId}/certificates/${certId}`
+}
+
+/**
+ * @summary Remove a certificate attachment from a qualification
+ */
+export const deleteQualificationCertificate = async (id: number,
+    qualId: number,
+    certId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteQualificationCertificateUrl(id,qualId,certId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteQualificationCertificateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationCertificate>>, TError,{id: number;qualId: number;certId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationCertificate>>, TError,{id: number;qualId: number;certId: number}, TContext> => {
+
+const mutationKey = ['deleteQualificationCertificate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteQualificationCertificate>>, {id: number;qualId: number;certId: number}> = (props) => {
+          const {id,qualId,certId} = props ?? {};
+
+          return  deleteQualificationCertificate(id,qualId,certId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteQualificationCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof deleteQualificationCertificate>>>
+
+    export type DeleteQualificationCertificateMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove a certificate attachment from a qualification
+ */
+export const useDeleteQualificationCertificate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationCertificate>>, TError,{id: number;qualId: number;certId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteQualificationCertificate>>,
+        TError,
+        {id: number;qualId: number;certId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteQualificationCertificateMutationOptions(options));
+    }
+
 export const getListEmployeeWorkRecordsUrl = (id: number,) => {
 
 
@@ -4554,4 +4948,295 @@ export function useGetSysadminSummary<TData = Awaited<ReturnType<typeof getSysad
 
 
 
+
+export const getListQualificationTypesUrl = () => {
+
+
+
+
+  return `/api/sysadmin/qualification-types`
+}
+
+/**
+ * @summary List all qualification types ordered alphabetically
+ */
+export const listQualificationTypes = async ( options?: RequestInit): Promise<QualificationType[]> => {
+
+  return customFetch<QualificationType[]>(getListQualificationTypesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListQualificationTypesQueryKey = () => {
+    return [
+    `/api/sysadmin/qualification-types`
+    ] as const;
+    }
+
+
+export const getListQualificationTypesQueryOptions = <TData = Awaited<ReturnType<typeof listQualificationTypes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListQualificationTypesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listQualificationTypes>>> = ({ signal }) => listQualificationTypes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listQualificationTypes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListQualificationTypesQueryResult = NonNullable<Awaited<ReturnType<typeof listQualificationTypes>>>
+export type ListQualificationTypesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all qualification types ordered alphabetically
+ */
+
+export function useListQualificationTypes<TData = Awaited<ReturnType<typeof listQualificationTypes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listQualificationTypes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListQualificationTypesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateQualificationTypeUrl = () => {
+
+
+
+
+  return `/api/sysadmin/qualification-types`
+}
+
+/**
+ * @summary Create a qualification type
+ */
+export const createQualificationType = async (qualificationTypeInput: QualificationTypeInput, options?: RequestInit): Promise<QualificationType> => {
+
+  return customFetch<QualificationType>(getCreateQualificationTypeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(qualificationTypeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateQualificationTypeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createQualificationType>>, TError,{data: BodyType<QualificationTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createQualificationType>>, TError,{data: BodyType<QualificationTypeInput>}, TContext> => {
+
+const mutationKey = ['createQualificationType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createQualificationType>>, {data: BodyType<QualificationTypeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createQualificationType(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateQualificationTypeMutationResult = NonNullable<Awaited<ReturnType<typeof createQualificationType>>>
+    export type CreateQualificationTypeMutationBody = BodyType<QualificationTypeInput>
+    export type CreateQualificationTypeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a qualification type
+ */
+export const useCreateQualificationType = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createQualificationType>>, TError,{data: BodyType<QualificationTypeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createQualificationType>>,
+        TError,
+        {data: BodyType<QualificationTypeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateQualificationTypeMutationOptions(options));
+    }
+
+export const getUpdateQualificationTypeUrl = (id: number,) => {
+
+
+
+
+  return `/api/sysadmin/qualification-types/${id}`
+}
+
+/**
+ * @summary Update a qualification type
+ */
+export const updateQualificationType = async (id: number,
+    qualificationTypeUpdate: QualificationTypeUpdate, options?: RequestInit): Promise<QualificationType> => {
+
+  return customFetch<QualificationType>(getUpdateQualificationTypeUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(qualificationTypeUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateQualificationTypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateQualificationType>>, TError,{id: number;data: BodyType<QualificationTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateQualificationType>>, TError,{id: number;data: BodyType<QualificationTypeUpdate>}, TContext> => {
+
+const mutationKey = ['updateQualificationType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateQualificationType>>, {id: number;data: BodyType<QualificationTypeUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateQualificationType(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateQualificationTypeMutationResult = NonNullable<Awaited<ReturnType<typeof updateQualificationType>>>
+    export type UpdateQualificationTypeMutationBody = BodyType<QualificationTypeUpdate>
+    export type UpdateQualificationTypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a qualification type
+ */
+export const useUpdateQualificationType = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateQualificationType>>, TError,{id: number;data: BodyType<QualificationTypeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateQualificationType>>,
+        TError,
+        {id: number;data: BodyType<QualificationTypeUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateQualificationTypeMutationOptions(options));
+    }
+
+export const getDeleteQualificationTypeUrl = (id: number,) => {
+
+
+
+
+  return `/api/sysadmin/qualification-types/${id}`
+}
+
+/**
+ * @summary Delete a qualification type
+ */
+export const deleteQualificationType = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteQualificationTypeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteQualificationTypeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationType>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationType>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteQualificationType'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteQualificationType>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteQualificationType(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteQualificationTypeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteQualificationType>>>
+
+    export type DeleteQualificationTypeMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a qualification type
+ */
+export const useDeleteQualificationType = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteQualificationType>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteQualificationType>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteQualificationTypeMutationOptions(options));
+    }
 

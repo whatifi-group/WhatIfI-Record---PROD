@@ -6,18 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface EmployeeQualification {
+export interface QualificationType {
   id: number;
-  employeeId: number;
-  qualificationTypeId: number;
-  /** @nullable */
-  qualificationTypeName?: string | null;
+  name: string;
   /** @nullable */
   awardingBody?: string | null;
-  dateAchieved: Date;
   /** @nullable */
-  expiryDate?: Date | null;
+  validityValue?: number | null;
   /** @nullable */
-  notes?: string | null;
+  validityUnit?: string | null;
+  isActive: boolean;
   createdAt: Date;
 }

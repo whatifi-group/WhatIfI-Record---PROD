@@ -771,6 +771,145 @@ paths:
         "404":
           description: Not found
 
+  /employees/{id}/qualifications/{qualId}/revalidate:
+    post:
+      operationId: revalidateEmployeeQualification
+      tags: [employee-sections]
+      summary: Revalidate a qualification (update dates and record history)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QualificationRevalidateInput"
+      responses:
+        "200":
+          description: Updated qualification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeQualification"
+        "404":
+          description: Not found
+
+  /employees/{id}/qualifications/{qualId}/revalidations:
+    get:
+      operationId: listQualificationRevalidations
+      tags: [employee-sections]
+      summary: List revalidation history for a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of revalidation records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QualificationRevalidation"
+
+  /employees/{id}/qualifications/{qualId}/certificates:
+    get:
+      operationId: listQualificationCertificates
+      tags: [employee-sections]
+      summary: List certificate attachments for a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of certificates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QualificationCertificate"
+    post:
+      operationId: createQualificationCertificate
+      tags: [employee-sections]
+      summary: Attach a certificate to a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QualificationCertificateInput"
+      responses:
+        "201":
+          description: Created certificate record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualificationCertificate"
+
+  /employees/{id}/qualifications/{qualId}/certificates/{certId}:
+    delete:
+      operationId: deleteQualificationCertificate
+      tags: [employee-sections]
+      summary: Remove a certificate attachment from a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: certId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   /employees/{id}/work-records:
     get:
       operationId: listEmployeeWorkRecords
@@ -1310,6 +1449,80 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SysadminSummary"
+
+  /sysadmin/qualification-types:
+    get:
+      operationId: listQualificationTypes
+      tags: [sysadmin]
+      summary: List all qualification types ordered alphabetically
+      responses:
+        "200":
+          description: List of qualification types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QualificationType"
+    post:
+      operationId: createQualificationType
+      tags: [sysadmin]
+      summary: Create a qualification type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QualificationTypeInput"
+      responses:
+        "201":
+          description: Created qualification type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualificationType"
+
+  /sysadmin/qualification-types/{id}:
+    patch:
+      operationId: updateQualificationType
+      tags: [sysadmin]
+      summary: Update a qualification type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QualificationTypeUpdate"
+      responses:
+        "200":
+          description: Updated qualification type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualificationType"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteQualificationType
+      tags: [sysadmin]
+      summary: Delete a qualification type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
 
 components:
   schemas:
@@ -2030,18 +2243,24 @@ components:
 
     EmployeeQualification:
       type: object
-      required: [id, employeeId, title, createdAt]
+      required: [id, employeeId, qualificationTypeId, dateAchieved, createdAt]
       properties:
         id:
           type: integer
         employeeId:
           type: integer
-        title:
-          type: string
-        institution:
+        qualificationTypeId:
+          type: integer
+        qualificationTypeName:
           type: ["string", "null"]
-        yearObtained:
-          type: ["integer", "null"]
+        awardingBody:
+          type: ["string", "null"]
+        dateAchieved:
+          type: string
+          format: date
+        expiryDate:
+          type: ["string", "null"]
+          format: date
         notes:
           type: ["string", "null"]
         createdAt:
@@ -2050,30 +2269,138 @@ components:
 
     EmployeeQualificationInput:
       type: object
-      required: [title]
+      required: [qualificationTypeId, dateAchieved]
       properties:
-        title:
-          type: string
-          minLength: 1
-        institution:
-          type: string
-        yearObtained:
+        qualificationTypeId:
           type: integer
+        dateAchieved:
+          type: string
+          format: date
         notes:
           type: string
 
     EmployeeQualificationUpdate:
       type: object
       properties:
-        title:
+        qualificationTypeId:
+          type: integer
+        dateAchieved:
           type: string
-          minLength: 1
-        institution:
-          type: ["string", "null"]
-        yearObtained:
-          type: ["integer", "null"]
+          format: date
         notes:
           type: ["string", "null"]
+
+    QualificationRevalidateInput:
+      type: object
+      required: [dateAchieved]
+      properties:
+        dateAchieved:
+          type: string
+          format: date
+        notes:
+          type: ["string", "null"]
+
+    QualificationRevalidation:
+      type: object
+      required: [id, qualificationId, previousDateAchieved, revalidatedAt]
+      properties:
+        id:
+          type: integer
+        qualificationId:
+          type: integer
+        previousDateAchieved:
+          type: string
+          format: date
+        previousExpiryDate:
+          type: ["string", "null"]
+          format: date
+        revalidatedAt:
+          type: string
+          format: date-time
+        notes:
+          type: ["string", "null"]
+
+    QualificationCertificate:
+      type: object
+      required: [id, qualificationId, fileName, fileUrl, uploadedAt]
+      properties:
+        id:
+          type: integer
+        qualificationId:
+          type: integer
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        mimeType:
+          type: ["string", "null"]
+        uploadedAt:
+          type: string
+          format: date-time
+
+    QualificationCertificateInput:
+      type: object
+      required: [fileName, fileUrl]
+      properties:
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        mimeType:
+          type: string
+
+    QualificationType:
+      type: object
+      required: [id, name, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        awardingBody:
+          type: ["string", "null"]
+        validityValue:
+          type: ["integer", "null"]
+        validityUnit:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    QualificationTypeInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        awardingBody:
+          type: string
+        validityValue:
+          type: integer
+          minimum: 1
+        validityUnit:
+          type: string
+          enum: [days, months, years]
+        isActive:
+          type: boolean
+
+    QualificationTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        awardingBody:
+          type: ["string", "null"]
+        validityValue:
+          type: ["integer", "null"]
+        validityUnit:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
 
     EmployeeWorkRecord:
       type: object

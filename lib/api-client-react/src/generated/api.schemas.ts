@@ -457,33 +457,107 @@ export interface EmployeeNextOfKinUpdate {
 export interface EmployeeQualification {
   id: number;
   employeeId: number;
-  title: string;
+  qualificationTypeId: number;
   /** @nullable */
-  institution?: string | null;
+  qualificationTypeName?: string | null;
   /** @nullable */
-  yearObtained?: number | null;
+  awardingBody?: string | null;
+  dateAchieved: string;
+  /** @nullable */
+  expiryDate?: string | null;
   /** @nullable */
   notes?: string | null;
   createdAt: string;
 }
 
 export interface EmployeeQualificationInput {
-  /** @minLength 1 */
-  title: string;
-  institution?: string;
-  yearObtained?: number;
+  qualificationTypeId: number;
+  dateAchieved: string;
   notes?: string;
 }
 
 export interface EmployeeQualificationUpdate {
-  /** @minLength 1 */
-  title?: string;
-  /** @nullable */
-  institution?: string | null;
-  /** @nullable */
-  yearObtained?: number | null;
+  qualificationTypeId?: number;
+  dateAchieved?: string;
   /** @nullable */
   notes?: string | null;
+}
+
+export interface QualificationRevalidateInput {
+  dateAchieved: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface QualificationRevalidation {
+  id: number;
+  qualificationId: number;
+  previousDateAchieved: string;
+  /** @nullable */
+  previousExpiryDate?: string | null;
+  revalidatedAt: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface QualificationCertificate {
+  id: number;
+  qualificationId: number;
+  fileName: string;
+  fileUrl: string;
+  /** @nullable */
+  mimeType?: string | null;
+  uploadedAt: string;
+}
+
+export interface QualificationCertificateInput {
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
+}
+
+export interface QualificationType {
+  id: number;
+  name: string;
+  /** @nullable */
+  awardingBody?: string | null;
+  /** @nullable */
+  validityValue?: number | null;
+  /** @nullable */
+  validityUnit?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type QualificationTypeInputValidityUnit = typeof QualificationTypeInputValidityUnit[keyof typeof QualificationTypeInputValidityUnit];
+
+
+export const QualificationTypeInputValidityUnit = {
+  days: 'days',
+  months: 'months',
+  years: 'years',
+} as const;
+
+export interface QualificationTypeInput {
+  /** @minLength 1 */
+  name: string;
+  awardingBody?: string;
+  /** @minimum 1 */
+  validityValue?: number;
+  validityUnit?: QualificationTypeInputValidityUnit;
+  isActive?: boolean;
+}
+
+export interface QualificationTypeUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  awardingBody?: string | null;
+  /** @nullable */
+  validityValue?: number | null;
+  /** @nullable */
+  validityUnit?: string | null;
+  isActive?: boolean;
 }
 
 export interface EmployeeWorkRecord {

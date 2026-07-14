@@ -7,5 +7,8 @@ export * from "./employeeAttachments";
 export * from "./employeeMedical";
 export * from "./employeeDietary";
 export * from "./employeeNextOfKin";
+export * from "./qualificationTypes";
 export * from "./employeeQualifications";
+export * from "./qualificationRevalidations";
+export * from "./qualificationCertificates";
 export * from "./employeeWorkRecords";

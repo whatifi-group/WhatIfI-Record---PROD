@@ -4,113 +4,460 @@ import {
   useCreateEmployeeQualification,
   useUpdateEmployeeQualification,
   useDeleteEmployeeQualification,
+  useRevalidateEmployeeQualification,
+  useListQualificationRevalidations,
+  useListQualificationCertificates,
+  useCreateQualificationCertificate,
+  useDeleteQualificationCertificate,
+  useListQualificationTypes,
   getListEmployeeQualificationsQueryKey,
+  getListQualificationRevalidationsQueryKey,
+  getListQualificationCertificatesQueryKey,
 } from "@workspace/api-client-react";
-import type { EmployeeQualification } from "@workspace/api-client-react";
+import type {
+  EmployeeQualification,
+  QualificationType,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, GraduationCap } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  GraduationCap,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Paperclip,
+  ExternalLink,
+} from "lucide-react";
+import { format, parseISO, isPast, differenceInDays } from "date-fns";
 
 interface Props {
   employeeId: number;
 }
 
-interface FormData {
-  title: string;
-  institution: string;
-  yearObtained: string;
+interface QualForm {
+  qualificationTypeId: string;
+  dateAchieved: string;
   notes: string;
 }
 
-const defaultForm: FormData = { title: "", institution: "", yearObtained: "", notes: "" };
+interface RevalidateForm {
+  dateAchieved: string;
+  notes: string;
+}
+
+interface CertForm {
+  fileName: string;
+  fileUrl: string;
+}
+
+const defaultQualForm: QualForm = {
+  qualificationTypeId: "",
+  dateAchieved: "",
+  notes: "",
+};
+
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
+  try {
+    return format(parseISO(dateStr), "d MMM yyyy");
+  } catch {
+    return dateStr;
+  }
+}
+
+function ExpiryBadge({ expiryDate }: { expiryDate: string | null | undefined }) {
+  if (!expiryDate) return null;
+  const date = parseISO(expiryDate);
+  const expired = isPast(date);
+  const daysLeft = differenceInDays(date, new Date());
+  const soonThreshold = 30;
+
+  if (expired) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive/10 text-destructive border border-destructive/20">
+        Expired
+      </span>
+    );
+  }
+  if (daysLeft <= soonThreshold) {
+    return (
+      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+        Expires in {daysLeft}d
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary/10 text-secondary border border-secondary/20">
+      Valid
+    </span>
+  );
+}
+
+/** Sub-component: revalidation history for a single qualification */
+function RevalidationHistory({
+  employeeId,
+  qualId,
+}: {
+  employeeId: number;
+  qualId: number;
+}) {
+  const { data: history, isLoading } = useListQualificationRevalidations(
+    employeeId,
+    qualId,
+  );
+
+  if (isLoading)
+    return <Loader2 className="w-3 h-3 animate-spin text-muted-foreground mx-auto" />;
+  if (!history || history.length === 0)
+    return <p className="text-xs text-muted-foreground italic">No previous revalidations.</p>;
+
+  return (
+    <div className="space-y-1">
+      {[...history].reverse().map((r) => (
+        <div
+          key={r.id}
+          className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground"
+        >
+          <span>Achieved: {formatDate(r.previousDateAchieved)}</span>
+          {r.previousExpiryDate && (
+            <span>Expired: {formatDate(r.previousExpiryDate)}</span>
+          )}
+          <span className="text-muted-foreground/60">
+            Revalidated {formatDate(r.revalidatedAt as unknown as string)}
+          </span>
+          {r.notes && <span className="italic">{r.notes}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Sub-component: certificates for a single qualification */
+function CertificatesList({
+  employeeId,
+  qualId,
+}: {
+  employeeId: number;
+  qualId: number;
+}) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: certs, isLoading } = useListQualificationCertificates(
+    employeeId,
+    qualId,
+  );
+  const createCert = useCreateQualificationCertificate();
+  const deleteCert = useDeleteQualificationCertificate();
+  const [addOpen, setAddOpen] = useState(false);
+  const [certForm, setCertForm] = useState<CertForm>({ fileName: "", fileUrl: "" });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: getListQualificationCertificatesQueryKey(employeeId, qualId),
+    });
+
+  const handleAdd = () => {
+    if (!certForm.fileName.trim() || !certForm.fileUrl.trim()) {
+      toast({ title: "File name and URL are required", variant: "destructive" });
+      return;
+    }
+    createCert.mutate(
+      {
+        id: employeeId,
+        qualId,
+        data: { fileName: certForm.fileName.trim(), fileUrl: certForm.fileUrl.trim() },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Certificate added" });
+          invalidate();
+          setAddOpen(false);
+          setCertForm({ fileName: "", fileUrl: "" });
+        },
+        onError: () => toast({ title: "Failed to add certificate", variant: "destructive" }),
+      },
+    );
+  };
+
+  const handleDelete = (certId: number) => {
+    deleteCert.mutate(
+      { id: employeeId, qualId, certId },
+      {
+        onSuccess: () => { toast({ title: "Certificate removed" }); invalidate(); },
+        onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
+      },
+    );
+  };
+
+  if (isLoading)
+    return <Loader2 className="w-3 h-3 animate-spin text-muted-foreground mx-auto" />;
+
+  return (
+    <div className="space-y-2">
+      {certs && certs.length > 0 && (
+        <div className="space-y-1">
+          {certs.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 text-xs">
+              <Paperclip className="w-3 h-3 text-muted-foreground shrink-0" />
+              <a
+                href={c.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary hover:underline truncate max-w-[220px]"
+              >
+                {c.fileName}
+                <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+              </a>
+              <span className="text-muted-foreground/60 shrink-0">
+                {formatDate(c.uploadedAt as unknown as string)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-auto"
+                onClick={() => handleDelete(c.id)}
+              >
+                <Trash2 className="w-2.5 h-2.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+      {!addOpen ? (
+        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setAddOpen(true)}>
+          <Plus className="w-3 h-3" /> Add Certificate
+        </Button>
+      ) : (
+        <div className="border border-border/50 rounded-lg p-3 space-y-2 bg-muted/20">
+          <div>
+            <Label className="text-xs">File Name</Label>
+            <Input
+              className="h-7 text-xs mt-0.5"
+              placeholder="certificate.pdf"
+              value={certForm.fileName}
+              onChange={(e) => setCertForm((f) => ({ ...f, fileName: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label className="text-xs">File URL</Label>
+            <Input
+              className="h-7 text-xs mt-0.5"
+              placeholder="https://..."
+              value={certForm.fileUrl}
+              onChange={(e) => setCertForm((f) => ({ ...f, fileUrl: e.target.value }))}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleAdd}
+              disabled={createCert.isPending}
+            >
+              {createCert.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
+              Add
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => { setAddOpen(false); setCertForm({ fileName: "", fileUrl: "" }); }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EmployeeQualificationsTab({ employeeId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<EmployeeQualification | null>(null);
-  const [form, setForm] = useState<FormData>(defaultForm);
+  const [form, setForm] = useState<QualForm>(defaultQualForm);
 
+  const [revalidateOpen, setRevalidateOpen] = useState(false);
+  const [revalidatingRecord, setRevalidatingRecord] = useState<EmployeeQualification | null>(null);
+  const [revalidateForm, setRevalidateForm] = useState<RevalidateForm>({ dateAchieved: "", notes: "" });
+
+  const [expandedHistory, setExpandedHistory] = useState<Record<number, boolean>>({});
+  const [expandedCerts, setExpandedCerts] = useState<Record<number, boolean>>({});
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const { data: qualTypes } = useListQualificationTypes();
   const { data: records, isLoading } = useListEmployeeQualifications(employeeId);
   const createQual = useCreateEmployeeQualification();
   const updateQual = useUpdateEmployeeQualification();
   const deleteQual = useDeleteEmployeeQualification();
+  const revalidateQual = useRevalidateEmployeeQualification();
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: getListEmployeeQualificationsQueryKey(employeeId) });
+  const activeTypes = qualTypes?.filter((t) => t.isActive) ?? [];
+  const selectedType = activeTypes.find(
+    (t) => t.id.toString() === form.qualificationTypeId,
+  );
+
+  const calcPreviewExpiry = (
+    dateAchieved: string,
+    type: QualificationType | undefined,
+  ): string => {
+    if (!type?.validityValue || !type?.validityUnit || !dateAchieved) return "";
+    try {
+      const d = new Date(dateAchieved + "T00:00:00Z");
+      if (type.validityUnit === "days") d.setUTCDate(d.getUTCDate() + type.validityValue);
+      else if (type.validityUnit === "months")
+        d.setUTCMonth(d.getUTCMonth() + type.validityValue);
+      else if (type.validityUnit === "years")
+        d.setUTCFullYear(d.getUTCFullYear() + type.validityValue);
+      return d.toISOString().split("T")[0];
+    } catch {
+      return "";
+    }
+  };
+
+  const previewExpiry = calcPreviewExpiry(form.dateAchieved, selectedType);
+
+  const invalidateList = () =>
+    queryClient.invalidateQueries({
+      queryKey: getListEmployeeQualificationsQueryKey(employeeId),
+    });
 
   const openAdd = () => {
     setEditingRecord(null);
-    setForm(defaultForm);
+    setForm(defaultQualForm);
     setDialogOpen(true);
   };
 
   const openEdit = (record: EmployeeQualification) => {
     setEditingRecord(record);
     setForm({
-      title: record.title,
-      institution: record.institution || "",
-      yearObtained: record.yearObtained?.toString() || "",
-      notes: record.notes || "",
+      qualificationTypeId: record.qualificationTypeId.toString(),
+      dateAchieved: record.dateAchieved,
+      notes: record.notes ?? "",
     });
     setDialogOpen(true);
   };
 
   const handleSave = () => {
-    if (!form.title.trim()) {
-      toast({ title: "Title is required", variant: "destructive" });
+    if (!form.qualificationTypeId) {
+      toast({ title: "Qualification type is required", variant: "destructive" });
       return;
     }
-    const yearObtained = form.yearObtained ? parseInt(form.yearObtained, 10) : undefined;
-
+    if (!form.dateAchieved) {
+      toast({ title: "Date Achieved is required", variant: "destructive" });
+      return;
+    }
+    const payload = {
+      qualificationTypeId: parseInt(form.qualificationTypeId, 10),
+      dateAchieved: form.dateAchieved,
+      notes: form.notes || undefined,
+    };
     if (editingRecord) {
       updateQual.mutate(
+        { id: employeeId, qualId: editingRecord.id, data: payload },
         {
-          id: employeeId,
-          qualId: editingRecord.id,
-          data: {
-            title: form.title,
-            institution: form.institution || null,
-            yearObtained: yearObtained ?? null,
-            notes: form.notes || null,
+          onSuccess: () => {
+            toast({ title: "Qualification updated" });
+            invalidateList();
+            setDialogOpen(false);
           },
-        },
-        {
-          onSuccess: () => { toast({ title: "Qualification updated" }); invalidate(); setDialogOpen(false); },
           onError: () => toast({ title: "Failed to update", variant: "destructive" }),
-        }
+        },
       );
     } else {
       createQual.mutate(
+        { id: employeeId, data: payload },
         {
-          id: employeeId,
-          data: {
-            title: form.title,
-            institution: form.institution || undefined,
-            yearObtained,
-            notes: form.notes || undefined,
+          onSuccess: () => {
+            toast({ title: "Qualification added" });
+            invalidateList();
+            setDialogOpen(false);
           },
-        },
-        {
-          onSuccess: () => { toast({ title: "Qualification added" }); invalidate(); setDialogOpen(false); },
           onError: () => toast({ title: "Failed to add", variant: "destructive" }),
-        }
+        },
       );
     }
   };
 
-  const handleDelete = (qualificationId: number) => {
-    deleteQual.mutate(
-      { id: employeeId, qualId: qualificationId },
+  const openRevalidate = (record: EmployeeQualification) => {
+    setRevalidatingRecord(record);
+    setRevalidateForm({ dateAchieved: "", notes: "" });
+    setRevalidateOpen(true);
+  };
+
+  const handleRevalidate = () => {
+    if (!revalidatingRecord || !revalidateForm.dateAchieved) {
+      toast({ title: "New Date Achieved is required", variant: "destructive" });
+      return;
+    }
+    revalidateQual.mutate(
       {
-        onSuccess: () => { toast({ title: "Qualification removed" }); invalidate(); },
+        id: employeeId,
+        qualId: revalidatingRecord.id,
+        data: {
+          dateAchieved: revalidateForm.dateAchieved,
+          notes: revalidateForm.notes || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Qualification revalidated" });
+          invalidateList();
+          queryClient.invalidateQueries({
+            queryKey: getListQualificationRevalidationsQueryKey(
+              employeeId,
+              revalidatingRecord.id,
+            ),
+          });
+          setRevalidateOpen(false);
+        },
+        onError: () => toast({ title: "Failed to revalidate", variant: "destructive" }),
+      },
+    );
+  };
+
+  const handleDelete = (qualId: number) => {
+    deleteQual.mutate(
+      { id: employeeId, qualId },
+      {
+        onSuccess: () => { toast({ title: "Qualification removed" }); invalidateList(); setDeletingId(null); },
         onError: () => toast({ title: "Failed to delete", variant: "destructive" }),
-      }
+      },
     );
   };
 
@@ -128,7 +475,9 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-base font-semibold text-foreground">Qualifications</h3>
-        <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="w-4 h-4 mr-1" /> Add
+        </Button>
       </div>
 
       {!records || records.length === 0 ? (
@@ -139,69 +488,207 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
       ) : (
         <div className="space-y-3">
           {records.map((record) => (
-            <div key={record.id} className="border border-border/50 rounded-lg p-4 bg-card">
+            <div
+              key={record.id}
+              className="border border-border/50 rounded-lg p-4 bg-card space-y-3"
+            >
+              {/* Header row */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-foreground">{record.title}</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
-                    {record.institution && <span>{record.institution}</span>}
-                    {record.yearObtained && <span>· {record.yearObtained}</span>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-sm text-foreground">
+                      {record.qualificationTypeName ?? `Type #${record.qualificationTypeId}`}
+                    </p>
+                    <ExpiryBadge expiryDate={record.expiryDate} />
                   </div>
-                  {record.notes && <p className="text-xs text-muted-foreground mt-2 italic">{record.notes}</p>}
+                  {record.awardingBody && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{record.awardingBody}</p>
+                  )}
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                    <span>Achieved: {formatDate(record.dateAchieved)}</span>
+                    {record.expiryDate && (
+                      <span>Expires: {formatDate(record.expiryDate)}</span>
+                    )}
+                  </div>
+                  {record.notes && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">{record.notes}</p>
+                  )}
                 </div>
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(record)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Revalidate"
+                    onClick={() => openRevalidate(record)}
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Edit"
+                    onClick={() => openEdit(record)}
+                  >
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remove this qualification?</AlertDialogTitle>
-                        <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(record.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Remove</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    title="Delete"
+                    onClick={() => setDeletingId(record.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
+              </div>
+
+              {/* Revalidation history toggle */}
+              <div className="border-t border-border/40 pt-2">
+                <button
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() =>
+                    setExpandedHistory((prev) => ({
+                      ...prev,
+                      [record.id]: !prev[record.id],
+                    }))
+                  }
+                >
+                  {expandedHistory[record.id] ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                  Revalidation History
+                </button>
+                {expandedHistory[record.id] && (
+                  <div className="mt-2 pl-4">
+                    <RevalidationHistory
+                      employeeId={employeeId}
+                      qualId={record.id}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Certificates toggle */}
+              <div className="border-t border-border/40 pt-2">
+                <button
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() =>
+                    setExpandedCerts((prev) => ({
+                      ...prev,
+                      [record.id]: !prev[record.id],
+                    }))
+                  }
+                >
+                  {expandedCerts[record.id] ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                  Certificates
+                </button>
+                {expandedCerts[record.id] && (
+                  <div className="mt-2 pl-4">
+                    <CertificatesList
+                      employeeId={employeeId}
+                      qualId={record.id}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* Add / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[440px]">
+        <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>{editingRecord ? "Edit Qualification" : "Add Qualification"}</DialogTitle>
+            <DialogTitle>
+              {editingRecord ? "Edit Qualification" : "Add Qualification"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <Label>Title *</Label>
-              <Input className="mt-1" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Bachelor of Science, CIPD Level 5..." />
+              <Label>Qualification Type *</Label>
+              <Select
+                value={form.qualificationTypeId}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, qualificationTypeId: v }))
+                }
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select a qualification type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeTypes.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">
+                      No active qualification types. Add some in SysAdmin first.
+                    </div>
+                  ) : (
+                    activeTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id.toString()}>
+                        {t.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
+
+            {selectedType && (
+              <div>
+                <Label>Awarding Body</Label>
+                <Input
+                  className="mt-1 bg-muted/30"
+                  value={selectedType.awardingBody ?? "—"}
+                  readOnly
+                />
+              </div>
+            )}
+
             <div>
-              <Label>Institution</Label>
-              <Input className="mt-1" value={form.institution} onChange={e => setForm(f => ({ ...f, institution: e.target.value }))} placeholder="University name" />
+              <Label>Date Achieved *</Label>
+              <Input
+                className="mt-1"
+                type="date"
+                value={form.dateAchieved}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, dateAchieved: e.target.value }))
+                }
+              />
             </div>
-            <div>
-              <Label>Year Obtained</Label>
-              <Input className="mt-1" type="number" value={form.yearObtained} onChange={e => setForm(f => ({ ...f, yearObtained: e.target.value }))} placeholder="2020" min="1900" max="2100" />
-            </div>
+
+            {selectedType?.validityValue && form.dateAchieved && (
+              <div>
+                <Label>Expiry Date (calculated)</Label>
+                <Input
+                  className="mt-1 bg-muted/30"
+                  value={previewExpiry ? formatDate(previewExpiry) : "—"}
+                  readOnly
+                />
+              </div>
+            )}
+
             <div>
               <Label>Notes</Label>
-              <Textarea className="mt-1" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Additional details..." />
+              <Textarea
+                className="mt-1"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                placeholder="Additional details…"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingRecord ? "Update" : "Add"}
@@ -209,6 +696,79 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Revalidate Dialog */}
+      <Dialog open={revalidateOpen} onOpenChange={setRevalidateOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Revalidate Qualification</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            The current dates will be saved to the revalidation history and the record
+            will be updated with the new dates.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <Label>New Date Achieved *</Label>
+              <Input
+                className="mt-1"
+                type="date"
+                value={revalidateForm.dateAchieved}
+                onChange={(e) =>
+                  setRevalidateForm((f) => ({ ...f, dateAchieved: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label>Notes</Label>
+              <Textarea
+                className="mt-1"
+                value={revalidateForm.notes}
+                onChange={(e) =>
+                  setRevalidateForm((f) => ({ ...f, notes: e.target.value }))
+                }
+                placeholder="Reason for revalidation…"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevalidateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRevalidate} disabled={revalidateQual.isPending}>
+              {revalidateQual.isPending && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              Revalidate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog
+        open={deletingId !== null}
+        onOpenChange={(open) => !open && setDeletingId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this qualification?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will also delete all associated revalidation history and certificates.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingId !== null && handleDelete(deletingId)}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface EmployeeQualificationInput {
-  qualificationTypeId: number;
-  dateAchieved: Date;
-  notes?: string;
+export interface QualificationCertificateInput {
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
 }

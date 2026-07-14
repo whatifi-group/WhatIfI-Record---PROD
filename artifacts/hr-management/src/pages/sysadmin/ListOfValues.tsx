@@ -176,10 +176,8 @@ export default function ListOfValues() {
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs uppercase bg-muted/30 text-muted-foreground">
                     <tr>
-                      <th className="px-6 py-4 font-semibold w-[250px]">Label</th>
-                      <th className="px-6 py-4 font-semibold">Value Key</th>
+                      <th className="px-6 py-4 font-semibold">Label</th>
                       <th className="px-6 py-4 font-semibold w-[120px]">Status</th>
-                      <th className="px-6 py-4 font-semibold w-[100px] text-right">Order</th>
                       <th className="px-6 py-4 font-semibold text-right w-[100px]">Actions</th>
                     </tr>
                   </thead>
@@ -194,28 +192,18 @@ export default function ListOfValues() {
                       categoryGroup.items.sort((a, b) => a.sortOrder - b.sortOrder).map((item) => (
                         <tr key={item.id} className={`hover:bg-muted/20 transition-colors group ${!item.isActive ? "opacity-60" : ""}`}>
                           <td className="px-6 py-3 align-middle">
-                            <div className="flex items-center gap-2">
-                              <span className={`font-medium ${!item.isActive ? "text-muted-foreground" : "text-foreground"}`}>
-                                {item.label}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-3 align-middle">
-                            <code className="text-xs bg-muted/50 px-1.5 py-0.5 rounded text-muted-foreground border border-border/50">
-                              {item.value}
-                            </code>
+                            <span className={`font-medium ${!item.isActive ? "text-muted-foreground" : "text-foreground"}`}>
+                              {item.label}
+                            </span>
                           </td>
                           <td className="px-6 py-3 align-middle">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border shadow-sm ${
-                              item.isActive 
-                                ? 'bg-secondary/10 text-secondary border-secondary/20' 
+                              item.isActive
+                                ? 'bg-secondary/10 text-secondary border-secondary/20'
                                 : 'bg-muted text-muted-foreground border-border/50'
                             }`}>
                               {item.isActive ? 'Active' : 'Inactive'}
                             </span>
-                          </td>
-                          <td className="px-6 py-3 align-middle text-right text-muted-foreground">
-                            {item.sortOrder}
                           </td>
                           <td className="px-6 py-3 align-middle text-right">
                             <div className="flex items-center justify-end gap-1">

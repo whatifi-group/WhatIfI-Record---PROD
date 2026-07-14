@@ -288,7 +288,6 @@ export default function EmployeesList() {
                   <TableHead>Role & Department</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -304,7 +303,12 @@ export default function EmployeesList() {
                           {employee.firstName[0]}{employee.lastName[0]}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-medium text-foreground truncate">{employee.firstName} {employee.lastName}</span>
+                          <Link
+                            href={`/employees/${employee.id}`}
+                            className="font-medium text-foreground truncate hover:text-primary transition-colors"
+                          >
+                            {employee.firstName} {employee.lastName}
+                          </Link>
                           <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
                         </div>
                       </div>
@@ -320,11 +324,6 @@ export default function EmployeesList() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                       {format(new Date(employee.startDate), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/employees/${employee.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
-                        Profile
-                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

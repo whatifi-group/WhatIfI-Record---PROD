@@ -24,6 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 import EmployeeAddressesTab from "./employee-tabs/EmployeeAddressesTab";
@@ -56,8 +57,11 @@ export default function EmployeeProfile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  const [isEditing, setIsEditing] = useState(false);
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission('edit_employees');
+  const canDelete = hasPermission('delete_employees');
+
+  const [isEditing, setIsEditing] = useState(canEdit);
 
   const { data: employee, isLoading, isError } = useGetEmployee(employeeId, { 
     query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) } 
@@ -213,32 +217,31 @@ export default function EmployeeProfile() {
             </CardContent>
           </Card>
           
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => setIsEditing(true)} className="w-full" variant="outline">
-              <Pencil className="w-4 h-4 mr-2" /> Edit Profile
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
-                  <Trash2 className="w-4 h-4 mr-2" /> Remove Employee
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remove {employee.firstName}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently remove {employee.firstName} {employee.lastName} from the system. This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                    Remove
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          {canDelete && (
+            <div className="flex flex-col gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <Trash2 className="w-4 h-4 mr-2" /> Remove Employee
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove {employee.firstName}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove {employee.firstName} {employee.lastName} from the system. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                      Remove
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </div>
 
         {/* Main Content — Tabbed */}

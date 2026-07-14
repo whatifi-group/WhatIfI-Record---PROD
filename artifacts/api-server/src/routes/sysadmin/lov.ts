@@ -17,6 +17,7 @@ const router: IRouter = Router();
 const CATEGORY_LABELS: Record<string, string> = {
   employment_type: "Employment Types",
   leave_type: "Leave Types",
+  employee_status: "Employee Status",
 };
 
 // GET /sysadmin/lov — all categories with their items

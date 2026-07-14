@@ -25,7 +25,7 @@ const employeeSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
   employmentType: z.string().min(1, "Engagement type is required"),
-  status: z.enum([EmployeeStatus.active, EmployeeStatus.inactive, EmployeeStatus.on_leave]),
+  status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
   salary: z.coerce.number().optional().nullable(),
 });
@@ -44,6 +44,7 @@ export default function EmployeesList() {
   const { data: employees, isLoading } = useListEmployees();
   const { data: departments } = useListDepartments();
   const { data: employmentTypes } = useListLovItems("employment_type");
+  const { data: employeeStatuses } = useListLovItems("employee_status");
   const createEmployee = useCreateEmployee();
 
   const form = useForm<EmployeeFormValues>({
@@ -56,7 +57,7 @@ export default function EmployeesList() {
       jobTitle: "",
       departmentId: null,
       employmentType: "full_time",
-      status: EmployeeStatus.active,
+      status: "active",
       startDate: new Date().toISOString().split("T")[0],
       salary: null,
     },
@@ -182,6 +183,23 @@ export default function EmployeesList() {
                     </FormItem>
                   )} />
 
+                  <FormField control={form.control} name="status" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {employeeStatuses?.filter(s => s.isActive).map(s => (
+                            <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+
                   <FormField control={form.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
@@ -241,9 +259,9 @@ export default function EmployeesList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value={EmployeeStatus.active}>Active</SelectItem>
-                <SelectItem value={EmployeeStatus.on_leave}>On Leave</SelectItem>
-                <SelectItem value={EmployeeStatus.inactive}>Inactive</SelectItem>
+                {employeeStatuses?.map(s => (
+                  <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

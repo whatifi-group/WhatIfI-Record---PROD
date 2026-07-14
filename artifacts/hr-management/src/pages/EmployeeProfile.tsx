@@ -33,7 +33,7 @@ const employeeUpdateSchema = z.object({
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
   employmentType: z.string().min(1, "Engagement type is required"),
-  status: z.enum([EmployeeStatus.active, EmployeeStatus.inactive, EmployeeStatus.on_leave]),
+  status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
   salary: z.coerce.number().optional().nullable(),
 });
@@ -54,6 +54,7 @@ export default function EmployeeProfile() {
   });
   const { data: departments } = useListDepartments();
   const { data: employmentTypes } = useListLovItems("employment_type");
+  const { data: employeeStatuses } = useListLovItems("employee_status");
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
 
@@ -67,7 +68,7 @@ export default function EmployeeProfile() {
       jobTitle: "",
       departmentId: null,
       employmentType: "full_time",
-      status: EmployeeStatus.active,
+      status: "active",
       startDate: new Date().toISOString().split("T")[0],
       salary: null,
     },
@@ -308,9 +309,9 @@ export default function EmployeeProfile() {
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value={EmployeeStatus.active}>Active</SelectItem>
-                              <SelectItem value={EmployeeStatus.on_leave}>On Leave</SelectItem>
-                              <SelectItem value={EmployeeStatus.inactive}>Inactive</SelectItem>
+                              {employeeStatuses?.filter(s => s.isActive || s.value === field.value).map(s => (
+                                <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

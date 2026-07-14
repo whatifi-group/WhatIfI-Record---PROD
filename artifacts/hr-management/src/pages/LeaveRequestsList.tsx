@@ -6,7 +6,6 @@ import {
   useDeleteLeaveRequest,
   useListEmployees,
   getListLeaveRequestsQueryKey,
-  getGetDashboardSummaryQueryKey,
   useListLovItems
 } from "@workspace/api-client-react";
 import { LeaveStatus } from "@workspace/api-client-react";
@@ -70,7 +69,6 @@ export default function LeaveRequestsList() {
         onSuccess: () => {
           toast({ title: "Leave request submitted", description: "Leave request submitted successfully." });
           queryClient.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
           setIsCreateOpen(false);
           form.reset();
         },
@@ -88,7 +86,6 @@ export default function LeaveRequestsList() {
         onSuccess: () => {
           toast({ title: `Request ${status}`, description: `Leave request has been ${status}.` });
           queryClient.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
         },
         onError: () => {
           toast({ title: "Update failed", variant: "destructive" });
@@ -104,7 +101,6 @@ export default function LeaveRequestsList() {
         onSuccess: () => {
           toast({ title: "Request cancelled", description: "Leave request has been removed." });
           queryClient.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
         },
         onError: () => {
           toast({ title: "Cancellation failed", variant: "destructive" });

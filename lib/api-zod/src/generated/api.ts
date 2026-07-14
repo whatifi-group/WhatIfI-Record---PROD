@@ -954,51 +954,6 @@ export const DeleteLeaveRequestResponse = zod.void()
 
 
 /**
- * Aggregate counts and recent activity for the HR dashboard
- * @summary Get dashboard summary
- */
-export const GetDashboardSummaryResponse = zod.object({
-  "totalEmployees": zod.number(),
-  "activeEmployees": zod.number(),
-  "onLeaveEmployees": zod.number(),
-  "totalDepartments": zod.number(),
-  "pendingLeaveRequests": zod.number(),
-  "departmentBreakdown": zod.array(zod.object({
-  "departmentId": zod.number(),
-  "departmentName": zod.string(),
-  "count": zod.number()
-})),
-  "recentHires": zod.array(zod.object({
-  "id": zod.number(),
-  "firstName": zod.string(),
-  "lastName": zod.string(),
-  "email": zod.string(),
-  "phone": zod.string().nullable(),
-  "jobTitle": zod.string(),
-  "departmentId": zod.number().nullable(),
-  "departmentName": zod.string().nullable(),
-  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
-  "startDate": zod.coerce.date(),
-  "salary": zod.number().nullable(),
-  "avatarUrl": zod.string().nullable(),
-  "createdAt": zod.coerce.date()
-})),
-  "upcomingLeave": zod.array(zod.object({
-  "id": zod.number(),
-  "employeeId": zod.number(),
-  "employeeName": zod.string(),
-  "type": zod.string().describe('Leave type value — managed via List of Values'),
-  "startDate": zod.coerce.date(),
-  "endDate": zod.coerce.date(),
-  "status": zod.enum(['pending', 'approved', 'rejected']),
-  "reason": zod.string().nullable(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
  * @summary List all LOV categories with their items
  */
 export const ListLovCategoriesResponseItem = zod.object({

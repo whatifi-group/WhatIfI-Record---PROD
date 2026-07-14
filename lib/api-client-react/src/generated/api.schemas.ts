@@ -160,23 +160,6 @@ export interface LeaveRequestUpdate {
   reason?: string | null;
 }
 
-export interface DepartmentHeadcount {
-  departmentId: number;
-  departmentName: string;
-  count: number;
-}
-
-export interface DashboardSummary {
-  totalEmployees: number;
-  activeEmployees: number;
-  onLeaveEmployees: number;
-  totalDepartments: number;
-  pendingLeaveRequests: number;
-  departmentBreakdown: DepartmentHeadcount[];
-  recentHires: Employee[];
-  upcomingLeave: LeaveRequest[];
-}
-
 export interface LovItem {
   id: number;
   category: string;

@@ -20,7 +20,6 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  DashboardSummary,
   Department,
   DepartmentInput,
   DepartmentUpdate,
@@ -3362,84 +3361,6 @@ export const useDeleteLeaveRequest = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteLeaveRequestMutationOptions(options));
     }
-
-export const getGetDashboardSummaryUrl = () => {
-
-
-
-
-  return `/api/dashboard/summary`
-}
-
-/**
- * Aggregate counts and recent activity for the HR dashboard
- * @summary Get dashboard summary
- */
-export const getDashboardSummary = async ( options?: RequestInit): Promise<DashboardSummary> => {
-
-  return customFetch<DashboardSummary>(getGetDashboardSummaryUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetDashboardSummaryQueryKey = () => {
-    return [
-    `/api/dashboard/summary`
-    ] as const;
-    }
-
-
-export const getGetDashboardSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetDashboardSummaryQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardSummary>>> = ({ signal }) => getDashboardSummary({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetDashboardSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardSummary>>>
-export type GetDashboardSummaryQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get dashboard summary
- */
-
-export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDashboardSummary>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboardSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetDashboardSummaryQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export const getListLovCategoriesUrl = () => {
 

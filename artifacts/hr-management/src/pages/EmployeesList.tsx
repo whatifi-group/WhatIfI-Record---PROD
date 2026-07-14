@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, getGetDashboardSummaryQueryKey, useListLovItems } from "@workspace/api-client-react";
+import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, useListLovItems } from "@workspace/api-client-react";
 import { EmployeeStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,6 @@ export default function EmployeesList() {
         onSuccess: () => {
           toast({ title: "Employee added", description: "Successfully added new team member." });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetDashboardSummaryQueryKey() });
           setIsCreateOpen(false);
           form.reset();
         },

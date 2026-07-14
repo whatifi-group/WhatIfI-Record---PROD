@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './dashboardSummary';
 export * from './department';
-export * from './departmentHeadcount';
 export * from './departmentInput';
 export * from './departmentUpdate';
 export * from './employee';

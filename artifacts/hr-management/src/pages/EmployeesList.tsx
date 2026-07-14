@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, useListLovItems } from "@workspace/api-client-react";
 import { EmployeeStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,6 +36,7 @@ export default function EmployeesList() {
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -268,6 +269,7 @@ export default function EmployeesList() {
                     key={employee.id} 
                     className="group border-border/30 hover:bg-muted/10 transition-colors cursor-pointer"
                     style={{ animationDelay: `${idx * 50}ms` }}
+                    onClick={() => setLocation(`/employees/${employee.id}`)}
                   >
                     <TableCell className="py-4">
                       <div className="flex items-center gap-3">
@@ -275,12 +277,9 @@ export default function EmployeesList() {
                           {employee.firstName[0]}{employee.lastName[0]}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <Link
-                            href={`/employees/${employee.id}`}
-                            className="font-medium text-foreground truncate hover:text-primary transition-colors"
-                          >
+                          <span className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
                             {employee.firstName} {employee.lastName}
-                          </Link>
+                          </span>
                           <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
                         </div>
                       </div>

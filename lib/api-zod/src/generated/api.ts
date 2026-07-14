@@ -404,3 +404,233 @@ export const GetDashboardSummaryResponse = zod.object({
 })
 
 
+/**
+ * @summary List all roles
+ */
+export const ListRolesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystem": zod.boolean(),
+  "userCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const ListRolesResponse = zod.array(ListRolesResponseItem)
+
+
+/**
+ * @summary Create a role
+ */
+
+
+
+export const CreateRoleBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports']))
+})
+
+export const CreateRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystem": zod.boolean(),
+  "userCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a role
+ */
+export const GetRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystem": zod.boolean(),
+  "userCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a role
+ */
+export const UpdateRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateRoleBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "description": zod.string().nullish(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])).optional()
+})
+
+export const UpdateRoleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystem": zod.boolean(),
+  "userCount": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a role (must not be a system role)
+ */
+export const DeleteRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRoleResponse = zod.void()
+
+
+/**
+ * @summary List all users
+ */
+export const ListUsersQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'suspended']).optional(),
+  "roleId": zod.coerce.number().optional()
+})
+
+export const ListUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListUsersResponse = zod.array(ListUsersResponseItem)
+
+
+/**
+ * @summary Register a new user account
+ */
+
+
+export const createUserBodyPasswordMin = 8;
+
+export const createUserBodyPermissionsDefault = [];
+
+export const CreateUserBody = zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string().min(1),
+  "password": zod.string().min(createUserBodyPasswordMin),
+  "roleId": zod.number(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])).default(createUserBodyPermissionsDefault)
+})
+
+export const CreateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a user
+ */
+export const GetUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a user (role, permissions, status, name)
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateUserBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "email": zod.string().min(1).optional(),
+  "status": zod.enum(['active', 'inactive', 'suspended']).optional(),
+  "roleId": zod.number().optional(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])).optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a user account
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteUserResponse = zod.void()
+
+
+/**
+ * @summary Get sysadmin dashboard summary counts
+ */
+export const GetSysadminSummaryResponse = zod.object({
+  "totalUsers": zod.number(),
+  "activeUsers": zod.number(),
+  "suspendedUsers": zod.number().optional(),
+  "totalRoles": zod.number(),
+  "recentUsers": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+

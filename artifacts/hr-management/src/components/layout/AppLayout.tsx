@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight } from "lucide-react";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
 import { useHealthCheck } from "@workspace/api-client-react";
@@ -41,6 +41,15 @@ const modules: Module[] = [
       { name: "Directory", href: "/employees", icon: Users },
       { name: "Departments", href: "/departments", icon: Building2 },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
+    ],
+  },
+  {
+    name: "SysAdmin",
+    icon: ShieldCheck,
+    pages: [
+      { name: "Dashboard", href: "/sysadmin", icon: LayoutDashboard },
+      { name: "Users", href: "/sysadmin/users", icon: UserCog },
+      { name: "Roles", href: "/sysadmin/roles", icon: Lock },
     ],
   },
 ];

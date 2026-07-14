@@ -188,6 +188,99 @@ export interface DashboardSummary {
   upcomingLeave: LeaveRequest[];
 }
 
+export type Permission = typeof Permission[keyof typeof Permission];
+
+
+export const Permission = {
+  sysadmin: 'sysadmin',
+  hr_admin: 'hr_admin',
+  view_employees: 'view_employees',
+  edit_employees: 'edit_employees',
+  delete_employees: 'delete_employees',
+  view_departments: 'view_departments',
+  edit_departments: 'edit_departments',
+  view_leave: 'view_leave',
+  manage_leave: 'manage_leave',
+  view_reports: 'view_reports',
+} as const;
+
+export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
+
+
+export const UserStatus = {
+  active: 'active',
+  inactive: 'inactive',
+  suspended: 'suspended',
+} as const;
+
+export interface Role {
+  id: number;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  permissions: Permission[];
+  isSystem: boolean;
+  userCount: number;
+  createdAt: string;
+}
+
+export interface RoleInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+  permissions: Permission[];
+}
+
+export interface RoleUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  permissions?: Permission[];
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  status: UserStatus;
+  roleId: number;
+  roleName: string;
+  permissions: Permission[];
+  /** @nullable */
+  lastLoginAt?: string | null;
+  createdAt: string;
+}
+
+export interface UserInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  email: string;
+  /** @minLength 8 */
+  password: string;
+  roleId: number;
+  permissions?: Permission[];
+}
+
+export interface UserUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  email?: string;
+  status?: UserStatus;
+  roleId?: number;
+  permissions?: Permission[];
+}
+
+export interface SysadminSummary {
+  totalUsers: number;
+  activeUsers: number;
+  suspendedUsers?: number;
+  totalRoles: number;
+  recentUsers: User[];
+}
+
 export type ListEmployeesParams = {
 search?: string;
 departmentId?: number;
@@ -197,5 +290,11 @@ status?: EmployeeStatus;
 export type ListLeaveRequestsParams = {
 employeeId?: number;
 status?: LeaveStatus;
+};
+
+export type ListUsersParams = {
+search?: string;
+status?: UserStatus;
+roleId?: number;
 };
 

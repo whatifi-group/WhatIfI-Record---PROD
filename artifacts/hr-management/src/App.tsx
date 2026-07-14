@@ -10,6 +10,9 @@ import EmployeesList from '@/pages/EmployeesList';
 import EmployeeProfile from '@/pages/EmployeeProfile';
 import DepartmentsList from '@/pages/DepartmentsList';
 import LeaveRequestsList from '@/pages/LeaveRequestsList';
+import SysadminDashboard from '@/pages/sysadmin/SysadminDashboard';
+import UsersList from '@/pages/sysadmin/UsersList';
+import RolesList from '@/pages/sysadmin/RolesList';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -31,6 +34,9 @@ function Router() {
         <Route path="/employees/:id" component={EmployeeProfile} />
         <Route path="/departments" component={DepartmentsList} />
         <Route path="/leave" component={LeaveRequestsList} />
+        <Route path="/sysadmin" component={SysadminDashboard} />
+        <Route path="/sysadmin/users" component={UsersList} />
+        <Route path="/sysadmin/roles" component={RolesList} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

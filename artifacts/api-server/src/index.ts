@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { seedLov } from "./lib/seedLov";
+import { seedRoles } from "./lib/seedRoles";
 
 const rawPort = process.env["PORT"];
 
@@ -16,7 +17,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-seedLov()
+Promise.all([seedLov(), seedRoles()])
   .then(() => {
     app.listen(port, (err) => {
       if (err) {
@@ -28,6 +29,6 @@ seedLov()
     });
   })
   .catch((err) => {
-    logger.error({ err }, "Failed to seed LOV data — aborting startup");
+    logger.error({ err }, "Failed to seed data — aborting startup");
     process.exit(1);
   });

@@ -65,17 +65,31 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
+function HrRoute({ component: Component }: { component: React.ComponentType }) {
+  const { hasPermission } = useAuth();
+  if (!hasPermission('hr:access') && !hasPermission('sysadmin')) {
+    return <AccessDenied />;
+  }
+  return <Component />;
+}
+
 function MainRoutes() {
   return (
     <AppLayout>
       <Switch>
         <Route path="/" component={CompanyDashboard} />
-        <Route path="/employees" component={EmployeesList} />
-        <Route path="/employees/:id" component={EmployeeProfile} />
+        <Route path="/employees">
+          {() => <HrRoute component={EmployeesList} />}
+        </Route>
+        <Route path="/employees/:id">
+          {() => <HrRoute component={EmployeeProfile} />}
+        </Route>
         <Route path="/departments">
           {() => <AdminRoute component={DepartmentsList} />}
         </Route>
-        <Route path="/leave" component={LeaveRequestsList} />
+        <Route path="/leave">
+          {() => <HrRoute component={LeaveRequestsList} />}
+        </Route>
         <Route path="/sysadmin">
           {() => <AdminRoute component={SysadminDashboard} />}
         </Route>

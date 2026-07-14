@@ -11,6 +11,8 @@ import { z } from "zod/v4";
 
 export const permissionValues = [
   "sysadmin",
+  "hr:access",
+  "hr:past_employees",
   "hr_admin",
   "view_employees",
   "edit_employees",

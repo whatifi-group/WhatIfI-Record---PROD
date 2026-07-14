@@ -27,23 +27,31 @@ interface ModulePage {
   name: string;
   href: string;
   icon: LucideIcon;
+  /** Visible only to users with the 'sysadmin' permission. */
   adminOnly?: boolean;
+  /** Visible only to users with the 'hr:past_employees' permission (or sysadmin). */
+  hrPastEmployeesOnly?: boolean;
 }
 
 interface Module {
   name: string;
   icon: LucideIcon;
   pages: ModulePage[];
+  /** Visible only to users with the 'sysadmin' permission. */
   adminOnly?: boolean;
+  /** Visible only to users with the 'hr:access' permission (or sysadmin). */
+  hrOnly?: boolean;
 }
 
 const modules: Module[] = [
   {
     name: "Human Resources",
     icon: Users,
+    hrOnly: true,
     pages: [
       { name: "Directory", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
+      { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
     ],
   },
   {
@@ -101,7 +109,13 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {modules.filter((mod) => !mod.adminOnly || hasPermission('sysadmin')).map((mod) => (
+          {modules
+            .filter((mod) => {
+              if (mod.adminOnly) return hasPermission('sysadmin');
+              if (mod.hrOnly) return hasPermission('hr:access') || hasPermission('sysadmin');
+              return true;
+            })
+            .map((mod) => (
             <Collapsible key={mod.name} defaultOpen={isModuleActive(mod)} className="group/collapsible">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
@@ -114,7 +128,11 @@ function AppSidebar() {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {mod.pages
-                      .filter((page) => !page.adminOnly || hasPermission('sysadmin'))
+                      .filter((page) => {
+                        if (page.adminOnly) return hasPermission('sysadmin');
+                        if (page.hrPastEmployeesOnly) return hasPermission('hr:past_employees') || hasPermission('sysadmin');
+                        return true;
+                      })
                       .map((page) => {
                         const isActive = location === page.href || location.startsWith(page.href);
                         return (

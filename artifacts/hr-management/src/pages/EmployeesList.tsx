@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -34,7 +33,6 @@ type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 export default function EmployeesList() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   
@@ -83,31 +81,19 @@ export default function EmployeesList() {
   const filteredEmployees = useMemo(() => {
     if (!employees) return [];
     return employees.filter((emp) => {
+      if (emp.status !== EmployeeStatus.active) return false;
+
       const matchesSearch = search === "" || 
         emp.firstName.toLowerCase().includes(search.toLowerCase()) || 
         emp.lastName.toLowerCase().includes(search.toLowerCase()) ||
         emp.email.toLowerCase().includes(search.toLowerCase()) ||
         emp.jobTitle.toLowerCase().includes(search.toLowerCase());
         
-      const matchesStatus = statusFilter === "all" || emp.status === statusFilter;
       const matchesDept = departmentFilter === "all" || emp.departmentId === parseInt(departmentFilter);
       
-      return matchesSearch && matchesStatus && matchesDept;
+      return matchesSearch && matchesDept;
     });
-  }, [employees, search, statusFilter, departmentFilter]);
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case EmployeeStatus.active:
-        return <Badge className="bg-secondary text-secondary-foreground hover:bg-secondary/90 border-transparent">Active</Badge>;
-      case EmployeeStatus.on_leave:
-        return <Badge className="bg-chart-4 text-chart-4-foreground hover:bg-chart-4/90 border-transparent">On Leave</Badge>;
-      case EmployeeStatus.inactive:
-        return <Badge variant="outline" className="text-muted-foreground border-border">Inactive</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  }, [employees, search, departmentFilter]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -252,17 +238,6 @@ export default function EmployeesList() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[150px] bg-background">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {employeeStatuses?.map(s => (
-                  <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -284,8 +259,6 @@ export default function EmployeesList() {
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="w-[300px]">Employee</TableHead>
-                  <TableHead>Role & Department</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead className="hidden md:table-cell">Joined</TableHead>
                 </TableRow>
               </TableHeader>
@@ -311,15 +284,6 @@ export default function EmployeesList() {
                           <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-foreground">{employee.jobTitle}</span>
-                        <span className="text-xs text-muted-foreground">{employee.departmentName || "No Department"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(employee.status)}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                       {format(new Date(employee.startDate), "MMM d, yyyy")}

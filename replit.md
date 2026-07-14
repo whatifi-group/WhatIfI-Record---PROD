@@ -30,6 +30,15 @@ Deliberately out of scope for v1: payroll, attendance/time tracking.
 - Drizzle `date` columns store `YYYY-MM-DD` strings; since the generated Zod schemas coerce date-format fields to JS `Date` objects, route handlers convert `Date` → date-string before insert/update.
 - Employee `salary` is a Postgres `numeric` column; it's cast to `float8` in `SELECT`s so it serializes as a JSON number matching the generated response schema (numeric would otherwise come back as a string).
 
+## Schema migrations (drizzle-kit)
+
+`drizzle-kit push` requires an interactive TTY and will hang in non-interactive shells (CI, Replit's shell runner). To apply schema changes:
+
+- **Interactive shell**: run `pnpm --filter @workspace/db push` — it prompts you to confirm destructive changes.
+- **Force push (skip prompts)**: run `pnpm --filter @workspace/db push-force` — use only when you are certain no data will be lost (e.g. adding new tables/columns).
+
+Never leave one-off raw-SQL migration scripts in the repo. If `drizzle-kit push` cannot run (e.g. no TTY available), open an interactive shell session first and run the push command there.
+
 ## User preferences
 - Brand identity from the uploaded logo: navy/red/green compass motif.
 - Keep the tone professional throughout — no playful/thematic renaming of standard HR terms (e.g. use "Employee"/"Department", not invented nicknames).

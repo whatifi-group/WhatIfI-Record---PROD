@@ -46,7 +46,6 @@ const employeeUpdateSchema = z.object({
   employmentType: z.string().min(1, "Engagement type is required"),
   status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
-  salary: z.coerce.number().optional().nullable(),
 });
 
 type EmployeeUpdateValues = z.infer<typeof employeeUpdateSchema>;
@@ -84,7 +83,6 @@ export default function EmployeeProfile() {
       employmentType: "full_time",
       status: "active",
       startDate: new Date().toISOString().split("T")[0],
-      salary: null,
     },
   });
 
@@ -103,7 +101,6 @@ export default function EmployeeProfile() {
         employmentType: employee.employmentType,
         status: employee.status as EmployeeStatus,
         startDate: employee.startDate.split("T")[0],
-        salary: employee.salary,
       });
     }
   }, [employee, employeeId, form]);
@@ -346,15 +343,6 @@ export default function EmployeeProfile() {
                               </FormItem>
                             )} />
                             
-                            <FormField control={form.control} name="salary" render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Compensation</FormLabel>
-                                <FormControl>
-                                  <Input type="number" step="0.01" {...field} value={field.value || ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )} />
                           </div>
                           
                           <div className="flex justify-end border-t border-border/50 pt-4 mt-6">
@@ -395,10 +383,6 @@ export default function EmployeeProfile() {
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Start Date</h3>
                         <p className="text-base font-medium">{format(new Date(employee.startDate), "MMMM d, yyyy")}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-1">Compensation</h3>
-                        <p className="text-base font-medium">{employee.salary ? `$${employee.salary.toLocaleString()}` : "Confidential"}</p>
                       </div>
                     </div>
                   )}

@@ -26,7 +26,6 @@ const employeeSchema = z.object({
   employmentType: z.string().min(1, "Engagement type is required"),
   status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
-  salary: z.coerce.number().optional().nullable(),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -58,7 +57,6 @@ export default function EmployeesList() {
       employmentType: "full_time",
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
-      salary: null,
     },
   });
 
@@ -194,15 +192,6 @@ export default function EmployeesList() {
                     </FormItem>
                   )} />
 
-                  <FormField control={form.control} name="salary" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Compensation (Optional)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} value={field.value || ""} onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={createEmployee.isPending}>

@@ -16,6 +16,7 @@ import LeaveRequestsList from '@/pages/LeaveRequestsList';
 import SysadminDashboard from '@/pages/sysadmin/SysadminDashboard';
 import UsersList from '@/pages/sysadmin/UsersList';
 import RolesList from '@/pages/sysadmin/RolesList';
+import ListOfValues from '@/pages/sysadmin/ListOfValues';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/not-found';
 
@@ -41,6 +42,7 @@ function MainRoutes() {
         <Route path="/sysadmin" component={SysadminDashboard} />
         <Route path="/sysadmin/users" component={UsersList} />
         <Route path="/sysadmin/roles" component={RolesList} />
+        <Route path="/sysadmin/lov" component={ListOfValues} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

@@ -6,13 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LeaveType = typeof LeaveType[keyof typeof LeaveType];
-
-
-export const LeaveType = {
-  vacation: 'vacation',
-  sick: 'sick',
-  personal: 'personal',
-  bereavement: 'bereavement',
-  other: 'other',
-} as const;
+/**
+ * Leave type value — managed via List of Values
+ */
+export type LeaveType = string;

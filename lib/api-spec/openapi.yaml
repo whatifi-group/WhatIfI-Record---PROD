@@ -405,6 +405,123 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  # ── List of Values ───────────────────────────────────────────────────────
+
+  /sysadmin/lov:
+    get:
+      operationId: listLovCategories
+      tags: [sysadmin]
+      summary: List all LOV categories with their items
+      responses:
+        "200":
+          description: All LOV categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LovCategory"
+
+  /sysadmin/lov/{category}:
+    get:
+      operationId: listLovItems
+      tags: [sysadmin]
+      summary: List items for a specific LOV category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Items in the category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LovItem"
+    post:
+      operationId: createLovItem
+      tags: [sysadmin]
+      summary: Add a new item to a LOV category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LovItemInput"
+      responses:
+        "201":
+          description: Created item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LovItem"
+        "409":
+          description: Value already exists in category
+
+  /sysadmin/lov/{category}/{id}:
+    patch:
+      operationId: updateLovItem
+      tags: [sysadmin]
+      summary: Update a LOV item label or sort order
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LovItemUpdate"
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LovItem"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLovItem
+      tags: [sysadmin]
+      summary: Delete a LOV item (non-system items only)
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Cannot delete a system item
+
   # ── SysAdmin ──────────────────────────────────────────────────────────────
 
   /sysadmin/roles:
@@ -640,7 +757,7 @@ components:
 
     EmploymentType:
       type: string
-      enum: [full_time, part_time, contract, intern]
+      description: Employment type value — managed via List of Values
 
     EmployeeStatus:
       type: string
@@ -648,7 +765,7 @@ components:
 
     LeaveType:
       type: string
-      enum: [vacation, sick, personal, bereavement, other]
+      description: Leave type value — managed via List of Values
 
     LeaveStatus:
       type: string
@@ -920,6 +1037,69 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/LeaveRequest"
+
+    # ── LOV schemas ─────────────────────────────────────────────────────────
+
+    LovItem:
+      type: object
+      required: [id, category, value, label, sortOrder, isActive, isSystem, createdAt]
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        value:
+          type: string
+        label:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        isSystem:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    LovItemInput:
+      type: object
+      required: [label, value]
+      properties:
+        label:
+          type: string
+          minLength: 1
+        value:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    LovItemUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    LovCategory:
+      type: object
+      required: [category, label, items]
+      properties:
+        category:
+          type: string
+        label:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LovItem"
 
     # ── Auth schemas ────────────────────────────────────────────────────────
 

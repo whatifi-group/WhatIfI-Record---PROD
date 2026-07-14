@@ -35,6 +35,10 @@ import type {
   ListLeaveRequestsParams,
   ListUsersParams,
   LoginInput,
+  LovCategory,
+  LovItem,
+  LovItemInput,
+  LovItemUpdate,
   Role,
   RoleInput,
   RoleUpdate,
@@ -1563,6 +1567,379 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
 
 
 
+
+export const getListLovCategoriesUrl = () => {
+
+
+
+
+  return `/api/sysadmin/lov`
+}
+
+/**
+ * @summary List all LOV categories with their items
+ */
+export const listLovCategories = async ( options?: RequestInit): Promise<LovCategory[]> => {
+
+  return customFetch<LovCategory[]>(getListLovCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLovCategoriesQueryKey = () => {
+    return [
+    `/api/sysadmin/lov`
+    ] as const;
+    }
+
+
+export const getListLovCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listLovCategories>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLovCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLovCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLovCategories>>> = ({ signal }) => listLovCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLovCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLovCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listLovCategories>>>
+export type ListLovCategoriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all LOV categories with their items
+ */
+
+export function useListLovCategories<TData = Awaited<ReturnType<typeof listLovCategories>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLovCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLovCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListLovItemsUrl = (category: string,) => {
+
+
+
+
+  return `/api/sysadmin/lov/${category}`
+}
+
+/**
+ * @summary List items for a specific LOV category
+ */
+export const listLovItems = async (category: string, options?: RequestInit): Promise<LovItem[]> => {
+
+  return customFetch<LovItem[]>(getListLovItemsUrl(category),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLovItemsQueryKey = (category: string,) => {
+    return [
+    `/api/sysadmin/lov/${category}`
+    ] as const;
+    }
+
+
+export const getListLovItemsQueryOptions = <TData = Awaited<ReturnType<typeof listLovItems>>, TError = ErrorType<unknown>>(category: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLovItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLovItemsQueryKey(category);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLovItems>>> = ({ signal }) => listLovItems(category, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: category !== null && category !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLovItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLovItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listLovItems>>>
+export type ListLovItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List items for a specific LOV category
+ */
+
+export function useListLovItems<TData = Awaited<ReturnType<typeof listLovItems>>, TError = ErrorType<unknown>>(
+ category: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLovItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLovItemsQueryOptions(category,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateLovItemUrl = (category: string,) => {
+
+
+
+
+  return `/api/sysadmin/lov/${category}`
+}
+
+/**
+ * @summary Add a new item to a LOV category
+ */
+export const createLovItem = async (category: string,
+    lovItemInput: LovItemInput, options?: RequestInit): Promise<LovItem> => {
+
+  return customFetch<LovItem>(getCreateLovItemUrl(category),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lovItemInput)
+  }
+);}
+
+
+
+
+
+export const getCreateLovItemMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLovItem>>, TError,{category: string;data: BodyType<LovItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLovItem>>, TError,{category: string;data: BodyType<LovItemInput>}, TContext> => {
+
+const mutationKey = ['createLovItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLovItem>>, {category: string;data: BodyType<LovItemInput>}> = (props) => {
+          const {category,data} = props ?? {};
+
+          return  createLovItem(category,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLovItemMutationResult = NonNullable<Awaited<ReturnType<typeof createLovItem>>>
+    export type CreateLovItemMutationBody = BodyType<LovItemInput>
+    export type CreateLovItemMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a new item to a LOV category
+ */
+export const useCreateLovItem = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLovItem>>, TError,{category: string;data: BodyType<LovItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLovItem>>,
+        TError,
+        {category: string;data: BodyType<LovItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLovItemMutationOptions(options));
+    }
+
+export const getUpdateLovItemUrl = (category: string,
+    id: number,) => {
+
+
+
+
+  return `/api/sysadmin/lov/${category}/${id}`
+}
+
+/**
+ * @summary Update a LOV item label or sort order
+ */
+export const updateLovItem = async (category: string,
+    id: number,
+    lovItemUpdate: LovItemUpdate, options?: RequestInit): Promise<LovItem> => {
+
+  return customFetch<LovItem>(getUpdateLovItemUrl(category,id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lovItemUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateLovItemMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLovItem>>, TError,{category: string;id: number;data: BodyType<LovItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLovItem>>, TError,{category: string;id: number;data: BodyType<LovItemUpdate>}, TContext> => {
+
+const mutationKey = ['updateLovItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLovItem>>, {category: string;id: number;data: BodyType<LovItemUpdate>}> = (props) => {
+          const {category,id,data} = props ?? {};
+
+          return  updateLovItem(category,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLovItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateLovItem>>>
+    export type UpdateLovItemMutationBody = BodyType<LovItemUpdate>
+    export type UpdateLovItemMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a LOV item label or sort order
+ */
+export const useUpdateLovItem = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLovItem>>, TError,{category: string;id: number;data: BodyType<LovItemUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLovItem>>,
+        TError,
+        {category: string;id: number;data: BodyType<LovItemUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateLovItemMutationOptions(options));
+    }
+
+export const getDeleteLovItemUrl = (category: string,
+    id: number,) => {
+
+
+
+
+  return `/api/sysadmin/lov/${category}/${id}`
+}
+
+/**
+ * @summary Delete a LOV item (non-system items only)
+ */
+export const deleteLovItem = async (category: string,
+    id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteLovItemUrl(category,id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteLovItemMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLovItem>>, TError,{category: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLovItem>>, TError,{category: string;id: number}, TContext> => {
+
+const mutationKey = ['deleteLovItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLovItem>>, {category: string;id: number}> = (props) => {
+          const {category,id} = props ?? {};
+
+          return  deleteLovItem(category,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteLovItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLovItem>>>
+
+    export type DeleteLovItemMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a LOV item (non-system items only)
+ */
+export const useDeleteLovItem = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLovItem>>, TError,{category: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteLovItem>>,
+        TError,
+        {category: string;id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteLovItemMutationOptions(options));
+    }
 
 export const getListRolesUrl = () => {
 

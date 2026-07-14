@@ -9,15 +9,10 @@ export interface HealthStatus {
   status: string;
 }
 
-export type EmploymentType = typeof EmploymentType[keyof typeof EmploymentType];
-
-
-export const EmploymentType = {
-  full_time: 'full_time',
-  part_time: 'part_time',
-  contract: 'contract',
-  intern: 'intern',
-} as const;
+/**
+ * Employment type value — managed via List of Values
+ */
+export type EmploymentType = string;
 
 export type EmployeeStatus = typeof EmployeeStatus[keyof typeof EmployeeStatus];
 
@@ -28,16 +23,10 @@ export const EmployeeStatus = {
   on_leave: 'on_leave',
 } as const;
 
-export type LeaveType = typeof LeaveType[keyof typeof LeaveType];
-
-
-export const LeaveType = {
-  vacation: 'vacation',
-  sick: 'sick',
-  personal: 'personal',
-  bereavement: 'bereavement',
-  other: 'other',
-} as const;
+/**
+ * Leave type value — managed via List of Values
+ */
+export type LeaveType = string;
 
 export type LeaveStatus = typeof LeaveStatus[keyof typeof LeaveStatus];
 
@@ -186,6 +175,39 @@ export interface DashboardSummary {
   departmentBreakdown: DepartmentHeadcount[];
   recentHires: Employee[];
   upcomingLeave: LeaveRequest[];
+}
+
+export interface LovItem {
+  id: number;
+  category: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
+  isSystem: boolean;
+  createdAt: string;
+}
+
+export interface LovItemInput {
+  /** @minLength 1 */
+  label: string;
+  /** @minLength 1 */
+  value: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface LovItemUpdate {
+  /** @minLength 1 */
+  label?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface LovCategory {
+  category: string;
+  label: string;
+  items: LovItem[];
 }
 
 export interface LoginInput {

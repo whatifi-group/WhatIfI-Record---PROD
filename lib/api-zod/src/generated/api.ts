@@ -171,7 +171,7 @@ export const ListEmployeesResponseItem = zod.object({
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
@@ -197,7 +197,7 @@ export const CreateEmployeeBody = zod.object({
   "phone": zod.string().optional(),
   "jobTitle": zod.string().min(1),
   "departmentId": zod.number().nullish(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullish(),
@@ -213,7 +213,7 @@ export const CreateEmployeeResponse = zod.object({
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
@@ -238,7 +238,7 @@ export const GetEmployeeResponse = zod.object({
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
@@ -267,7 +267,7 @@ export const UpdateEmployeeBody = zod.object({
   "phone": zod.string().nullish(),
   "jobTitle": zod.string().min(1).optional(),
   "departmentId": zod.number().nullish(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']).optional(),
+  "employmentType": zod.string().optional().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']).optional(),
   "startDate": zod.coerce.date().optional(),
   "salary": zod.number().nullish(),
@@ -283,7 +283,7 @@ export const UpdateEmployeeResponse = zod.object({
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
@@ -314,7 +314,7 @@ export const ListLeaveRequestsResponseItem = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
@@ -329,7 +329,7 @@ export const ListLeaveRequestsResponse = zod.array(ListLeaveRequestsResponseItem
  */
 export const CreateLeaveRequestBody = zod.object({
   "employeeId": zod.number(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "reason": zod.string().optional()
@@ -339,7 +339,7 @@ export const CreateLeaveRequestResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
@@ -359,7 +359,7 @@ export const GetLeaveRequestResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
@@ -376,7 +376,7 @@ export const UpdateLeaveRequestParams = zod.object({
 })
 
 export const UpdateLeaveRequestBody = zod.object({
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']).optional(),
+  "type": zod.string().optional().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date().optional(),
   "endDate": zod.coerce.date().optional(),
   "status": zod.enum(['pending', 'approved', 'rejected']).optional(),
@@ -387,7 +387,7 @@ export const UpdateLeaveRequestResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
@@ -430,7 +430,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
-  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']),
+  "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
@@ -441,7 +441,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string(),
-  "type": zod.enum(['vacation', 'sick', 'personal', 'bereavement', 'other']),
+  "type": zod.string().describe('Leave type value — managed via List of Values'),
   "startDate": zod.coerce.date(),
   "endDate": zod.coerce.date(),
   "status": zod.enum(['pending', 'approved', 'rejected']),
@@ -449,6 +449,116 @@ export const GetDashboardSummaryResponse = zod.object({
   "createdAt": zod.coerce.date()
 }))
 })
+
+
+/**
+ * @summary List all LOV categories with their items
+ */
+export const ListLovCategoriesResponseItem = zod.object({
+  "category": zod.string(),
+  "label": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "isSystem": zod.boolean(),
+  "createdAt": zod.coerce.date()
+}))
+})
+export const ListLovCategoriesResponse = zod.array(ListLovCategoriesResponseItem)
+
+
+/**
+ * @summary List items for a specific LOV category
+ */
+export const ListLovItemsParams = zod.object({
+  "category": zod.coerce.string()
+})
+
+export const ListLovItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "isSystem": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListLovItemsResponse = zod.array(ListLovItemsResponseItem)
+
+
+/**
+ * @summary Add a new item to a LOV category
+ */
+export const CreateLovItemParams = zod.object({
+  "category": zod.coerce.string()
+})
+
+
+
+
+
+export const CreateLovItemBody = zod.object({
+  "label": zod.string().min(1),
+  "value": zod.string().min(1),
+  "sortOrder": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const CreateLovItemResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "isSystem": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a LOV item label or sort order
+ */
+export const UpdateLovItemParams = zod.object({
+  "category": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateLovItemBody = zod.object({
+  "label": zod.string().min(1).optional(),
+  "sortOrder": zod.number().optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateLovItemResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.string(),
+  "value": zod.string(),
+  "label": zod.string(),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "isSystem": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a LOV item (non-system items only)
+ */
+export const DeleteLovItemParams = zod.object({
+  "category": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+export const DeleteLovItemResponse = zod.void()
 
 
 /**

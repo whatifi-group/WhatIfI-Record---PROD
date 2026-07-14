@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * Employment type value — managed via List of Values
- */
-export type EmploymentType = string;
+export interface LovItemUpdate {
+  /** @minLength 1 */
+  label?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}

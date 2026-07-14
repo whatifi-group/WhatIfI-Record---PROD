@@ -31,9 +31,7 @@ export const employeesTable = pgTable("employees", {
     () => departmentsTable.id,
     { onDelete: "set null" },
   ),
-  employmentType: text("employment_type", {
-    enum: employmentTypeValues,
-  }).notNull(),
+  employmentType: text("employment_type").notNull(),
   status: text("status", { enum: employeeStatusValues })
     .notNull()
     .default("active"),

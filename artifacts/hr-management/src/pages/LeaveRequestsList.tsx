@@ -6,9 +6,10 @@ import {
   useDeleteLeaveRequest,
   useListEmployees,
   getListLeaveRequestsQueryKey,
-  getGetDashboardSummaryQueryKey
+  getGetDashboardSummaryQueryKey,
+  useListLovItems
 } from "@workspace/api-client-react";
-import { LeaveStatus, LeaveType } from "@workspace/api-client-react";
+import { LeaveStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +29,7 @@ import { format, differenceInDays } from "date-fns";
 
 const leaveSchema = z.object({
   employeeId: z.coerce.number().min(1, "Employee must be selected"),
-  type: z.enum([LeaveType.vacation, LeaveType.sick, LeaveType.personal, LeaveType.bereavement, LeaveType.other]),
+  type: z.string().min(1, "Leave type is required"),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
   reason: z.string().optional(),
@@ -45,6 +46,7 @@ export default function LeaveRequestsList() {
 
   const { data: leaveRequests, isLoading } = useListLeaveRequests();
   const { data: employees } = useListEmployees({ status: "active" as any });
+  const { data: leaveTypes } = useListLovItems("leave_type");
   
   const createLeave = useCreateLeaveRequest();
   const updateLeave = useUpdateLeaveRequest();
@@ -54,7 +56,7 @@ export default function LeaveRequestsList() {
     resolver: zodResolver(leaveSchema),
     defaultValues: {
       employeeId: 0,
-      type: LeaveType.vacation,
+      type: "vacation",
       startDate: new Date().toISOString().split("T")[0],
       endDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
       reason: "",
@@ -183,11 +185,9 @@ export default function LeaveRequestsList() {
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value={LeaveType.vacation}>Vacation</SelectItem>
-                        <SelectItem value={LeaveType.sick}>Sick Leave</SelectItem>
-                        <SelectItem value={LeaveType.personal}>Personal</SelectItem>
-                        <SelectItem value={LeaveType.bereavement}>Bereavement</SelectItem>
-                        <SelectItem value={LeaveType.other}>Other</SelectItem>
+                        {leaveTypes?.filter(t => t.isActive).map(type => (
+                          <SelectItem key={type.id} value={type.value}>{type.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

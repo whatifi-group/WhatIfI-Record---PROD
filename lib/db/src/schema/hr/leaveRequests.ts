@@ -25,7 +25,7 @@ export const leaveRequestsTable = pgTable("leave_requests", {
   employeeId: integer("employee_id")
     .notNull()
     .references(() => employeesTable.id, { onDelete: "cascade" }),
-  type: text("type", { enum: leaveTypeValues }).notNull(),
+  type: text("type").notNull(),
   startDate: date("start_date", { mode: "string" }).notNull(),
   endDate: date("end_date", { mode: "string" }).notNull(),
   status: text("status", { enum: leaveStatusValues })

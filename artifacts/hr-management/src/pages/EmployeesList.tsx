@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, getGetDashboardSummaryQueryKey } from "@workspace/api-client-react";
-import { EmployeeStatus, EmploymentType } from "@workspace/api-client-react";
+import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, getGetDashboardSummaryQueryKey, useListLovItems } from "@workspace/api-client-react";
+import { EmployeeStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ const employeeSchema = z.object({
   phone: z.string().optional(),
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
-  employmentType: z.enum([EmploymentType.full_time, EmploymentType.part_time, EmploymentType.contract, EmploymentType.intern]),
+  employmentType: z.string().min(1, "Engagement type is required"),
   status: z.enum([EmployeeStatus.active, EmployeeStatus.inactive, EmployeeStatus.on_leave]),
   startDate: z.string().min(1, "Start date is required"),
   salary: z.coerce.number().optional().nullable(),
@@ -43,6 +43,7 @@ export default function EmployeesList() {
 
   const { data: employees, isLoading } = useListEmployees();
   const { data: departments } = useListDepartments();
+  const { data: employmentTypes } = useListLovItems("employment_type");
   const createEmployee = useCreateEmployee();
 
   const form = useForm<EmployeeFormValues>({
@@ -54,7 +55,7 @@ export default function EmployeesList() {
       phone: "",
       jobTitle: "",
       departmentId: null,
-      employmentType: EmploymentType.full_time,
+      employmentType: "full_time",
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
       salary: null,
@@ -172,10 +173,9 @@ export default function EmployeesList() {
                           <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value={EmploymentType.full_time}>Full Time</SelectItem>
-                          <SelectItem value={EmploymentType.part_time}>Part Time</SelectItem>
-                          <SelectItem value={EmploymentType.contract}>Contract</SelectItem>
-                          <SelectItem value={EmploymentType.intern}>Intern</SelectItem>
+                          {employmentTypes?.filter(t => t.isActive).map(type => (
+                            <SelectItem key={type.id} value={type.value}>{type.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />

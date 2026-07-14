@@ -6,9 +6,10 @@ import {
   useDeleteEmployee, 
   getGetEmployeeQueryKey,
   useListDepartments,
-  getListEmployeesQueryKey
+  getListEmployeesQueryKey,
+  useListLovItems
 } from "@workspace/api-client-react";
-import { EmployeeStatus, EmploymentType } from "@workspace/api-client-react";
+import { EmployeeStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ const employeeUpdateSchema = z.object({
   phone: z.string().optional().nullable(),
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
-  employmentType: z.enum([EmploymentType.full_time, EmploymentType.part_time, EmploymentType.contract, EmploymentType.intern]),
+  employmentType: z.string().min(1, "Engagement type is required"),
   status: z.enum([EmployeeStatus.active, EmployeeStatus.inactive, EmployeeStatus.on_leave]),
   startDate: z.string().min(1, "Start date is required"),
   salary: z.coerce.number().optional().nullable(),
@@ -52,6 +53,7 @@ export default function EmployeeProfile() {
     query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) } 
   });
   const { data: departments } = useListDepartments();
+  const { data: employmentTypes } = useListLovItems("employment_type");
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
 
@@ -64,7 +66,7 @@ export default function EmployeeProfile() {
       phone: "",
       jobTitle: "",
       departmentId: null,
-      employmentType: EmploymentType.full_time,
+      employmentType: "full_time",
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
       salary: null,
@@ -291,10 +293,9 @@ export default function EmployeeProfile() {
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                             <SelectContent>
-                              <SelectItem value={EmploymentType.full_time}>Full Time</SelectItem>
-                              <SelectItem value={EmploymentType.part_time}>Part Time</SelectItem>
-                              <SelectItem value={EmploymentType.contract}>Contract</SelectItem>
-                              <SelectItem value={EmploymentType.intern}>Intern</SelectItem>
+                              {employmentTypes?.filter(t => t.isActive || t.value === field.value).map(type => (
+                                <SelectItem key={type.id} value={type.value}>{type.label}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

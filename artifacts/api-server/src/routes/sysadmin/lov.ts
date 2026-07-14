@@ -31,8 +31,9 @@ router.get("/sysadmin/lov", async (req, res): Promise<void> => {
     .from(lovItemsTable)
     .orderBy(lovItemsTable.category, lovItemsTable.sortOrder, lovItemsTable.label);
 
-  // Group by category
+  // Group by category — seed all known categories first so empty ones still appear
   const grouped = new Map<string, typeof rows>();
+  for (const cat of Object.keys(CATEGORY_LABELS)) grouped.set(cat, []);
   for (const row of rows) {
     if (!grouped.has(row.category)) grouped.set(row.category, []);
     grouped.get(row.category)!.push(row);

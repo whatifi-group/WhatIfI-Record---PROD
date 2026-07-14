@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "WhatIfI HR"
+version = "1.0.0"
+id = "artifacts/hr-management"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18789
+
+[services.development]
+run = "pnpm --filter @workspace/hr-management run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hr-management", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/hr-management/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18789"
+BASE_PATH = "/"

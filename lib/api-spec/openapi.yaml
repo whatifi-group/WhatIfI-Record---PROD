@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: departments
+    description: Department operations
+  - name: employees
+    description: Employee operations
+  - name: leave-requests
+    description: Leave request operations
+  - name: dashboard
+    description: Dashboard summary operations
 paths:
   /healthz:
     get:
@@ -24,6 +32,327 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create a department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentInput"
+      responses:
+        "201":
+          description: Created department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+
+  /departments/{id}:
+    get:
+      operationId: getDepartment
+      tags: [departments]
+      summary: Get a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Update a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentUpdate"
+      responses:
+        "200":
+          description: Updated department
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete a department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      summary: List employees
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EmployeeStatus"
+      responses:
+        "200":
+          description: List of employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Employee"
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      summary: Create an employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeInput"
+      responses:
+        "201":
+          description: Created employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      summary: Get an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      summary: Update an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeUpdate"
+      responses:
+        "200":
+          description: Updated employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployee
+      tags: [employees]
+      summary: Delete an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /leave-requests:
+    get:
+      operationId: listLeaveRequests
+      tags: [leave-requests]
+      summary: List leave requests
+      parameters:
+        - name: employeeId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/LeaveStatus"
+      responses:
+        "200":
+          description: List of leave requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaveRequest"
+    post:
+      operationId: createLeaveRequest
+      tags: [leave-requests]
+      summary: Create a leave request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveRequestInput"
+      responses:
+        "201":
+          description: Created leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+
+  /leave-requests/{id}:
+    get:
+      operationId: getLeaveRequest
+      tags: [leave-requests]
+      summary: Get a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateLeaveRequest
+      tags: [leave-requests]
+      summary: Update a leave request (e.g. approve/reject)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveRequestUpdate"
+      responses:
+        "200":
+          description: Updated leave request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaveRequest"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLeaveRequest
+      tags: [leave-requests]
+      summary: Delete a leave request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary
+      description: Aggregate counts and recent activity for the HR dashboard
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +363,285 @@ components:
       required:
         - status
 
+    EmploymentType:
+      type: string
+      enum: [full_time, part_time, contract, intern]
+
+    EmployeeStatus:
+      type: string
+      enum: [active, inactive, on_leave]
+
+    LeaveType:
+      type: string
+      enum: [vacation, sick, personal, bereavement, other]
+
+    LeaveStatus:
+      type: string
+      enum: [pending, approved, rejected]
+
+    Department:
+      type: object
+      required: [id, name, description, headEmployeeId, employeeCount, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        headEmployeeId:
+          type: ["integer", "null"]
+        employeeCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    DepartmentInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        headEmployeeId:
+          type: ["integer", "null"]
+
+    DepartmentUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: ["string", "null"]
+        headEmployeeId:
+          type: ["integer", "null"]
+
+    Employee:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - phone
+        - jobTitle
+        - departmentId
+        - departmentName
+        - employmentType
+        - status
+        - startDate
+        - salary
+        - avatarUrl
+        - createdAt
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        departmentName:
+          type: ["string", "null"]
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        status:
+          $ref: "#/components/schemas/EmployeeStatus"
+        startDate:
+          type: string
+          format: date
+        salary:
+          type: ["number", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeInput:
+      type: object
+      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 1
+        phone:
+          type: string
+        jobTitle:
+          type: string
+          minLength: 1
+        departmentId:
+          type: ["integer", "null"]
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        status:
+          $ref: "#/components/schemas/EmployeeStatus"
+        startDate:
+          type: string
+          format: date
+        salary:
+          type: ["number", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 1
+        phone:
+          type: ["string", "null"]
+        jobTitle:
+          type: string
+          minLength: 1
+        departmentId:
+          type: ["integer", "null"]
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        status:
+          $ref: "#/components/schemas/EmployeeStatus"
+        startDate:
+          type: string
+          format: date
+        salary:
+          type: ["number", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+
+    LeaveRequest:
+      type: object
+      required:
+        - id
+        - employeeId
+        - employeeName
+        - type
+        - startDate
+        - endDate
+        - status
+        - reason
+        - createdAt
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        type:
+          $ref: "#/components/schemas/LeaveType"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          $ref: "#/components/schemas/LeaveStatus"
+        reason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    LeaveRequestInput:
+      type: object
+      required: [employeeId, type, startDate, endDate]
+      properties:
+        employeeId:
+          type: integer
+        type:
+          $ref: "#/components/schemas/LeaveType"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        reason:
+          type: string
+
+    LeaveRequestUpdate:
+      type: object
+      properties:
+        type:
+          $ref: "#/components/schemas/LeaveType"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        status:
+          $ref: "#/components/schemas/LeaveStatus"
+        reason:
+          type: ["string", "null"]
+
+    DepartmentHeadcount:
+      type: object
+      required: [departmentId, departmentName, count]
+      properties:
+        departmentId:
+          type: integer
+        departmentName:
+          type: string
+        count:
+          type: integer
+
+    DashboardSummary:
+      type: object
+      required:
+        - totalEmployees
+        - activeEmployees
+        - onLeaveEmployees
+        - totalDepartments
+        - pendingLeaveRequests
+        - departmentBreakdown
+        - recentHires
+        - upcomingLeave
+      properties:
+        totalEmployees:
+          type: integer
+        activeEmployees:
+          type: integer
+        onLeaveEmployees:
+          type: integer
+        totalDepartments:
+          type: integer
+        pendingLeaveRequests:
+          type: integer
+        departmentBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentHeadcount"
+        recentHires:
+          type: array
+          items:
+            $ref: "#/components/schemas/Employee"
+        upcomingLeave:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaveRequest"

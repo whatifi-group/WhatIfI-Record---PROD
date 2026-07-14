@@ -5,12 +5,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Users, ShieldCheck, ArrowUpRight, ShieldX, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ModuleLink {
   name: string;
   description: string;
   href: string;
   icon: LucideIcon;
+  permission?: string;
 }
 
 // Landing page for the whole company system. As new modules are added
@@ -28,12 +30,15 @@ const modules: ModuleLink[] = [
     description: "User accounts, roles, and system permissions.",
     href: "/sysadmin",
     icon: ShieldCheck,
+    permission: "sysadmin",
   },
 ];
 
 export default function CompanyDashboard() {
   const [, setLocation] = useLocation();
+  const { hasPermission } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
+  const visibleModules = modules.filter((m) => !m.permission || hasPermission(m.permission));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -70,7 +75,7 @@ export default function CompanyDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {modules.map((mod) => (
+        {visibleModules.map((mod) => (
           <Link key={mod.href} href={mod.href}>
             <Card className="border-border/50 shadow-sm hover-elevate transition-all cursor-pointer group h-full">
               <CardHeader>

@@ -33,3 +33,4 @@ Deliberately out of scope for v1: payroll, attendance/time tracking.
 ## User preferences
 - Brand identity from the uploaded logo: navy/red/green compass motif.
 - Keep the tone professional throughout — no playful/thematic renaming of standard HR terms (e.g. use "Employee"/"Department", not invented nicknames).
+- Every dropdown/select in the app must have a corresponding LOV category in SysAdmin → List of Values. When adding a new dropdown: (1) add the category key + label to `CATEGORY_LABELS` in `artifacts/api-server/src/routes/sysadmin/lov.ts`, (2) seed initial values into `lov_items`, (3) load options in the component with `useListLovItems("<category>")` — never hardcode the options array.

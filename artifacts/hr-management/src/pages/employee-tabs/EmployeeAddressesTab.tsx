@@ -5,6 +5,7 @@ import {
   useUpdateEmployeeAddress,
   useDeleteEmployeeAddress,
   getListEmployeeAddressesQueryKey,
+  useListLovItems,
 } from "@workspace/api-client-react";
 import type { EmployeeAddress, EmployeeAddressInput } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
-const ADDRESS_TYPES = ["home", "work", "other", "billing", "delivery"];
 
 interface AddressFormData {
   addressType: string;
@@ -55,6 +55,7 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
   const [form, setForm] = useState<AddressFormData>(defaultForm);
 
   const { data: addresses, isLoading } = useListEmployeeAddresses(employeeId);
+  const { data: addressTypes } = useListLovItems("address_type");
   const createAddress = useCreateEmployeeAddress();
   const updateAddress = useUpdateEmployeeAddress();
   const deleteAddress = useDeleteEmployeeAddress();
@@ -156,7 +157,7 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="secondary" className="capitalize text-xs">{address.addressType}</Badge>
+                    <Badge variant="secondary" className="text-xs">{addressTypes?.find(t => t.value === address.addressType)?.label ?? address.addressType}</Badge>
                     {address.isPrimary && <Badge className="bg-primary/10 text-primary text-xs border-0">Primary</Badge>}
                   </div>
                   <p className="text-sm font-medium text-foreground">{address.line1}</p>
@@ -205,7 +206,7 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
               <Select value={form.addressType} onValueChange={(v) => setForm(f => ({ ...f, addressType: v }))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ADDRESS_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                  {addressTypes?.filter(t => t.isActive).map(t => <SelectItem key={t.id} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

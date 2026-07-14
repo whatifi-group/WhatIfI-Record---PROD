@@ -5,6 +5,7 @@ import {
   useUpdateEmployeeWorkRecord,
   useDeleteEmployeeWorkRecord,
   getListEmployeeWorkRecordsQueryKey,
+  useListLovItems,
 } from "@workspace/api-client-react";
 import type { EmployeeWorkRecord } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Clock } from "lucide-react";
 import { format } from "date-fns";
 
-const SHIFT_TYPES = ["regular", "overtime", "night", "weekend", "holiday", "on-call", "other"];
 
 interface Props {
   employeeId: number;
@@ -63,6 +63,7 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
   const [form, setForm] = useState<FormData>(defaultForm);
 
   const { data: records, isLoading } = useListEmployeeWorkRecords(employeeId);
+  const { data: shiftTypes } = useListLovItems("shift_type");
   const createRecord = useCreateEmployeeWorkRecord();
   const updateRecord = useUpdateEmployeeWorkRecord();
   const deleteRecord = useDeleteEmployeeWorkRecord();
@@ -196,9 +197,9 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={`capitalize text-xs ${shiftTypeColor[record.shiftType] || shiftTypeColor.other}`}
+                      className={`text-xs ${shiftTypeColor[record.shiftType] || shiftTypeColor.other}`}
                     >
-                      {record.shiftType}
+                      {shiftTypes?.find(t => t.value === record.shiftType)?.label ?? record.shiftType}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{record.startTime || "—"}</TableCell>
@@ -258,7 +259,7 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
               <Select value={form.shiftType} onValueChange={(v) => setForm(f => ({ ...f, shiftType: v }))}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SHIFT_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                  {shiftTypes?.filter(t => t.isActive).map(t => <SelectItem key={t.id} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

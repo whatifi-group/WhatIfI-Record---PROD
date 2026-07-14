@@ -18,6 +18,10 @@ const CATEGORY_LABELS: Record<string, string> = {
   employment_type: "Employment Types",
   leave_type: "Leave Types",
   employee_status: "Employee Status",
+  address_type: "Address Types",
+  shift_type: "Shift Types",
+  medical_condition: "Medical Conditions",
+  dietary_requirement: "Dietary Requirements",
 };
 
 // GET /sysadmin/lov — all categories with their items

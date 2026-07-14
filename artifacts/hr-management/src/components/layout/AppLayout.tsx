@@ -6,27 +6,52 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarProvider,
   SidebarTrigger,
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Users, Building2, Calendar, LayoutDashboard } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
 import { useHealthCheck } from "@workspace/api-client-react";
+
+interface ModulePage {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+interface Module {
+  name: string;
+  icon: LucideIcon;
+  pages: ModulePage[];
+}
+
+const modules: Module[] = [
+  {
+    name: "Human Resources",
+    icon: Users,
+    pages: [
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Directory", href: "/employees", icon: Users },
+      { name: "Departments", href: "/departments", icon: Building2 },
+      { name: "Leave Requests", href: "/leave", icon: Calendar },
+    ],
+  },
+];
 
 function AppSidebar() {
   const [location] = useLocation();
   const { setOpenMobile } = useSidebar();
   const { data: health } = useHealthCheck();
 
-  const navigation = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Directory", href: "/employees", icon: Users },
-    { name: "Departments", href: "/departments", icon: Building2 },
-    { name: "Leave Requests", href: "/leave", icon: Calendar },
-  ];
+  const isModuleActive = (mod: Module) =>
+    mod.pages.some((page) => location === page.href || location.startsWith(page.href));
 
   return (
     <Sidebar variant="sidebar" className="border-r border-border bg-sidebar">
@@ -41,21 +66,45 @@ function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="px-4 py-2">
         <SidebarMenu>
-          {navigation.map((item) => {
-            const isActive = item.href === "/"
-              ? location === "/"
-              : location === item.href || location.startsWith(item.href);
-            return (
-              <SidebarMenuItem key={item.name}>
-                <SidebarMenuButton asChild isActive={isActive} tooltip={item.name}>
-                  <Link href={item.href} onClick={() => setOpenMobile(false)} className="flex items-center gap-3 py-2">
-                    <item.icon className="h-4 w-4" />
-                    <span className="font-medium">{item.name}</span>
-                  </Link>
-                </SidebarMenuButton>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={location === "/"} tooltip="Home">
+              <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 py-2">
+                <Home className="h-4 w-4" />
+                <span className="font-medium">Home</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          {modules.map((mod) => (
+            <Collapsible key={mod.name} defaultOpen={isModuleActive(mod)} className="group/collapsible">
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton isActive={isModuleActive(mod)} tooltip={mod.name}>
+                    <mod.icon className="h-4 w-4" />
+                    <span className="font-medium">{mod.name}</span>
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {mod.pages.map((page) => {
+                      const isActive = location === page.href || location.startsWith(page.href);
+                      return (
+                        <SidebarMenuSubItem key={page.href}>
+                          <SidebarMenuSubButton asChild isActive={isActive}>
+                            <Link href={page.href} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
+                              <page.icon className="h-4 w-4" />
+                              <span>{page.name}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
               </SidebarMenuItem>
-            );
-          })}
+            </Collapsible>
+          ))}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-6 space-y-4">

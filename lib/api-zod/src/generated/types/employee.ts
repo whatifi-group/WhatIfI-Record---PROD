@@ -27,5 +27,15 @@ export interface Employee {
   salary: number | null;
   /** @nullable */
   avatarUrl: string | null;
+  /**
+     * LOV value from leaver_reason category; required when status is leaver
+     * @nullable
+     */
+  leaverReason: string | null;
+  /**
+     * Date the employee left; defaults to today when status is set to leaver
+     * @nullable
+     */
+  leaverDate: Date | null;
   createdAt: Date;
 }

@@ -85,6 +85,16 @@ export interface Employee {
   salary: number | null;
   /** @nullable */
   avatarUrl: string | null;
+  /**
+     * LOV value from leaver_reason category; required when status is leaver
+     * @nullable
+     */
+  leaverReason: string | null;
+  /**
+     * Date the employee left; defaults to today when status is set to leaver
+     * @nullable
+     */
+  leaverDate: string | null;
   createdAt: string;
 }
 
@@ -129,6 +139,16 @@ export interface EmployeeUpdate {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /**
+     * Required when setting status to leaver
+     * @nullable
+     */
+  leaverReason?: string | null;
+  /**
+     * Defaults to today if omitted when setting status to leaver
+     * @nullable
+     */
+  leaverDate?: string | null;
 }
 
 export interface LeaveRequest {

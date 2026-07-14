@@ -22,12 +22,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 import EmployeeAddressesTab from "./employee-tabs/EmployeeAddressesTab";
+import MarkAsLeaverDialog from "./MarkAsLeaverDialog";
 import EmployeePayrollTab from "./employee-tabs/EmployeePayrollTab";
 import EmployeeAttachmentsTab from "./employee-tabs/EmployeeAttachmentsTab";
 import EmployeeMedicalTab from "./employee-tabs/EmployeeMedicalTab";
@@ -63,10 +64,11 @@ export default function EmployeeProfile() {
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('edit_employees');
-  const canDelete = hasPermission('delete_employees');
+  const canDelete = hasPermission('sysadmin');
   const canViewPayroll = hasPermission('view_payroll') || hasPermission('sysadmin');
 
   const [isEditing, setIsEditing] = useState(canEdit);
+  const [isMarkingLeaver, setIsMarkingLeaver] = useState(false);
 
   const { data: employee, isLoading, isError } = useGetEmployee(employeeId, { 
     query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) } 
@@ -74,6 +76,7 @@ export default function EmployeeProfile() {
   const { data: departments } = useListDepartments();
   const { data: employmentTypes } = useListLovItems("employment_type");
   const { data: employeeStatuses } = useListLovItems("employee_status");
+  const { data: leaverReasons } = useListLovItems("leaver_reason");
   const updateEmployee = useUpdateEmployee();
   const deleteEmployee = useDeleteEmployee();
 
@@ -185,11 +188,15 @@ export default function EmployeeProfile() {
               <p className="text-sm font-medium text-muted-foreground">{employee.jobTitle}</p>
               
               <div className="mt-3 flex justify-center">
-                <Badge variant={employee.status === EmployeeStatus.active ? "default" : "secondary"} className={
-                  employee.status === EmployeeStatus.active ? "bg-secondary hover:bg-secondary/90 text-white" : 
-                  employee.status === EmployeeStatus.on_leave ? "bg-chart-4 hover:bg-chart-4/90 text-white" : ""
-                }>
-                  {employee.status.replace("_", " ").toUpperCase()}
+                <Badge
+                  variant={employee.status === EmployeeStatus.active ? "default" : "secondary"}
+                  className={
+                    employee.status === EmployeeStatus.active ? "bg-secondary hover:bg-secondary/90 text-white" :
+                    employee.status === EmployeeStatus.on_leave ? "bg-chart-4 hover:bg-chart-4/90 text-white" :
+                    employee.status === EmployeeStatus.leaver ? "bg-destructive/80 hover:bg-destructive/70 text-white" : ""
+                  }
+                >
+                  {employee.status.replace(/_/g, " ").toUpperCase()}
                 </Badge>
               </div>
 
@@ -217,11 +224,44 @@ export default function EmployeeProfile() {
                   <span>Joined {format(new Date(employee.startDate), "MMM d, yyyy")}</span>
                 </div>
               </div>
+
+              {/* Leaver info in sidebar */}
+              {employee.status === EmployeeStatus.leaver && (
+                <div className="mt-4 pt-4 border-t border-border/50 space-y-2 text-sm text-left">
+                  {employee.leaverDate && (
+                    <div className="flex items-center text-muted-foreground">
+                      <LogOut className="w-4 h-4 mr-3 shrink-0 text-destructive/60" />
+                      <span>Left {format(new Date(employee.leaverDate), "MMM d, yyyy")}</span>
+                    </div>
+                  )}
+                  {employee.leaverReason && (
+                    <div className="flex items-start text-muted-foreground">
+                      <span className="w-4 h-4 mr-3 shrink-0" />
+                      <span className="capitalize">
+                        {leaverReasons?.find(r => r.value === employee.leaverReason)?.label ?? employee.leaverReason.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
-          
-          {canDelete && (
-            <div className="flex flex-col gap-2">
+
+          {/* Action buttons */}
+          <div className="flex flex-col gap-2">
+            {/* Mark as Leaver — edit_employees on active/on_leave employees */}
+            {canEdit && (employee.status === EmployeeStatus.active || employee.status === EmployeeStatus.on_leave) && (
+              <Button
+                variant="ghost"
+                className="w-full text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                onClick={() => setIsMarkingLeaver(true)}
+              >
+                <LogOut className="w-4 h-4 mr-2" /> Mark as Leaver
+              </Button>
+            )}
+
+            {/* Permanent delete — sysadmin only */}
+            {canDelete && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
@@ -243,8 +283,17 @@ export default function EmployeeProfile() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Mark as Leaver dialog */}
+          <MarkAsLeaverDialog
+            open={isMarkingLeaver}
+            onClose={() => setIsMarkingLeaver(false)}
+            employeeId={employeeId}
+            employeeName={`${employee.firstName} ${employee.lastName}`}
+            onSuccess={() => setIsMarkingLeaver(false)}
+          />
         </div>
 
         {/* Main Content — Tabbed */}
@@ -332,7 +381,7 @@ export default function EmployeeProfile() {
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                   <SelectContent>
-                                    {employeeStatuses?.filter(s => s.isActive || s.value === field.value).map(s => (
+                                    {employeeStatuses?.filter(s => (s.isActive || s.value === field.value) && s.value !== 'leaver').map(s => (
                                       <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
                                     ))}
                                   </SelectContent>
@@ -390,6 +439,23 @@ export default function EmployeeProfile() {
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Start Date</h3>
                         <p className="text-base font-medium">{format(new Date(employee.startDate), "MMMM d, yyyy")}</p>
                       </div>
+                      {employee.status === EmployeeStatus.leaver && (
+                        <>
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-1">Leaver Reason</h3>
+                            <p className="text-base font-medium">
+                              {leaverReasons?.find(r => r.value === employee.leaverReason)?.label
+                                ?? (employee.leaverReason?.replace(/_/g, " ") || "Not recorded")}
+                            </p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-1">Leaving Date</h3>
+                            <p className="text-base font-medium">
+                              {employee.leaverDate ? format(new Date(employee.leaverDate), "MMMM d, yyyy") : "Not recorded"}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </CardContent>

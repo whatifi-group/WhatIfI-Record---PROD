@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, departmentsTable, employeesTable } from "@workspace/db";
+import { requirePermission } from "../../middlewares/requirePermission";
 import {
   CreateEmployeeBody,
   UpdateEmployeeBody,
@@ -36,6 +37,8 @@ function employeeSelection() {
       startDate: employeesTable.startDate,
       salary: sql<number | null>`${employeesTable.salary}::float8`,
       avatarUrl: employeesTable.avatarUrl,
+      leaverReason: employeesTable.leaverReason,
+      leaverDate: employeesTable.leaverDate,
       createdAt: employeesTable.createdAt,
     })
     .from(employeesTable)
@@ -135,7 +138,14 @@ router.patch("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { salary, startDate, ...rest } = parsed.data;
+  // Enforce: leaverReason required when setting status to leaver
+  if (parsed.data.status === "leaver" && !parsed.data.leaverReason) {
+    res.status(400).json({ error: "leaverReason is required when setting status to leaver" });
+    return;
+  }
+
+  const { salary, startDate, leaverDate, ...rest } = parsed.data;
+  const today = new Date().toISOString().slice(0, 10);
 
   const [updated] = await db
     .update(employeesTable)
@@ -146,6 +156,14 @@ router.patch("/employees/:id", async (req, res): Promise<void> => {
         : {}),
       ...(salary !== undefined
         ? { salary: salary != null ? String(salary) : null }
+        : {}),
+      // Explicit leaverDate from request
+      ...(leaverDate !== undefined
+        ? { leaverDate: leaverDate != null ? toDateString(leaverDate) : null }
+        : {}),
+      // Auto-set leaverDate to today if marking as leaver and caller omitted it
+      ...(parsed.data.status === "leaver" && leaverDate === undefined
+        ? { leaverDate: today }
         : {}),
     })
     .where(eq(employeesTable.id, params.data.id))
@@ -163,7 +181,7 @@ router.patch("/employees/:id", async (req, res): Promise<void> => {
   res.json(UpdateEmployeeResponse.parse(row));
 });
 
-router.delete("/employees/:id", async (req, res): Promise<void> => {
+router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {
   const params = DeleteEmployeeParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

@@ -23,6 +23,13 @@ const SEED_ITEMS: SeedItem[] = [
   { category: "employment_type", value: "part_time", label: "Part Time",  sortOrder: 2 },
   { category: "employment_type", value: "contract",  label: "Contract",   sortOrder: 3 },
   { category: "employment_type", value: "intern",    label: "Intern",     sortOrder: 4 },
+  // leaver_reason
+  { category: "leaver_reason", value: "resignation",       label: "Resignation",       sortOrder: 1 },
+  { category: "leaver_reason", value: "redundancy",        label: "Redundancy",        sortOrder: 2 },
+  { category: "leaver_reason", value: "retirement",        label: "Retirement",        sortOrder: 3 },
+  { category: "leaver_reason", value: "end_of_contract",   label: "End of Contract",   sortOrder: 4 },
+  { category: "leaver_reason", value: "dismissal",         label: "Dismissal",         sortOrder: 5 },
+  { category: "leaver_reason", value: "other",             label: "Other",             sortOrder: 6 },
   // medical_condition
   { category: "medical_condition", value: "diabetes", label: "Diabetes", sortOrder: 1 },
   { category: "medical_condition", value: "asthma", label: "Asthma", sortOrder: 2 },

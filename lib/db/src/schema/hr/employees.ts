@@ -38,6 +38,8 @@ export const employeesTable = pgTable("employees", {
   startDate: date("start_date", { mode: "string" }).notNull(),
   salary: numeric("salary", { precision: 12, scale: 2 }),
   avatarUrl: text("avatar_url"),
+  leaverReason: text("leaver_reason"),
+  leaverDate: date("leaver_date", { mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

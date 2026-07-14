@@ -159,7 +159,7 @@ export const DeleteDepartmentResponse = zod.void()
 export const ListEmployeesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "departmentId": zod.coerce.number().optional(),
-  "status": zod.enum(['active', 'inactive', 'on_leave']).optional()
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional()
 })
 
 export const ListEmployeesResponseItem = zod.object({
@@ -172,10 +172,12 @@ export const ListEmployeesResponseItem = zod.object({
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
   "avatarUrl": zod.string().nullable(),
+  "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
+  "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
@@ -198,7 +200,7 @@ export const CreateEmployeeBody = zod.object({
   "jobTitle": zod.string().min(1),
   "departmentId": zod.number().nullish(),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullish(),
   "avatarUrl": zod.string().nullish()
@@ -214,10 +216,12 @@ export const CreateEmployeeResponse = zod.object({
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
   "avatarUrl": zod.string().nullable(),
+  "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
+  "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date()
 })
 
@@ -239,10 +243,12 @@ export const GetEmployeeResponse = zod.object({
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
   "avatarUrl": zod.string().nullable(),
+  "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
+  "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date()
 })
 
@@ -268,10 +274,12 @@ export const UpdateEmployeeBody = zod.object({
   "jobTitle": zod.string().min(1).optional(),
   "departmentId": zod.number().nullish(),
   "employmentType": zod.string().optional().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']).optional(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional(),
   "startDate": zod.coerce.date().optional(),
   "salary": zod.number().nullish(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "leaverReason": zod.string().nullish().describe('Required when setting status to leaver'),
+  "leaverDate": zod.coerce.date().nullish().describe('Defaults to today if omitted when setting status to leaver')
 })
 
 export const UpdateEmployeeResponse = zod.object({
@@ -284,10 +292,12 @@ export const UpdateEmployeeResponse = zod.object({
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
-  "status": zod.enum(['active', 'inactive', 'on_leave']),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullable(),
   "avatarUrl": zod.string().nullable(),
+  "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
+  "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date()
 })
 

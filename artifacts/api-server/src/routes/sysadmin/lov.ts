@@ -22,6 +22,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   shift_type: "Shift Types",
   medical_condition: "Medical Conditions",
   dietary_requirement: "Dietary Requirements",
+  leaver_reason: "Leaver Reasons",
 };
 
 // GET /sysadmin/lov — all categories with their items

@@ -28,4 +28,14 @@ export interface EmployeeUpdate {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /**
+     * Required when setting status to leaver
+     * @nullable
+     */
+  leaverReason?: string | null;
+  /**
+     * Defaults to today if omitted when setting status to leaver
+     * @nullable
+     */
+  leaverDate?: Date | null;
 }

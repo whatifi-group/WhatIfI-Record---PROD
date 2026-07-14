@@ -1540,7 +1540,7 @@ components:
 
     EmployeeStatus:
       type: string
-      enum: [active, inactive, on_leave]
+      enum: [active, inactive, on_leave, leaver]
 
     LeaveType:
       type: string
@@ -1607,6 +1607,8 @@ components:
         - startDate
         - salary
         - avatarUrl
+        - leaverReason
+        - leaverDate
         - createdAt
       properties:
         id:
@@ -1636,6 +1638,13 @@ components:
           type: ["number", "null"]
         avatarUrl:
           type: ["string", "null"]
+        leaverReason:
+          type: ["string", "null"]
+          description: LOV value from leaver_reason category; required when status is leaver
+        leaverDate:
+          type: ["string", "null"]
+          format: date
+          description: Date the employee left; defaults to today when status is set to leaver
         createdAt:
           type: string
           format: date-time
@@ -1702,6 +1711,13 @@ components:
           type: ["number", "null"]
         avatarUrl:
           type: ["string", "null"]
+        leaverReason:
+          type: ["string", "null"]
+          description: Required when setting status to leaver
+        leaverDate:
+          type: ["string", "null"]
+          format: date
+          description: Defaults to today if omitted when setting status to leaver
 
     LeaveRequest:
       type: object

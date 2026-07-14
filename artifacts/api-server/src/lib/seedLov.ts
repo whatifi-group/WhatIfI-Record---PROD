@@ -13,6 +13,16 @@ interface SeedItem {
 }
 
 const SEED_ITEMS: SeedItem[] = [
+  // employee_status
+  { category: "employee_status", value: "active",   label: "Active",   sortOrder: 1 },
+  { category: "employee_status", value: "inactive", label: "Inactive", sortOrder: 2 },
+  { category: "employee_status", value: "on_leave", label: "On Leave", sortOrder: 3 },
+  { category: "employee_status", value: "leaver",   label: "Leaver",   sortOrder: 4 },
+  // employment_type
+  { category: "employment_type", value: "full_time", label: "Full Time",  sortOrder: 1 },
+  { category: "employment_type", value: "part_time", label: "Part Time",  sortOrder: 2 },
+  { category: "employment_type", value: "contract",  label: "Contract",   sortOrder: 3 },
+  { category: "employment_type", value: "intern",    label: "Intern",     sortOrder: 4 },
   // medical_condition
   { category: "medical_condition", value: "diabetes", label: "Diabetes", sortOrder: 1 },
   { category: "medical_condition", value: "asthma", label: "Asthma", sortOrder: 2 },

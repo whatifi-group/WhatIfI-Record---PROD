@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ArrowUpRight } from "lucide-react";
+import { Users, ShieldCheck, ArrowUpRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface ModuleLink {
@@ -19,6 +19,12 @@ const modules: ModuleLink[] = [
     description: "Employees, departments, and leave requests.",
     href: "/dashboard",
     icon: Users,
+  },
+  {
+    name: "SysAdmin",
+    description: "User accounts, roles, and system permissions.",
+    href: "/sysadmin",
+    icon: ShieldCheck,
   },
 ];
 

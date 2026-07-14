@@ -68,8 +68,7 @@ function AppSidebar() {
         <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-border/50">
           <img src={logoUrl} alt="WhatIfI Group Ltd" className="w-10 h-10 object-contain" />
           <div className="flex flex-col">
-            <span className="font-display font-bold text-sm text-foreground leading-tight">WhatIfI Group</span>
-            <span className="text-[10px] text-muted-foreground leading-tight">Human Resources</span>
+            <span className="font-display font-bold text-sm text-foreground leading-tight">WhatIfI Record</span>
           </div>
         </div>
       </SidebarHeader>

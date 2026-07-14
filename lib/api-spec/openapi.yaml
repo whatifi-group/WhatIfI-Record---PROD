@@ -1584,12 +1584,9 @@ components:
 
     LovItemInput:
       type: object
-      required: [label, value]
+      required: [label]
       properties:
         label:
-          type: string
-          minLength: 1
-        value:
           type: string
           minLength: 1
         sortOrder:

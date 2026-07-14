@@ -39,7 +39,6 @@ import * as z from "zod";
 
 const lovItemSchema = z.object({
   label: z.string().min(1, "Label is required"),
-  value: z.string().min(1, "Value is required").regex(/^[a-z0-9_]+$/, "Value can only contain lowercase letters, numbers, and underscores"),
   isActive: z.boolean().default(true),
   sortOrder: z.coerce.number().default(0),
 });
@@ -61,20 +60,20 @@ export default function LovCategoryDetail() {
 
   const form = useForm<LovItemFormValues>({
     resolver: zodResolver(lovItemSchema),
-    defaultValues: { label: "", value: "", isActive: true, sortOrder: 0 },
+    defaultValues: { label: "", isActive: true, sortOrder: 0 },
   });
 
   const categoryGroup = categories?.find((c) => c.category === category);
 
   const handleCreate = () => {
     setEditingItem(null);
-    form.reset({ label: "", value: "", isActive: true, sortOrder: 0 });
+    form.reset({ label: "", isActive: true, sortOrder: 0 });
     setFormOpen(true);
   };
 
   const handleEdit = (item: LovItem) => {
     setEditingItem(item);
-    form.reset({ label: item.label, value: item.value, isActive: item.isActive, sortOrder: item.sortOrder });
+    form.reset({ label: item.label, isActive: item.isActive, sortOrder: item.sortOrder });
     setFormOpen(true);
   };
 
@@ -122,7 +121,7 @@ export default function LovCategoryDetail() {
             setFormOpen(false);
           },
           onError: () => {
-            toast({ variant: "destructive", title: "Error", description: "Failed to create item. Value slug must be unique." });
+            toast({ variant: "destructive", title: "Error", description: "Failed to create item. Make sure the label contains at least one letter or number." });
           },
         }
       );
@@ -247,7 +246,7 @@ export default function LovCategoryDetail() {
             <DialogDescription>
               {editingItem
                 ? "Update the label, status, or sorting order."
-                : "Create a new dropdown option. The value key cannot be changed later."}
+                : "Fill in the label and adjust settings below."}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -259,27 +258,6 @@ export default function LovCategoryDetail() {
                   <FormItem>
                     <FormLabel>Display Label</FormLabel>
                     <FormControl><Input placeholder="e.g. Full Time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Value Key</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g. full_time"
-                        {...field}
-                        disabled={!!editingItem}
-                        className={editingItem ? "bg-muted" : ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A unique identifier for code use. Lowercase, numbers, underscores only.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

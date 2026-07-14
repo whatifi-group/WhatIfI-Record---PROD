@@ -70,25 +70,34 @@ router.post("/sysadmin/lov/:category", async (req, res): Promise<void> => {
     return;
   }
 
-  const existing = await db
-    .select({ id: lovItemsTable.id })
-    .from(lovItemsTable)
-    .where(
-      and(
-        eq(lovItemsTable.category, category),
-        eq(lovItemsTable.value, parsed.data.value),
-      ),
-    )
-    .limit(1);
+  // Auto-generate slug from label: lowercase, runs of non-alphanumeric → "_", trim underscores
+  const baseSlug = parsed.data.label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Value already exists in this category" });
+  if (!baseSlug) {
+    res.status(400).json({ error: "Label must contain at least one letter or number." });
     return;
+  }
+
+  // Find a unique slug by appending _2, _3, … if needed
+  let slug = baseSlug;
+  let suffix = 2;
+  while (true) {
+    const conflict = await db
+      .select({ id: lovItemsTable.id })
+      .from(lovItemsTable)
+      .where(and(eq(lovItemsTable.category, category), eq(lovItemsTable.value, slug)))
+      .limit(1);
+    if (conflict.length === 0) break;
+    slug = `${baseSlug}_${suffix++}`;
   }
 
   const [created] = await db
     .insert(lovItemsTable)
-    .values({ ...parsed.data, category, isSystem: false })
+    .values({ ...parsed.data, value: slug, category, isSystem: false })
     .returning();
 
   res.status(201).json(CreateLovItemResponse.parse(created));

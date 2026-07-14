@@ -1003,10 +1003,8 @@ export const CreateLovItemParams = zod.object({
 
 
 
-
 export const CreateLovItemBody = zod.object({
   "label": zod.string().min(1),
-  "value": zod.string().min(1),
   "sortOrder": zod.number().optional(),
   "isActive": zod.boolean().optional()
 })

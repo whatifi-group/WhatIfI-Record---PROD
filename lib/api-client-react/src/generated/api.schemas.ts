@@ -174,8 +174,6 @@ export interface LovItem {
 export interface LovItemInput {
   /** @minLength 1 */
   label: string;
-  /** @minLength 1 */
-  value: string;
   sortOrder?: number;
   isActive?: boolean;
 }

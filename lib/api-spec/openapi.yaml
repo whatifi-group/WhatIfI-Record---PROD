@@ -22,6 +22,8 @@ tags:
     description: Dashboard summary operations
   - name: sysadmin
     description: System administration operations
+  - name: employee-sections
+    description: Extended employee record sections (addresses, payroll, attachments, medical, dietary, next of kin, qualifications, work records)
 
 paths:
   # ── Auth ─────────────────────────────────────────────────────────────────
@@ -277,6 +279,586 @@ paths:
       summary: Delete an employee
       parameters:
         - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  # ── Employee sections ────────────────────────────────────────────────────
+
+  /employees/{id}/addresses:
+    get:
+      operationId: listEmployeeAddresses
+      tags: [employee-sections]
+      summary: List addresses for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeAddress"
+    post:
+      operationId: createEmployeeAddress
+      tags: [employee-sections]
+      summary: Add an address to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAddressInput"
+      responses:
+        "201":
+          description: Created address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAddress"
+
+  /employees/{id}/addresses/{addressId}:
+    patch:
+      operationId: updateEmployeeAddress
+      tags: [employee-sections]
+      summary: Update an employee address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAddressUpdate"
+      responses:
+        "200":
+          description: Updated address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAddress"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeAddress
+      tags: [employee-sections]
+      summary: Delete an employee address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/payroll:
+    get:
+      operationId: getEmployeePayroll
+      tags: [employee-sections]
+      summary: Get payroll record for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Payroll record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayroll"
+        "404":
+          description: No payroll record yet
+    put:
+      operationId: upsertEmployeePayroll
+      tags: [employee-sections]
+      summary: Create or update payroll record for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeePayrollInput"
+      responses:
+        "200":
+          description: Upserted payroll record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayroll"
+
+  /employees/{id}/attachments:
+    get:
+      operationId: listEmployeeAttachments
+      tags: [employee-sections]
+      summary: List attachments for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeAttachment"
+    post:
+      operationId: createEmployeeAttachment
+      tags: [employee-sections]
+      summary: Add an attachment metadata record to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeAttachmentInput"
+      responses:
+        "201":
+          description: Created attachment record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAttachment"
+
+  /employees/{id}/attachments/{attachmentId}:
+    delete:
+      operationId: deleteEmployeeAttachment
+      tags: [employee-sections]
+      summary: Delete an employee attachment record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/medical:
+    get:
+      operationId: getEmployeeMedical
+      tags: [employee-sections]
+      summary: Get medical selections and notes for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Medical data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeMedical"
+    put:
+      operationId: putEmployeeMedical
+      tags: [employee-sections]
+      summary: Replace medical selections and notes for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeMedicalInput"
+      responses:
+        "200":
+          description: Updated medical data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeMedical"
+
+  /employees/{id}/dietary:
+    get:
+      operationId: getEmployeeDietary
+      tags: [employee-sections]
+      summary: Get dietary selections and notes for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dietary data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDietary"
+    put:
+      operationId: putEmployeeDietary
+      tags: [employee-sections]
+      summary: Replace dietary selections and notes for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeDietaryInput"
+      responses:
+        "200":
+          description: Updated dietary data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDietary"
+
+  /employees/{id}/next-of-kin:
+    get:
+      operationId: listEmployeeNextOfKin
+      tags: [employee-sections]
+      summary: List next of kin records for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of next of kin
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeNextOfKin"
+    post:
+      operationId: createEmployeeNextOfKin
+      tags: [employee-sections]
+      summary: Add a next of kin record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeNextOfKinInput"
+      responses:
+        "201":
+          description: Created next of kin record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeNextOfKin"
+
+  /employees/{id}/next-of-kin/{kinId}:
+    patch:
+      operationId: updateEmployeeNextOfKin
+      tags: [employee-sections]
+      summary: Update a next of kin record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: kinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeNextOfKinUpdate"
+      responses:
+        "200":
+          description: Updated next of kin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeNextOfKin"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeNextOfKin
+      tags: [employee-sections]
+      summary: Delete a next of kin record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: kinId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/qualifications:
+    get:
+      operationId: listEmployeeQualifications
+      tags: [employee-sections]
+      summary: List qualifications for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of qualifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeQualification"
+    post:
+      operationId: createEmployeeQualification
+      tags: [employee-sections]
+      summary: Add a qualification to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeQualificationInput"
+      responses:
+        "201":
+          description: Created qualification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeQualification"
+
+  /employees/{id}/qualifications/{qualId}:
+    patch:
+      operationId: updateEmployeeQualification
+      tags: [employee-sections]
+      summary: Update a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeQualificationUpdate"
+      responses:
+        "200":
+          description: Updated qualification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeQualification"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeQualification
+      tags: [employee-sections]
+      summary: Delete a qualification
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: qualId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/work-records:
+    get:
+      operationId: listEmployeeWorkRecords
+      tags: [employee-sections]
+      summary: List work records (shifts/timesheets) for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of work records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeWorkRecord"
+    post:
+      operationId: createEmployeeWorkRecord
+      tags: [employee-sections]
+      summary: Add a work record to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeWorkRecordInput"
+      responses:
+        "201":
+          description: Created work record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkRecord"
+
+  /employees/{id}/work-records/{recordId}:
+    patch:
+      operationId: updateEmployeeWorkRecord
+      tags: [employee-sections]
+      summary: Update a work record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeWorkRecordUpdate"
+      responses:
+        "200":
+          description: Updated work record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkRecord"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeWorkRecord
+      tags: [employee-sections]
+      summary: Delete a work record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: recordId
           in: path
           required: true
           schema:
@@ -1265,3 +1847,355 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/User"
+
+    # ── Employee section schemas ────────────────────────────────────────────
+
+    EmployeeAddress:
+      type: object
+      required: [id, employeeId, addressType, line1, isPrimary, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        addressType:
+          type: string
+        line1:
+          type: string
+        line2:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        county:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        isPrimary:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeAddressInput:
+      type: object
+      required: [line1]
+      properties:
+        addressType:
+          type: string
+        line1:
+          type: string
+          minLength: 1
+        line2:
+          type: string
+        city:
+          type: string
+        county:
+          type: string
+        postcode:
+          type: string
+        country:
+          type: string
+        isPrimary:
+          type: boolean
+
+    EmployeeAddressUpdate:
+      type: object
+      properties:
+        addressType:
+          type: string
+        line1:
+          type: string
+          minLength: 1
+        line2:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        county:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        isPrimary:
+          type: boolean
+
+    EmployeePayroll:
+      type: object
+      required: [id, employeeId, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeNumber:
+          type: ["string", "null"]
+        niNumber:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        accountHolder:
+          type: ["string", "null"]
+        sortCode:
+          type: ["string", "null"]
+        accountNumber:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeePayrollInput:
+      type: object
+      properties:
+        employeeNumber:
+          type: ["string", "null"]
+        niNumber:
+          type: ["string", "null"]
+        bankName:
+          type: ["string", "null"]
+        accountHolder:
+          type: ["string", "null"]
+        sortCode:
+          type: ["string", "null"]
+        accountNumber:
+          type: ["string", "null"]
+
+    EmployeeAttachment:
+      type: object
+      required: [id, employeeId, fileName, fileUrl, uploadedAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        fileType:
+          type: ["string", "null"]
+        fileSizeBytes:
+          type: ["integer", "null"]
+        uploadedAt:
+          type: string
+          format: date-time
+
+    EmployeeAttachmentInput:
+      type: object
+      required: [fileName, fileUrl]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+        fileUrl:
+          type: string
+          minLength: 1
+        fileType:
+          type: string
+        fileSizeBytes:
+          type: integer
+
+    EmployeeMedical:
+      type: object
+      required: [selections, notes]
+      properties:
+        selections:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+
+    EmployeeMedicalInput:
+      type: object
+      required: [selections]
+      properties:
+        selections:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+
+    EmployeeDietary:
+      type: object
+      required: [selections, notes]
+      properties:
+        selections:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+
+    EmployeeDietaryInput:
+      type: object
+      required: [selections]
+      properties:
+        selections:
+          type: array
+          items:
+            type: string
+        notes:
+          type: ["string", "null"]
+
+    EmployeeNextOfKin:
+      type: object
+      required: [id, employeeId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        name:
+          type: string
+        relationship:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeNextOfKinInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        relationship:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    EmployeeNextOfKinUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        relationship:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+
+    EmployeeQualification:
+      type: object
+      required: [id, employeeId, title, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        title:
+          type: string
+        institution:
+          type: ["string", "null"]
+        yearObtained:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeQualificationInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        institution:
+          type: string
+        yearObtained:
+          type: integer
+        notes:
+          type: string
+
+    EmployeeQualificationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        institution:
+          type: ["string", "null"]
+        yearObtained:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+
+    EmployeeWorkRecord:
+      type: object
+      required: [id, employeeId, shiftDate, shiftType, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        shiftDate:
+          type: string
+          format: date
+        startTime:
+          type: ["string", "null"]
+        endTime:
+          type: ["string", "null"]
+        hoursWorked:
+          type: ["number", "null"]
+        shiftType:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeWorkRecordInput:
+      type: object
+      required: [shiftDate]
+      properties:
+        shiftDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+        endTime:
+          type: string
+        hoursWorked:
+          type: number
+        shiftType:
+          type: string
+        notes:
+          type: string
+
+    EmployeeWorkRecordUpdate:
+      type: object
+      properties:
+        shiftDate:
+          type: string
+          format: date
+        startTime:
+          type: ["string", "null"]
+        endTime:
+          type: ["string", "null"]
+        hoursWorked:
+          type: ["number", "null"]
+        shiftType:
+          type: string
+        notes:
+          type: ["string", "null"]

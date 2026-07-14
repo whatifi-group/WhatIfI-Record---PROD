@@ -1,0 +1,54 @@
+/**
+ * Idempotent LOV seed — runs at server startup.
+ * Inserts any missing system LOV items; safe to re-run on every boot.
+ */
+import { db, lovItemsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+
+interface SeedItem {
+  category: string;
+  value: string;
+  label: string;
+  sortOrder: number;
+}
+
+const SEED_ITEMS: SeedItem[] = [
+  // medical_condition
+  { category: "medical_condition", value: "diabetes", label: "Diabetes", sortOrder: 1 },
+  { category: "medical_condition", value: "asthma", label: "Asthma", sortOrder: 2 },
+  { category: "medical_condition", value: "epilepsy", label: "Epilepsy", sortOrder: 3 },
+  { category: "medical_condition", value: "heart_condition", label: "Heart Condition", sortOrder: 4 },
+  { category: "medical_condition", value: "mobility_impairment", label: "Mobility Impairment", sortOrder: 5 },
+  // dietary_requirement
+  { category: "dietary_requirement", value: "vegetarian", label: "Vegetarian", sortOrder: 1 },
+  { category: "dietary_requirement", value: "vegan", label: "Vegan", sortOrder: 2 },
+  { category: "dietary_requirement", value: "gluten_free", label: "Gluten Free", sortOrder: 3 },
+  { category: "dietary_requirement", value: "nut_allergy", label: "Nut Allergy", sortOrder: 4 },
+  { category: "dietary_requirement", value: "dairy_free", label: "Dairy Free", sortOrder: 5 },
+  { category: "dietary_requirement", value: "halal", label: "Halal", sortOrder: 6 },
+  { category: "dietary_requirement", value: "kosher", label: "Kosher", sortOrder: 7 },
+];
+
+export async function seedLov(): Promise<void> {
+  for (const item of SEED_ITEMS) {
+    const [existing] = await db
+      .select({ id: lovItemsTable.id })
+      .from(lovItemsTable)
+      .where(
+        and(
+          eq(lovItemsTable.category, item.category),
+          eq(lovItemsTable.value, item.value),
+        ),
+      );
+    if (!existing) {
+      await db.insert(lovItemsTable).values({
+        category: item.category,
+        value: item.value,
+        label: item.label,
+        sortOrder: item.sortOrder,
+        isActive: true,
+        isSystem: true,
+      });
+    }
+  }
+}

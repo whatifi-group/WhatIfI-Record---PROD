@@ -303,6 +303,553 @@ export const DeleteEmployeeResponse = zod.void()
 
 
 /**
+ * @summary List addresses for an employee
+ */
+export const ListEmployeeAddressesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeAddressesResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "addressType": zod.string(),
+  "line1": zod.string(),
+  "line2": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "county": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeeAddressesResponse = zod.array(ListEmployeeAddressesResponseItem)
+
+
+/**
+ * @summary Add an address to an employee
+ */
+export const CreateEmployeeAddressParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateEmployeeAddressBody = zod.object({
+  "addressType": zod.string().optional(),
+  "line1": zod.string().min(1),
+  "line2": zod.string().optional(),
+  "city": zod.string().optional(),
+  "county": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "country": zod.string().optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const CreateEmployeeAddressResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "addressType": zod.string(),
+  "line1": zod.string(),
+  "line2": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "county": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an employee address
+ */
+export const UpdateEmployeeAddressParams = zod.object({
+  "id": zod.coerce.number(),
+  "addressId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateEmployeeAddressBody = zod.object({
+  "addressType": zod.string().optional(),
+  "line1": zod.string().min(1).optional(),
+  "line2": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "county": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const UpdateEmployeeAddressResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "addressType": zod.string(),
+  "line1": zod.string(),
+  "line2": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "county": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an employee address
+ */
+export const DeleteEmployeeAddressParams = zod.object({
+  "id": zod.coerce.number(),
+  "addressId": zod.coerce.number()
+})
+
+export const DeleteEmployeeAddressResponse = zod.void()
+
+
+/**
+ * @summary Get payroll record for an employee
+ */
+export const GetEmployeePayrollParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeePayrollResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeNumber": zod.string().nullish(),
+  "niNumber": zod.string().nullish(),
+  "bankName": zod.string().nullish(),
+  "accountHolder": zod.string().nullish(),
+  "sortCode": zod.string().nullish(),
+  "accountNumber": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or update payroll record for an employee
+ */
+export const UpsertEmployeePayrollParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpsertEmployeePayrollBody = zod.object({
+  "employeeNumber": zod.string().nullish(),
+  "niNumber": zod.string().nullish(),
+  "bankName": zod.string().nullish(),
+  "accountHolder": zod.string().nullish(),
+  "sortCode": zod.string().nullish(),
+  "accountNumber": zod.string().nullish()
+})
+
+export const UpsertEmployeePayrollResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeNumber": zod.string().nullish(),
+  "niNumber": zod.string().nullish(),
+  "bankName": zod.string().nullish(),
+  "accountHolder": zod.string().nullish(),
+  "sortCode": zod.string().nullish(),
+  "accountNumber": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List attachments for an employee
+ */
+export const ListEmployeeAttachmentsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeAttachmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "fileName": zod.string(),
+  "fileUrl": zod.string(),
+  "fileType": zod.string().nullish(),
+  "fileSizeBytes": zod.number().nullish(),
+  "uploadedAt": zod.coerce.date()
+})
+export const ListEmployeeAttachmentsResponse = zod.array(ListEmployeeAttachmentsResponseItem)
+
+
+/**
+ * @summary Add an attachment metadata record to an employee
+ */
+export const CreateEmployeeAttachmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const CreateEmployeeAttachmentBody = zod.object({
+  "fileName": zod.string().min(1),
+  "fileUrl": zod.string().min(1),
+  "fileType": zod.string().optional(),
+  "fileSizeBytes": zod.number().optional()
+})
+
+export const CreateEmployeeAttachmentResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "fileName": zod.string(),
+  "fileUrl": zod.string(),
+  "fileType": zod.string().nullish(),
+  "fileSizeBytes": zod.number().nullish(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an employee attachment record
+ */
+export const DeleteEmployeeAttachmentParams = zod.object({
+  "id": zod.coerce.number(),
+  "attachmentId": zod.coerce.number()
+})
+
+export const DeleteEmployeeAttachmentResponse = zod.void()
+
+
+/**
+ * @summary Get medical selections and notes for an employee
+ */
+export const GetEmployeeMedicalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeeMedicalResponse = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullable()
+})
+
+
+/**
+ * @summary Replace medical selections and notes for an employee
+ */
+export const PutEmployeeMedicalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PutEmployeeMedicalBody = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullish()
+})
+
+export const PutEmployeeMedicalResponse = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullable()
+})
+
+
+/**
+ * @summary Get dietary selections and notes for an employee
+ */
+export const GetEmployeeDietaryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeeDietaryResponse = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullable()
+})
+
+
+/**
+ * @summary Replace dietary selections and notes for an employee
+ */
+export const PutEmployeeDietaryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PutEmployeeDietaryBody = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullish()
+})
+
+export const PutEmployeeDietaryResponse = zod.object({
+  "selections": zod.array(zod.string()),
+  "notes": zod.string().nullable()
+})
+
+
+/**
+ * @summary List next of kin records for an employee
+ */
+export const ListEmployeeNextOfKinParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeNextOfKinResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "name": zod.string(),
+  "relationship": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeeNextOfKinResponse = zod.array(ListEmployeeNextOfKinResponseItem)
+
+
+/**
+ * @summary Add a next of kin record
+ */
+export const CreateEmployeeNextOfKinParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateEmployeeNextOfKinBody = zod.object({
+  "name": zod.string().min(1),
+  "relationship": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "email": zod.string().optional(),
+  "address": zod.string().optional()
+})
+
+export const CreateEmployeeNextOfKinResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "name": zod.string(),
+  "relationship": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a next of kin record
+ */
+export const UpdateEmployeeNextOfKinParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateEmployeeNextOfKinBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "relationship": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish()
+})
+
+export const UpdateEmployeeNextOfKinResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "name": zod.string(),
+  "relationship": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a next of kin record
+ */
+export const DeleteEmployeeNextOfKinParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number()
+})
+
+export const DeleteEmployeeNextOfKinResponse = zod.void()
+
+
+/**
+ * @summary List qualifications for an employee
+ */
+export const ListEmployeeQualificationsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeQualificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "title": zod.string(),
+  "institution": zod.string().nullish(),
+  "yearObtained": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeeQualificationsResponse = zod.array(ListEmployeeQualificationsResponseItem)
+
+
+/**
+ * @summary Add a qualification to an employee
+ */
+export const CreateEmployeeQualificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateEmployeeQualificationBody = zod.object({
+  "title": zod.string().min(1),
+  "institution": zod.string().optional(),
+  "yearObtained": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateEmployeeQualificationResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "title": zod.string(),
+  "institution": zod.string().nullish(),
+  "yearObtained": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a qualification
+ */
+export const UpdateEmployeeQualificationParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateEmployeeQualificationBody = zod.object({
+  "title": zod.string().min(1).optional(),
+  "institution": zod.string().nullish(),
+  "yearObtained": zod.number().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateEmployeeQualificationResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "title": zod.string(),
+  "institution": zod.string().nullish(),
+  "yearObtained": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a qualification
+ */
+export const DeleteEmployeeQualificationParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const DeleteEmployeeQualificationResponse = zod.void()
+
+
+/**
+ * @summary List work records (shifts/timesheets) for an employee
+ */
+export const ListEmployeeWorkRecordsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeWorkRecordsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftDate": zod.coerce.date(),
+  "startTime": zod.string().nullish(),
+  "endTime": zod.string().nullish(),
+  "hoursWorked": zod.number().nullish(),
+  "shiftType": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeeWorkRecordsResponse = zod.array(ListEmployeeWorkRecordsResponseItem)
+
+
+/**
+ * @summary Add a work record to an employee
+ */
+export const CreateEmployeeWorkRecordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateEmployeeWorkRecordBody = zod.object({
+  "shiftDate": zod.coerce.date(),
+  "startTime": zod.string().optional(),
+  "endTime": zod.string().optional(),
+  "hoursWorked": zod.number().optional(),
+  "shiftType": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateEmployeeWorkRecordResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftDate": zod.coerce.date(),
+  "startTime": zod.string().nullish(),
+  "endTime": zod.string().nullish(),
+  "hoursWorked": zod.number().nullish(),
+  "shiftType": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a work record
+ */
+export const UpdateEmployeeWorkRecordParams = zod.object({
+  "id": zod.coerce.number(),
+  "recordId": zod.coerce.number()
+})
+
+export const UpdateEmployeeWorkRecordBody = zod.object({
+  "shiftDate": zod.coerce.date().optional(),
+  "startTime": zod.string().nullish(),
+  "endTime": zod.string().nullish(),
+  "hoursWorked": zod.number().nullish(),
+  "shiftType": zod.string().optional(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateEmployeeWorkRecordResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftDate": zod.coerce.date(),
+  "startTime": zod.string().nullish(),
+  "endTime": zod.string().nullish(),
+  "hoursWorked": zod.number().nullish(),
+  "shiftType": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a work record
+ */
+export const DeleteEmployeeWorkRecordParams = zod.object({
+  "id": zod.coerce.number(),
+  "recordId": zod.coerce.number()
+})
+
+export const DeleteEmployeeWorkRecordResponse = zod.void()
+
+
+/**
  * @summary List leave requests
  */
 export const ListLeaveRequestsQueryParams = zod.object({

@@ -57,7 +57,7 @@ export default function EmployeesList() {
       jobTitle: "",
       departmentId: null,
       employmentType: "full_time",
-      status: "active",
+      status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
       salary: null,
     },
@@ -65,7 +65,7 @@ export default function EmployeesList() {
 
   const onSubmit = (data: EmployeeFormValues) => {
     createEmployee.mutate(
-      { data },
+      { data: { ...data, status: data.status as EmployeeStatus } },
       {
         onSuccess: () => {
           toast({ title: "Employee added", description: "Successfully added new team member." });

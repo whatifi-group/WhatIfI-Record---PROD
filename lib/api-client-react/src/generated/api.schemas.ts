@@ -310,6 +310,239 @@ export interface SysadminSummary {
   recentUsers: User[];
 }
 
+export interface EmployeeAddress {
+  id: number;
+  employeeId: number;
+  addressType: string;
+  line1: string;
+  /** @nullable */
+  line2?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  county?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  country?: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface EmployeeAddressInput {
+  addressType?: string;
+  /** @minLength 1 */
+  line1: string;
+  line2?: string;
+  city?: string;
+  county?: string;
+  postcode?: string;
+  country?: string;
+  isPrimary?: boolean;
+}
+
+export interface EmployeeAddressUpdate {
+  addressType?: string;
+  /** @minLength 1 */
+  line1?: string;
+  /** @nullable */
+  line2?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  county?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  country?: string | null;
+  isPrimary?: boolean;
+}
+
+export interface EmployeePayroll {
+  id: number;
+  employeeId: number;
+  /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
+  niNumber?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  accountHolder?: string | null;
+  /** @nullable */
+  sortCode?: string | null;
+  /** @nullable */
+  accountNumber?: string | null;
+  createdAt: string;
+}
+
+export interface EmployeePayrollInput {
+  /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
+  niNumber?: string | null;
+  /** @nullable */
+  bankName?: string | null;
+  /** @nullable */
+  accountHolder?: string | null;
+  /** @nullable */
+  sortCode?: string | null;
+  /** @nullable */
+  accountNumber?: string | null;
+}
+
+export interface EmployeeAttachment {
+  id: number;
+  employeeId: number;
+  fileName: string;
+  fileUrl: string;
+  /** @nullable */
+  fileType?: string | null;
+  /** @nullable */
+  fileSizeBytes?: number | null;
+  uploadedAt: string;
+}
+
+export interface EmployeeAttachmentInput {
+  /** @minLength 1 */
+  fileName: string;
+  /** @minLength 1 */
+  fileUrl: string;
+  fileType?: string;
+  fileSizeBytes?: number;
+}
+
+export interface EmployeeMedical {
+  selections: string[];
+  /** @nullable */
+  notes: string | null;
+}
+
+export interface EmployeeMedicalInput {
+  selections: string[];
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface EmployeeDietary {
+  selections: string[];
+  /** @nullable */
+  notes: string | null;
+}
+
+export interface EmployeeDietaryInput {
+  selections: string[];
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface EmployeeNextOfKin {
+  id: number;
+  employeeId: number;
+  name: string;
+  /** @nullable */
+  relationship?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  address?: string | null;
+  createdAt: string;
+}
+
+export interface EmployeeNextOfKinInput {
+  /** @minLength 1 */
+  name: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}
+
+export interface EmployeeNextOfKinUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  relationship?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  address?: string | null;
+}
+
+export interface EmployeeQualification {
+  id: number;
+  employeeId: number;
+  title: string;
+  /** @nullable */
+  institution?: string | null;
+  /** @nullable */
+  yearObtained?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface EmployeeQualificationInput {
+  /** @minLength 1 */
+  title: string;
+  institution?: string;
+  yearObtained?: number;
+  notes?: string;
+}
+
+export interface EmployeeQualificationUpdate {
+  /** @minLength 1 */
+  title?: string;
+  /** @nullable */
+  institution?: string | null;
+  /** @nullable */
+  yearObtained?: number | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface EmployeeWorkRecord {
+  id: number;
+  employeeId: number;
+  shiftDate: string;
+  /** @nullable */
+  startTime?: string | null;
+  /** @nullable */
+  endTime?: string | null;
+  /** @nullable */
+  hoursWorked?: number | null;
+  shiftType: string;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface EmployeeWorkRecordInput {
+  shiftDate: string;
+  startTime?: string;
+  endTime?: string;
+  hoursWorked?: number;
+  shiftType?: string;
+  notes?: string;
+}
+
+export interface EmployeeWorkRecordUpdate {
+  shiftDate?: string;
+  /** @nullable */
+  startTime?: string | null;
+  /** @nullable */
+  endTime?: string | null;
+  /** @nullable */
+  hoursWorked?: number | null;
+  shiftType?: string;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type ListEmployeesParams = {
 search?: string;
 departmentId?: number;

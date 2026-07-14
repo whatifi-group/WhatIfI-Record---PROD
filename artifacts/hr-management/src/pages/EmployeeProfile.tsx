@@ -87,7 +87,7 @@ export default function EmployeeProfile() {
         jobTitle: employee.jobTitle,
         departmentId: employee.departmentId,
         employmentType: employee.employmentType,
-        status: employee.status,
+        status: employee.status as EmployeeStatus,
         startDate: employee.startDate.split("T")[0],
         salary: employee.salary,
       });
@@ -96,7 +96,7 @@ export default function EmployeeProfile() {
 
   const onSubmit = (data: EmployeeUpdateValues) => {
     updateEmployee.mutate(
-      { id: employeeId, data },
+      { id: employeeId, data: { ...data, status: data.status as EmployeeStatus } },
       {
         onSuccess: (updatedData) => {
           toast({ title: "Profile updated", description: "Employee details have been saved." });

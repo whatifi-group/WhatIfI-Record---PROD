@@ -218,7 +218,7 @@ export default function ListOfValues() {
                             {item.sortOrder}
                           </td>
                           <td className="px-6 py-3 align-middle text-right">
-                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-end gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"

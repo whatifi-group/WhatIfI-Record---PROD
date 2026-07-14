@@ -42,7 +42,6 @@ const modules: Module[] = [
     pages: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Directory", href: "/employees", icon: Users },
-      { name: "Departments", href: "/departments", icon: Building2 },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
     ],
   },
@@ -51,6 +50,7 @@ const modules: Module[] = [
     icon: ShieldCheck,
     pages: [
       { name: "Dashboard", href: "/sysadmin", icon: LayoutDashboard },
+      { name: "Departments", href: "/departments", icon: Building2 },
       { name: "Users", href: "/sysadmin/users", icon: UserCog },
       { name: "Roles", href: "/sysadmin/roles", icon: Lock },
       { name: "List of Values", href: "/sysadmin/lov", icon: ListOrdered },

@@ -150,11 +150,6 @@ router.delete("/sysadmin/lov/:category/:id", async (req, res): Promise<void> => 
     return;
   }
 
-  if (existing.isSystem) {
-    res.status(409).json({ error: "Cannot delete a system item" });
-    return;
-  }
-
   await db.delete(lovItemsTable).where(eq(lovItemsTable.id, idNum));
   res.sendStatus(204);
 });

@@ -9,7 +9,7 @@ import {
   LovItem 
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Settings, Plus, MoreHorizontal, Pencil, Trash2, Lock, ListOrdered } from "lucide-react";
+import { Settings, Plus, MoreHorizontal, Pencil, Trash2, ListOrdered } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -206,20 +206,6 @@ export default function ListOfValues() {
                               <span className={`font-medium ${!item.isActive ? "text-muted-foreground" : "text-foreground"}`}>
                                 {item.label}
                               </span>
-                              {item.isSystem && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <div className="bg-primary/10 text-primary p-1 rounded">
-                                        <Lock className="w-3 h-3" />
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>System value. Only label can be edited.</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
                             </div>
                           </td>
                           <td className="px-6 py-3 align-middle">
@@ -252,17 +238,13 @@ export default function ListOfValues() {
                                 <DropdownMenuItem onClick={() => handleEdit(categoryGroup.category, item)}>
                                   <Pencil className="mr-2 h-4 w-4" /> Edit
                                 </DropdownMenuItem>
-                                {!item.isSystem && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                      onClick={() => setDeletingItem({ category: categoryGroup.category, id: item.id })}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                  onClick={() => setDeletingItem({ category: categoryGroup.category, id: item.id })}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </td>

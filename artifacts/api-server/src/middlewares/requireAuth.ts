@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 
-// Routes that don't require authentication
-const PUBLIC_PATHS = new Set(["/api/auth/login", "/api/healthz"]);
+// Routes that don't require authentication.
+// These are matched against req.path which is relative to the /api mount point.
+const PUBLIC_PATHS = new Set(["/auth/login", "/healthz"]);
 
 export function requireAuth(
   req: Request,

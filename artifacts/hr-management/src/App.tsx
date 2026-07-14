@@ -16,6 +16,7 @@ import SysadminDashboard from '@/pages/sysadmin/SysadminDashboard';
 import UsersList from '@/pages/sysadmin/UsersList';
 import RolesList from '@/pages/sysadmin/RolesList';
 import ListOfValues from '@/pages/sysadmin/ListOfValues';
+import LovCategoryDetail from '@/pages/sysadmin/LovCategoryDetail';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/not-found';
 
@@ -71,6 +72,9 @@ function MainRoutes() {
         </Route>
         <Route path="/sysadmin/roles">
           {() => <AdminRoute component={RolesList} />}
+        </Route>
+        <Route path="/sysadmin/lov/:category">
+          {() => <AdminRoute component={LovCategoryDetail} />}
         </Route>
         <Route path="/sysadmin/lov">
           {() => <AdminRoute component={ListOfValues} />}

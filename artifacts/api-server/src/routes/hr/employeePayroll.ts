@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, employeePayrollTable } from "@workspace/db";
 import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
 
 const router: IRouter = Router({ mergeParams: true });
 
@@ -16,7 +17,7 @@ const PayrollInput = z.object({
   accountNumber: z.string().optional().nullable(),
 });
 
-router.get("/employees/:id/payroll", async (req, res): Promise<void> => {
+router.get("/employees/:id/payroll", requirePermission(["view_payroll", "sysadmin"]), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -33,7 +34,7 @@ router.get("/employees/:id/payroll", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.put("/employees/:id/payroll", async (req, res): Promise<void> => {
+router.put("/employees/:id/payroll", requirePermission(["view_payroll", "sysadmin"]), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

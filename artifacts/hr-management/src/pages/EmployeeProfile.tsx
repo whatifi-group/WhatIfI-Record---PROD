@@ -59,6 +59,7 @@ export default function EmployeeProfile() {
   const { hasPermission } = useAuth();
   const canEdit = hasPermission('edit_employees');
   const canDelete = hasPermission('delete_employees');
+  const canViewPayroll = hasPermission('view_payroll') || hasPermission('sysadmin');
 
   const [isEditing, setIsEditing] = useState(canEdit);
 
@@ -247,7 +248,7 @@ export default function EmployeeProfile() {
             <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/60 p-1 mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="addresses">Addresses</TabsTrigger>
-              <TabsTrigger value="payroll">Payroll</TabsTrigger>
+              {canViewPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
               <TabsTrigger value="attachments">Attachments</TabsTrigger>
               <TabsTrigger value="medical">Medical</TabsTrigger>
               <TabsTrigger value="dietary">Dietary</TabsTrigger>
@@ -398,13 +399,24 @@ export default function EmployeeProfile() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="payroll">
-              <Card className="border-border/50 shadow-sm">
-                <CardContent className="pt-6">
-                  <EmployeePayrollTab employeeId={employeeId} />
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {canViewPayroll ? (
+              <TabsContent value="payroll">
+                <Card className="border-border/50 shadow-sm">
+                  <CardContent className="pt-6">
+                    <EmployeePayrollTab employeeId={employeeId} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ) : (
+              <TabsContent value="payroll">
+                <Card className="border-border/50 shadow-sm">
+                  <CardContent className="pt-6 flex flex-col items-center justify-center py-16 text-center">
+                    <ShieldAlert className="w-10 h-10 text-muted-foreground/40 mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground">You don't have permission to view payroll information.</p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             <TabsContent value="attachments">
               <Card className="border-border/50 shadow-sm">

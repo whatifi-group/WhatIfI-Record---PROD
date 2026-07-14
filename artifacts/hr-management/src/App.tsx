@@ -19,6 +19,7 @@ import ListOfValues from '@/pages/sysadmin/ListOfValues';
 import LovCategoryDetail from '@/pages/sysadmin/LovCategoryDetail';
 import QualificationTypes from '@/pages/sysadmin/QualificationTypes';
 import PastEmployeesList from '@/pages/PastEmployeesList';
+import WorkRecordsList from '@/pages/WorkRecordsList';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/not-found';
 
@@ -110,6 +111,9 @@ function MainRoutes() {
         </Route>
         <Route path="/past-employees">
           {() => <PastEmployeesRoute component={PastEmployeesList} />}
+        </Route>
+        <Route path="/work-records">
+          {() => <HrRoute component={WorkRecordsList} />}
         </Route>
         <Route path="/sysadmin">
           {() => <AdminRoute component={SysadminDashboard} />}

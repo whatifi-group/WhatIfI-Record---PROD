@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useParams, useLocation, Link } from "wouter";
+import { useParams, useLocation, useSearch, Link } from "wouter";
 import { 
   useGetEmployee, 
   useUpdateEmployee, 
@@ -50,10 +50,15 @@ const employeeUpdateSchema = z.object({
 
 type EmployeeUpdateValues = z.infer<typeof employeeUpdateSchema>;
 
+const VALID_TABS = ["details","addresses","payroll","attachments","medical","dietary","next-of-kin","qualifications","work-record"] as const;
+
 export default function EmployeeProfile() {
   const { id } = useParams();
   const employeeId = parseInt(id || "0", 10);
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const tabParam = new URLSearchParams(search).get("tab");
+  const initialTab = VALID_TABS.includes(tabParam as typeof VALID_TABS[number]) ? tabParam! : "details";
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
@@ -244,7 +249,7 @@ export default function EmployeeProfile() {
 
         {/* Main Content — Tabbed */}
         <div className="flex-1 min-w-0">
-          <Tabs defaultValue="details">
+          <Tabs defaultValue={initialTab}>
             <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/60 p-1 mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="addresses">Addresses</TabsTrigger>

@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap } from "lucide-react";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
 import { useHealthCheck, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
@@ -50,6 +50,7 @@ const modules: Module[] = [
     hrOnly: true,
     pages: [
       { name: "Directory", href: "/employees", icon: Users },
+      { name: "Work Records", href: "/work-records", icon: ClipboardList },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
     ],

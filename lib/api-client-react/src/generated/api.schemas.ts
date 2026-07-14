@@ -21,6 +21,7 @@ export const EmployeeStatus = {
   active: 'active',
   inactive: 'inactive',
   on_leave: 'on_leave',
+  leaver: 'leaver',
 } as const;
 
 /**

@@ -18,7 +18,7 @@ export const employmentTypeValues = [
   "intern",
 ] as const;
 
-export const employeeStatusValues = ["active", "inactive", "on_leave"] as const;
+export const employeeStatusValues = ["active", "inactive", "on_leave", "leaver"] as const;
 
 export const employeesTable = pgTable("employees", {
   id: serial("id").primaryKey(),

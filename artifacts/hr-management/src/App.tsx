@@ -18,6 +18,7 @@ import RolesList from '@/pages/sysadmin/RolesList';
 import ListOfValues from '@/pages/sysadmin/ListOfValues';
 import LovCategoryDetail from '@/pages/sysadmin/LovCategoryDetail';
 import QualificationTypes from '@/pages/sysadmin/QualificationTypes';
+import PastEmployeesList from '@/pages/PastEmployeesList';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/not-found';
 
@@ -74,6 +75,22 @@ function HrRoute({ component: Component }: { component: React.ComponentType }) {
   return <Component />;
 }
 
+function PastEmployeesRoute({ component: Component }: { component: React.ComponentType }) {
+  const { hasPermission } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!hasPermission('hr:past_employees') && !hasPermission('sysadmin')) {
+      setLocation('/');
+    }
+  }, [hasPermission, setLocation]);
+
+  if (!hasPermission('hr:past_employees') && !hasPermission('sysadmin')) {
+    return null;
+  }
+  return <Component />;
+}
+
 function MainRoutes() {
   return (
     <AppLayout>
@@ -90,6 +107,9 @@ function MainRoutes() {
         </Route>
         <Route path="/leave">
           {() => <HrRoute component={LeaveRequestsList} />}
+        </Route>
+        <Route path="/past-employees">
+          {() => <PastEmployeesRoute component={PastEmployeesList} />}
         </Route>
         <Route path="/sysadmin">
           {() => <AdminRoute component={SysadminDashboard} />}

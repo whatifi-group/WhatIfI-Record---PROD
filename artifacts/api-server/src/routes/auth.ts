@@ -29,10 +29,15 @@ function userRow(row: {
   status: string;
   roleId: number;
   roleName: string | null;
-  permissions: unknown;
+  rolePermissions: unknown;
+  userPermissions: unknown;
   lastLoginAt: Date | null;
   createdAt: Date;
 }) {
+  const rolePerms = Array.isArray(row.rolePermissions) ? row.rolePermissions : [];
+  const userPerms = Array.isArray(row.userPermissions) ? row.userPermissions : [];
+  const effectivePermissions = [...new Set([...rolePerms, ...userPerms])];
+
   return {
     id: row.id,
     name: row.name,
@@ -40,7 +45,7 @@ function userRow(row: {
     status: row.status,
     roleId: row.roleId,
     roleName: row.roleName ?? "",
-    permissions: row.permissions,
+    permissions: effectivePermissions,
     lastLoginAt: row.lastLoginAt,
     createdAt: row.createdAt,
   };
@@ -55,7 +60,8 @@ async function fetchUser(id: number) {
       status: usersTable.status,
       roleId: usersTable.roleId,
       roleName: rolesTable.name,
-      permissions: usersTable.permissions,
+      rolePermissions: rolesTable.permissions,
+      userPermissions: usersTable.permissions,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })

@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, useCallback, ReactNode } from "react";
 import { useGetMe, getGetMeQueryKey, User } from "@workspace/api-client-react";
 
 interface AuthContextType {
@@ -6,6 +6,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   error: any;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !isError && !!user;
 
+  const hasPermission = useCallback(
+    (permission: string): boolean => {
+      if (!user?.permissions) return false;
+      return (user.permissions as string[]).includes(permission);
+    },
+    [user],
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -24,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated,
         error,
+        hasPermission,
       }}
     >
       {children}

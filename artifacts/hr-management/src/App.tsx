@@ -28,11 +28,6 @@ const queryClient = new QueryClient({
   },
 });
 
-function isAdminRole(roleName: string | null | undefined): boolean {
-  if (!roleName) return false;
-  return roleName.toLowerCase().includes("admin") || roleName.toLowerCase().includes("sysadmin");
-}
-
 function AccessDenied() {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 text-center">
@@ -50,8 +45,8 @@ function AccessDenied() {
 }
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
-  const { user } = useAuth();
-  if (!isAdminRole(user?.roleName)) {
+  const { hasPermission } = useAuth();
+  if (!hasPermission('sysadmin')) {
     return <AccessDenied />;
   }
   return <Component />;

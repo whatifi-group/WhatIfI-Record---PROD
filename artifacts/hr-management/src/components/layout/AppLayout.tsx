@@ -37,11 +37,6 @@ interface Module {
   adminOnly?: boolean;
 }
 
-function isAdminRole(roleName: string | null | undefined): boolean {
-  if (!roleName) return false;
-  return roleName.toLowerCase().includes("admin") || roleName.toLowerCase().includes("sysadmin");
-}
-
 const modules: Module[] = [
   {
     name: "Human Resources",
@@ -69,7 +64,7 @@ function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { setOpenMobile } = useSidebar();
   const { data: health } = useHealthCheck();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const logout = useLogout();
   const queryClient = useQueryClient();
 
@@ -106,7 +101,7 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {modules.filter((mod) => !mod.adminOnly || isAdminRole(user?.roleName)).map((mod) => (
+          {modules.filter((mod) => !mod.adminOnly || hasPermission('sysadmin')).map((mod) => (
             <Collapsible key={mod.name} defaultOpen={isModuleActive(mod)} className="group/collapsible">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
@@ -119,7 +114,7 @@ function AppSidebar() {
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {mod.pages
-                      .filter((page) => !page.adminOnly || isAdminRole(user?.roleName))
+                      .filter((page) => !page.adminOnly || hasPermission('sysadmin'))
                       .map((page) => {
                         const isActive = location === page.href || location.startsWith(page.href);
                         return (

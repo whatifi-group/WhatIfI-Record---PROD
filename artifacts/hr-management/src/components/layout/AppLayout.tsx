@@ -34,6 +34,7 @@ interface Module {
   name: string;
   icon: LucideIcon;
   pages: ModulePage[];
+  adminOnly?: boolean;
 }
 
 function isAdminRole(roleName: string | null | undefined): boolean {
@@ -53,9 +54,10 @@ const modules: Module[] = [
   {
     name: "SysAdmin",
     icon: ShieldCheck,
+    adminOnly: true,
     pages: [
       { name: "Dashboard", href: "/sysadmin", icon: LayoutDashboard },
-      { name: "Departments", href: "/departments", icon: Building2, adminOnly: true },
+      { name: "Departments", href: "/departments", icon: Building2 },
       { name: "Users", href: "/sysadmin/users", icon: UserCog },
       { name: "Roles", href: "/sysadmin/roles", icon: Lock },
       { name: "List of Values", href: "/sysadmin/lov", icon: ListOrdered },
@@ -104,7 +106,7 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {modules.map((mod) => (
+          {modules.filter((mod) => !mod.adminOnly || isAdminRole(user?.roleName)).map((mod) => (
             <Collapsible key={mod.name} defaultOpen={isModuleActive(mod)} className="group/collapsible">
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>

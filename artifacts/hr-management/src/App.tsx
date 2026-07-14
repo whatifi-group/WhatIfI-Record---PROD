@@ -68,10 +68,18 @@ function MainRoutes() {
           {() => <AdminRoute component={DepartmentsList} />}
         </Route>
         <Route path="/leave" component={LeaveRequestsList} />
-        <Route path="/sysadmin" component={SysadminDashboard} />
-        <Route path="/sysadmin/users" component={UsersList} />
-        <Route path="/sysadmin/roles" component={RolesList} />
-        <Route path="/sysadmin/lov" component={ListOfValues} />
+        <Route path="/sysadmin">
+          {() => <AdminRoute component={SysadminDashboard} />}
+        </Route>
+        <Route path="/sysadmin/users">
+          {() => <AdminRoute component={UsersList} />}
+        </Route>
+        <Route path="/sysadmin/roles">
+          {() => <AdminRoute component={RolesList} />}
+        </Route>
+        <Route path="/sysadmin/lov">
+          {() => <AdminRoute component={ListOfValues} />}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

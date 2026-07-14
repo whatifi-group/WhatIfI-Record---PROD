@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Loader2, Paperclip, ExternalLink } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 import { format } from "date-fns";
 
 interface Props {
@@ -35,7 +36,7 @@ export default function EmployeeAttachmentsTab({ employeeId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormData>(defaultForm);
 
-  const { data: attachments, isLoading } = useListEmployeeAttachments(employeeId);
+  const { data: attachments, isLoading, isError, refetch } = useListEmployeeAttachments(employeeId);
   const createAttachment = useCreateEmployeeAttachment();
   const deleteAttachment = useDeleteEmployeeAttachment();
 
@@ -76,6 +77,10 @@ export default function EmployeeAttachmentsTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <TabErrorState onRetry={refetch} message="Could not load attachments. Check your connection and try again." />;
   }
 
   return (

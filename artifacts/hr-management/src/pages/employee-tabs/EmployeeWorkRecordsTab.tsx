@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Clock } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 import { format } from "date-fns";
 
 
@@ -62,7 +63,7 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
   const [editingRecord, setEditingRecord] = useState<EmployeeWorkRecord | null>(null);
   const [form, setForm] = useState<FormData>(defaultForm);
 
-  const { data: records, isLoading } = useListEmployeeWorkRecords(employeeId);
+  const { data: records, isLoading, isError, refetch } = useListEmployeeWorkRecords(employeeId);
   const { data: shiftTypes } = useListLovItems("shift_type");
   const createRecord = useCreateEmployeeWorkRecord();
   const updateRecord = useUpdateEmployeeWorkRecord();
@@ -160,6 +161,10 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <TabErrorState onRetry={refetch} message="Could not load work records. Check your connection and try again." />;
   }
 
   return (

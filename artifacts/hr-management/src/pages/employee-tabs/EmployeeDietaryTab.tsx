@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Salad } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 
 interface Props {
   employeeId: number;
@@ -24,7 +25,7 @@ export default function EmployeeDietaryTab({ employeeId }: Props) {
   const [notes, setNotes] = useState("");
 
   const { data: lovItems, isLoading: lovLoading } = useListLovItems("dietary_requirement");
-  const { data: dietary, isLoading: dietaryLoading } = useGetEmployeeDietary(employeeId, {
+  const { data: dietary, isLoading: dietaryLoading, isError: dietaryIsError, error: dietaryError, refetch: refetchDietary } = useGetEmployeeDietary(employeeId, {
     query: { queryKey: getGetEmployeeDietaryQueryKey(employeeId) },
   });
   const putDietary = usePutEmployeeDietary();
@@ -61,6 +62,10 @@ export default function EmployeeDietaryTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (dietaryIsError && (dietaryError as any)?.status !== 404) {
+    return <TabErrorState onRetry={refetchDietary} message="Could not load dietary information. Check your connection and try again." />;
   }
 
   const activeItems = lovItems?.filter(item => item.isActive) || [];

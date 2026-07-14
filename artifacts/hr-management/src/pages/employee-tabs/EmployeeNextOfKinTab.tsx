@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Users } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 
 interface Props {
   employeeId: number;
@@ -37,7 +38,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const [editingRecord, setEditingRecord] = useState<EmployeeNextOfKin | null>(null);
   const [form, setForm] = useState<FormData>(defaultForm);
 
-  const { data: records, isLoading } = useListEmployeeNextOfKin(employeeId);
+  const { data: records, isLoading, isError, refetch } = useListEmployeeNextOfKin(employeeId);
   const createNok = useCreateEmployeeNextOfKin();
   const updateNok = useUpdateEmployeeNextOfKin();
   const deleteNok = useDeleteEmployeeNextOfKin();
@@ -124,6 +125,10 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <TabErrorState onRetry={refetch} message="Could not load next of kin records. Check your connection and try again." />;
   }
 
   return (

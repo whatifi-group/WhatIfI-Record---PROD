@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, MapPin } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import TabErrorState from "@/components/TabErrorState";
 
 
 interface AddressFormData {
@@ -54,7 +55,7 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
   const [editingAddress, setEditingAddress] = useState<EmployeeAddress | null>(null);
   const [form, setForm] = useState<AddressFormData>(defaultForm);
 
-  const { data: addresses, isLoading } = useListEmployeeAddresses(employeeId);
+  const { data: addresses, isLoading, isError, refetch } = useListEmployeeAddresses(employeeId);
   const { data: addressTypes } = useListLovItems("address_type");
   const createAddress = useCreateEmployeeAddress();
   const updateAddress = useUpdateEmployeeAddress();
@@ -136,6 +137,10 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <TabErrorState onRetry={refetch} message="Could not load addresses. Check your connection and try again." />;
   }
 
   return (

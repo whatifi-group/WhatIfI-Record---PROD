@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Heart } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 
 interface Props {
   employeeId: number;
@@ -24,7 +25,7 @@ export default function EmployeeMedicalTab({ employeeId }: Props) {
   const [notes, setNotes] = useState("");
 
   const { data: lovItems, isLoading: lovLoading } = useListLovItems("medical_condition");
-  const { data: medical, isLoading: medicalLoading } = useGetEmployeeMedical(employeeId, {
+  const { data: medical, isLoading: medicalLoading, isError: medicalIsError, error: medicalError, refetch: refetchMedical } = useGetEmployeeMedical(employeeId, {
     query: { queryKey: getGetEmployeeMedicalQueryKey(employeeId) },
   });
   const putMedical = usePutEmployeeMedical();
@@ -61,6 +62,10 @@ export default function EmployeeMedicalTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (medicalIsError && (medicalError as any)?.status !== 404) {
+    return <TabErrorState onRetry={refetchMedical} message="Could not load medical information. Check your connection and try again." />;
   }
 
   const activeItems = lovItems?.filter(item => item.isActive) || [];

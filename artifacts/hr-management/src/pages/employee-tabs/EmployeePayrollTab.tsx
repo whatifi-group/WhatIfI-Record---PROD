@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, Save, X, CreditCard } from "lucide-react";
+import TabErrorState from "@/components/TabErrorState";
 
 interface Props {
   employeeId: number;
@@ -46,7 +47,7 @@ export default function EmployeePayrollTab({ employeeId }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<FormData>(defaultForm);
 
-  const { data: payroll, isLoading } = useGetEmployeePayroll(employeeId, {
+  const { data: payroll, isLoading, isError, error, refetch } = useGetEmployeePayroll(employeeId, {
     query: { queryKey: getGetEmployeePayrollQueryKey(employeeId), retry: false },
   });
   const upsert = useUpsertEmployeePayroll();
@@ -92,6 +93,11 @@ export default function EmployeePayrollTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  // 404 means no record exists yet — show empty state below. Other errors are real failures.
+  if (isError && (error as any)?.status !== 404) {
+    return <TabErrorState onRetry={refetch} message="Could not load payroll information. Check your connection and try again." />;
   }
 
   return (

@@ -19,6 +19,7 @@ import type {
   QualificationType,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import TabErrorState from "@/components/TabErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -321,7 +322,7 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const { data: qualTypes } = useListQualificationTypes();
-  const { data: records, isLoading } = useListEmployeeQualifications(employeeId);
+  const { data: records, isLoading, isError, refetch } = useListEmployeeQualifications(employeeId);
   const createQual = useCreateEmployeeQualification();
   const updateQual = useUpdateEmployeeQualification();
   const deleteQual = useDeleteEmployeeQualification();
@@ -469,6 +470,10 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
         <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isError) {
+    return <TabErrorState onRetry={refetch} message="Could not load qualifications. Check your connection and try again." />;
   }
 
   return (

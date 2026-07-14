@@ -4,8 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { Loader2, ShieldX } from 'lucide-react';
+import React, { useEffect } from 'react';
 
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import EmployeesList from '@/pages/EmployeesList';
@@ -28,6 +28,35 @@ const queryClient = new QueryClient({
   },
 });
 
+function isAdminRole(roleName: string | null | undefined): boolean {
+  if (!roleName) return false;
+  return roleName.toLowerCase().includes("admin") || roleName.toLowerCase().includes("sysadmin");
+}
+
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] gap-4 text-center">
+      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-destructive/10">
+        <ShieldX className="h-8 w-8 text-destructive" />
+      </div>
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-foreground">Access Denied</h2>
+        <p className="text-muted-foreground text-sm max-w-xs">
+          You don't have permission to view this page. Contact your system administrator if you believe this is an error.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user } = useAuth();
+  if (!isAdminRole(user?.roleName)) {
+    return <AccessDenied />;
+  }
+  return <Component />;
+}
+
 function MainRoutes() {
   return (
     <AppLayout>
@@ -35,7 +64,9 @@ function MainRoutes() {
         <Route path="/" component={CompanyDashboard} />
         <Route path="/employees" component={EmployeesList} />
         <Route path="/employees/:id" component={EmployeeProfile} />
-        <Route path="/departments" component={DepartmentsList} />
+        <Route path="/departments">
+          {() => <AdminRoute component={DepartmentsList} />}
+        </Route>
         <Route path="/leave" component={LeaveRequestsList} />
         <Route path="/sysadmin" component={SysadminDashboard} />
         <Route path="/sysadmin/users" component={UsersList} />

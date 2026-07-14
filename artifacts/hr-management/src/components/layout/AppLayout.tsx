@@ -27,12 +27,18 @@ interface ModulePage {
   name: string;
   href: string;
   icon: LucideIcon;
+  adminOnly?: boolean;
 }
 
 interface Module {
   name: string;
   icon: LucideIcon;
   pages: ModulePage[];
+}
+
+function isAdminRole(roleName: string | null | undefined): boolean {
+  if (!roleName) return false;
+  return roleName.toLowerCase().includes("admin") || roleName.toLowerCase().includes("sysadmin");
 }
 
 const modules: Module[] = [
@@ -49,7 +55,7 @@ const modules: Module[] = [
     icon: ShieldCheck,
     pages: [
       { name: "Dashboard", href: "/sysadmin", icon: LayoutDashboard },
-      { name: "Departments", href: "/departments", icon: Building2 },
+      { name: "Departments", href: "/departments", icon: Building2, adminOnly: true },
       { name: "Users", href: "/sysadmin/users", icon: UserCog },
       { name: "Roles", href: "/sysadmin/roles", icon: Lock },
       { name: "List of Values", href: "/sysadmin/lov", icon: ListOrdered },
@@ -110,19 +116,21 @@ function AppSidebar() {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <SidebarMenuSub>
-                    {mod.pages.map((page) => {
-                      const isActive = location === page.href || location.startsWith(page.href);
-                      return (
-                        <SidebarMenuSubItem key={page.href}>
-                          <SidebarMenuSubButton asChild isActive={isActive}>
-                            <Link href={page.href} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
-                              <page.icon className="h-4 w-4" />
-                              <span>{page.name}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      );
-                    })}
+                    {mod.pages
+                      .filter((page) => !page.adminOnly || isAdminRole(user?.roleName))
+                      .map((page) => {
+                        const isActive = location === page.href || location.startsWith(page.href);
+                        return (
+                          <SidebarMenuSubItem key={page.href}>
+                            <SidebarMenuSubButton asChild isActive={isActive}>
+                              <Link href={page.href} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
+                                <page.icon className="h-4 w-4" />
+                                <span>{page.name}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>

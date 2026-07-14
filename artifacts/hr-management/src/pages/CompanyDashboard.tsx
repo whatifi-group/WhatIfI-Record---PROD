@@ -17,7 +17,7 @@ const modules: ModuleLink[] = [
   {
     name: "Human Resources",
     description: "Employees, departments, and leave requests.",
-    href: "/dashboard",
+    href: "/employees",
     icon: Users,
   },
   {

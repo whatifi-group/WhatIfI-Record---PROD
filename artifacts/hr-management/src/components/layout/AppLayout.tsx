@@ -40,7 +40,6 @@ const modules: Module[] = [
     name: "Human Resources",
     icon: Users,
     pages: [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Directory", href: "/employees", icon: Users },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
     ],

@@ -8,7 +8,6 @@ import { Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 
 import CompanyDashboard from '@/pages/CompanyDashboard';
-import Dashboard from '@/pages/Dashboard';
 import EmployeesList from '@/pages/EmployeesList';
 import EmployeeProfile from '@/pages/EmployeeProfile';
 import DepartmentsList from '@/pages/DepartmentsList';
@@ -34,7 +33,6 @@ function MainRoutes() {
     <AppLayout>
       <Switch>
         <Route path="/" component={CompanyDashboard} />
-        <Route path="/dashboard" component={Dashboard} />
         <Route path="/employees" component={EmployeesList} />
         <Route path="/employees/:id" component={EmployeeProfile} />
         <Route path="/departments" component={DepartmentsList} />

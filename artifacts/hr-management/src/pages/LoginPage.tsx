@@ -42,8 +42,10 @@ export default function LoginPage() {
     login.mutate(
       { data: values },
       {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        onSuccess: (user) => {
+          // Set auth data directly so isAuthenticated is true before navigation,
+          // preventing the Router from bouncing back to /login.
+          queryClient.setQueryData(getGetMeQueryKey(), user);
           setLocation("/");
         },
         onError: (err: any) => {

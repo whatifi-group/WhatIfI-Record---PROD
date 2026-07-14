@@ -47,8 +47,20 @@ function AccessDenied() {
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { hasPermission } = useAuth();
-  if (!hasPermission('sysadmin')) {
-    return <AccessDenied />;
+  const [location, setLocation] = useLocation();
+  const allowed = hasPermission('sysadmin');
+  const isSysadminRoute = location.startsWith('/sysadmin');
+
+  useEffect(() => {
+    if (!allowed && isSysadminRoute) {
+      setLocation('/?reason=access_denied');
+    }
+  }, [allowed, isSysadminRoute, setLocation]);
+
+  if (!allowed) {
+    // Sysadmin routes: render nothing while the redirect fires (avoids flash)
+    // Other guarded routes (e.g. /departments): keep the Access Denied screen
+    return isSysadminRoute ? null : <AccessDenied />;
   }
   return <Component />;
 }

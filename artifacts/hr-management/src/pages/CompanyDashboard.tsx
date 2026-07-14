@@ -1,6 +1,9 @@
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ShieldCheck, ArrowUpRight } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Users, ShieldCheck, ArrowUpRight, ShieldX, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface ModuleLink {
@@ -29,8 +32,38 @@ const modules: ModuleLink[] = [
 ];
 
 export default function CompanyDashboard() {
+  const [, setLocation] = useLocation();
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reason") === "access_denied") {
+      setShowBanner(true);
+      // Strip the query param from the URL without triggering a navigation/re-render
+      history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {showBanner && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 flex items-start gap-3">
+          <ShieldX className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="flex-1 text-sm">
+            You were redirected here because you don't have permission to access that page. Contact your system administrator if you think this is a mistake.
+          </AlertDescription>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 text-amber-600 hover:text-amber-800 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-900/40 -mt-0.5 -mr-1"
+            onClick={() => setShowBanner(false)}
+          >
+            <X className="h-3.5 w-3.5" />
+            <span className="sr-only">Dismiss</span>
+          </Button>
+        </Alert>
+      )}
+
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">WhatIfI Group</h1>
         <p className="text-muted-foreground mt-1 text-lg">Select a module to get started.</p>

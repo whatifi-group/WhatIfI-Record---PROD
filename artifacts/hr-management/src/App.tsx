@@ -1,8 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Route, Switch, Router as WouterRouter } from 'wouter';
+import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 import CompanyDashboard from '@/pages/CompanyDashboard';
 import Dashboard from '@/pages/Dashboard';
@@ -13,6 +16,7 @@ import LeaveRequestsList from '@/pages/LeaveRequestsList';
 import SysadminDashboard from '@/pages/sysadmin/SysadminDashboard';
 import UsersList from '@/pages/sysadmin/UsersList';
 import RolesList from '@/pages/sysadmin/RolesList';
+import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -24,7 +28,7 @@ const queryClient = new QueryClient({
   },
 });
 
-function Router() {
+function MainRoutes() {
   return (
     <AppLayout>
       <Switch>
@@ -43,15 +47,58 @@ function Router() {
   );
 }
 
+function Router() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isAuthenticated && location !== '/login') {
+      setLocation('/login');
+    } else if (isAuthenticated && location === '/login') {
+      setLocation('/');
+    }
+  }, [isLoading, isAuthenticated, location, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground text-sm font-medium">Loading session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prevent flash of content before redirecting
+  if (!isAuthenticated && location !== '/login') {
+    return null; 
+  }
+  
+  if (isAuthenticated && location === '/login') {
+    return null;
+  }
+
+  return (
+    <Switch>
+      <Route path="/login" component={LoginPage} />
+      <Route component={MainRoutes} />
+    </Switch>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

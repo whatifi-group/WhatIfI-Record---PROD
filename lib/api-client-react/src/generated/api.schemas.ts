@@ -188,6 +188,13 @@ export interface DashboardSummary {
   upcomingLeave: LeaveRequest[];
 }
 
+export interface LoginInput {
+  /** @minLength 1 */
+  email: string;
+  /** @minLength 1 */
+  password: string;
+}
+
 export type Permission = typeof Permission[keyof typeof Permission];
 
 

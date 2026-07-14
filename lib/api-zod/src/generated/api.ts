@@ -9,6 +9,53 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Log in with email and password
+ */
+
+
+
+
+export const LoginBody = zod.object({
+  "email": zod.string().min(1),
+  "password": zod.string().min(1)
+})
+
+export const LoginResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary End the current session
+ */
+export const LogoutResponse = zod.void()
+
+
+/**
+ * @summary Get the currently authenticated user
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'suspended']),
+  "roleId": zod.number(),
+  "roleName": zod.string(),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

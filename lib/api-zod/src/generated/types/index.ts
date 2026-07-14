@@ -25,6 +25,7 @@ export * from './leaveType';
 export * from './listEmployeesParams';
 export * from './listLeaveRequestsParams';
 export * from './listUsersParams';
+export * from './loginInput';
 export * from './permission';
 export * from './role';
 export * from './roleInput';

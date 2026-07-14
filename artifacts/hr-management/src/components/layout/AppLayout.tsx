@@ -15,10 +15,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock } from "lucide-react";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
-import { useHealthCheck } from "@workspace/api-client-react";
+import { useHealthCheck, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 interface ModulePage {
   name: string;
@@ -55,12 +58,24 @@ const modules: Module[] = [
 ];
 
 function AppSidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { setOpenMobile } = useSidebar();
   const { data: health } = useHealthCheck();
+  const { user } = useAuth();
+  const logout = useLogout();
+  const queryClient = useQueryClient();
 
   const isModuleActive = (mod: Module) =>
     mod.pages.some((page) => location === page.href || location.startsWith(page.href));
+
+  const handleLogout = () => {
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        setLocation('/login');
+      }
+    });
+  };
 
   return (
     <Sidebar variant="sidebar" className="border-r border-border bg-sidebar">
@@ -115,22 +130,41 @@ function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-6 space-y-4">
+      <SidebarFooter className="p-4 space-y-4 border-t border-border/50">
         {health && (
           <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground bg-muted/50 rounded-md py-1.5 px-3 w-fit mx-auto border border-border/30">
             <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
             <span>API: {health.status.toUpperCase()}</span>
           </div>
         )}
-        <div className="text-xs text-muted-foreground text-center">
-          One Question, Many Paths,<br />Lasting Impact
-        </div>
+        
+        {user && (
+          <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border shadow-sm">
+            <div className="flex flex-col min-w-0 pr-2">
+              <span className="text-sm font-semibold truncate text-foreground">{user.name}</span>
+              <span className="text-xs text-muted-foreground truncate">{user.roleName}</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleLogout} 
+              className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
+              disabled={logout.isPending}
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const initials = user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'HR';
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -142,7 +176,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-4">
                {/* Header actions could go here */}
                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                 HR
+                 {initials}
                </div>
             </div>
           </header>

@@ -27,6 +27,9 @@ import LoginPage from '@/pages/LoginPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import NotFound from '@/pages/not-found';
+import OnboardingPortal from '@/pages/OnboardingPortal';
+import OnboardingQueue from '@/pages/OnboardingQueue';
+import SelfServicePortal from '@/pages/SelfServicePortal';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +100,14 @@ export function PastEmployeesRoute({ component: Component }: { component: React.
   return <Component />;
 }
 
+export function SelfServiceRoute({ component: Component }: { component: React.ComponentType }) {
+  const { hasPermission } = useAuth();
+  if (!hasPermission('view_own_profile')) {
+    return <AccessDenied />;
+  }
+  return <Component />;
+}
+
 function MainRoutes() {
   return (
     <AppLayout>
@@ -147,6 +158,12 @@ function MainRoutes() {
         <Route path="/sysadmin/lov">
           {() => <AdminRoute component={ListOfValues} />}
         </Route>
+        <Route path="/onboarding-queue">
+          {() => <HrRoute component={OnboardingQueue} />}
+        </Route>
+        <Route path="/self-service">
+          {() => <SelfServiceRoute component={SelfServicePortal} />}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
@@ -154,13 +171,21 @@ function MainRoutes() {
 }
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, hasPermission } = useAuth();
   const [location, setLocation] = useLocation();
 
   const isPublicRoute =
     location === '/login' ||
     location === '/forgot-password' ||
-    location.startsWith('/reset-password');
+    location.startsWith('/reset-password') ||
+    location === '/onboarding';
+
+  // Self-service-only users land on /self-service, not the HR dashboard
+  const isSelfServiceOnly =
+    isAuthenticated &&
+    hasPermission('view_own_profile') &&
+    !hasPermission('hr:access') &&
+    !hasPermission('sysadmin');
 
   useEffect(() => {
     if (isLoading) return;
@@ -168,8 +193,10 @@ function Router() {
       setLocation('/login');
     } else if (isAuthenticated && isPublicRoute) {
       setLocation('/');
+    } else if (isSelfServiceOnly && location === '/') {
+      setLocation('/self-service');
     }
-  }, [isLoading, isAuthenticated, isPublicRoute, setLocation]);
+  }, [isLoading, isAuthenticated, isPublicRoute, isSelfServiceOnly, location, setLocation]);
 
   if (isLoading) {
     return (
@@ -196,6 +223,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/onboarding" component={OnboardingPortal} />
       <Route component={MainRoutes} />
     </Switch>
   );

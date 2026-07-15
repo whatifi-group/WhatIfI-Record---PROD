@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -15,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, HardHat } from "lucide-react";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, HardHat, ClipboardCheck, LayoutList } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -55,6 +56,7 @@ const modules: Module[] = [
       { name: "Leave Requests", href: "/leave", icon: Calendar },
       { name: "Expiring Qualifications", href: "/expiring-qualifications", icon: AlertTriangle },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
+      { name: "Onboarding Queue", href: "/onboarding-queue", icon: ClipboardCheck },
     ],
   },
   {
@@ -96,6 +98,30 @@ function AppSidebar() {
   const logout = useLogout();
   const queryClient = useQueryClient();
 
+  // Pending onboarding count — only fetched for HR/SysAdmin users
+  const [pendingCount, setPendingCount] = useState(0);
+  const canReviewOnboarding = hasPermission('hr:access') || hasPermission('sysadmin');
+  const isSelfServiceOnly =
+    hasPermission('view_own_profile') &&
+    !hasPermission('hr:access') &&
+    !hasPermission('sysadmin');
+
+  useEffect(() => {
+    if (!canReviewOnboarding) return;
+    let cancelled = false;
+    fetch('/api/onboarding/submissions?status=pending&page=1&pageSize=1', {
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && typeof data?.total === 'number') {
+          setPendingCount(data.total);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [canReviewOnboarding, location]);
+
   const isModuleActive = (mod: Module) =>
     mod.pages.some((page) => location === page.href || location.startsWith(page.href));
 
@@ -120,14 +146,29 @@ function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="px-4 py-2">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={location === "/"} tooltip="Home">
-              <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 py-2">
-                <Home className="h-4 w-4" />
-                <span className="font-medium">Home</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {/* Home — hidden for self-service-only users (they land on /self-service) */}
+          {!isSelfServiceOnly && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location === "/"} tooltip="Home">
+                <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 py-2">
+                  <Home className="h-4 w-4" />
+                  <span className="font-medium">Home</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+
+          {/* My Workspace — self-service employees only */}
+          {isSelfServiceOnly && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location === "/self-service"} tooltip="My Workspace">
+                <Link href="/self-service" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 py-2">
+                  <LayoutList className="h-4 w-4" />
+                  <span className="font-medium">My Workspace</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
 
           {modules
             .filter((mod) => {
@@ -160,7 +201,12 @@ function AppSidebar() {
                             <SidebarMenuSubButton asChild isActive={isActive}>
                               <Link href={page.href} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
                                 <page.icon className="h-4 w-4" />
-                                <span>{page.name}</span>
+                                <span className="flex-1">{page.name}</span>
+                                {page.href === '/onboarding-queue' && pendingCount > 0 && (
+                                  <span className="inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold min-w-[1.1rem] h-[1.1rem] px-1">
+                                    {pendingCount > 99 ? '99+' : pendingCount}
+                                  </span>
+                                )}
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>

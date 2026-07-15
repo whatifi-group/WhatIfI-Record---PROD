@@ -12,7 +12,7 @@
  *   POST /api/onboarding/submissions/:id/reject
  */
 import { Router, type IRouter } from "express";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, count } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -246,6 +246,13 @@ router.get(
       ? [eq(onboardingSubmissionsTable.onboardingStatus, status)]
       : [];
 
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(onboardingSubmissionsTable)
+      .where(whereClause);
+
     const rows = await db
       .select({
         id: onboardingSubmissionsTable.id,
@@ -261,12 +268,12 @@ router.get(
         reviewedAt: onboardingSubmissionsTable.reviewedAt,
       })
       .from(onboardingSubmissionsTable)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(whereClause)
       .orderBy(desc(onboardingSubmissionsTable.submittedAt))
       .limit(pageSize)
       .offset(offset);
 
-    res.json({ data: rows, page, pageSize });
+    res.json({ rows, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
   },
 );
 

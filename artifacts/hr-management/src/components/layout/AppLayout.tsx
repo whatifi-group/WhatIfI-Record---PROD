@@ -238,7 +238,7 @@ function AppSidebar() {
                         (p) => location === p.href || location.startsWith(p.href),
                       );
                       return (
-                        <Collapsible key={ss.name} defaultOpen={ssActive} className="group/subsection">
+                        <Collapsible key={ss.name} defaultOpen={isModuleActive(mod)} className="group/subsection">
                           <SidebarMenuSubItem>
                             <CollapsibleTrigger asChild>
                               <SidebarMenuSubButton isActive={ssActive} className="gap-2 cursor-pointer">

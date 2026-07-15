@@ -80,7 +80,7 @@ export const LoginResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -110,7 +110,7 @@ export const GetMeResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -1130,7 +1130,9 @@ export const ListWorkRecordsResponse = zod.object({
   "employeeStatus": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "employeeDepartmentId": zod.number().nullish(),
   "employeeDepartmentName": zod.string().nullish(),
-  "employeeAvatarUrl": zod.string().nullish()
+  "employeeAvatarUrl": zod.string().nullish(),
+  "employeeLeaverDate": zod.coerce.date().nullish().describe('Leaving date of the employee; null for active employees'),
+  "employeeLeaverReason": zod.string().nullish().describe('Leaver reason LOV value; null for active employees')
 })),
   "total": zod.number().describe('Total number of matching records across all pages'),
   "page": zod.number().describe('Current 1-based page number'),
@@ -1312,6 +1314,271 @@ export const DeleteEmployeeServicePeriodParams = zod.object({
 })
 
 export const DeleteEmployeeServicePeriodResponse = zod.void()
+
+
+/**
+ * @summary List disclosure records for an employee
+ */
+export const ListEmployeeDisclosuresParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeDisclosuresResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']),
+  "checkLevel": zod.enum(['basic', 'standard', 'enhanced', 'enhanced_barred']),
+  "certificateNumber": zod.string().nullish(),
+  "issueDate": zod.coerce.date(),
+  "onUpdateService": zod.boolean(),
+  "convictionDetails": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "updateChecks": zod.array(zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().nullish(),
+  "reviewDate": zod.coerce.date(),
+  "signedOffByUserId": zod.number().nullish(),
+  "signedOffByName": zod.string().nullish(),
+  "signedOffAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional()
+})
+export const ListEmployeeDisclosuresResponse = zod.array(ListEmployeeDisclosuresResponseItem)
+
+
+/**
+ * @summary Add a disclosure record
+ */
+export const CreateEmployeeDisclosureParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateEmployeeDisclosureBody = zod.object({
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']),
+  "checkLevel": zod.enum(['basic', 'standard', 'enhanced', 'enhanced_barred']),
+  "certificateNumber": zod.string().optional(),
+  "issueDate": zod.coerce.date(),
+  "onUpdateService": zod.boolean(),
+  "convictionDetails": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const CreateEmployeeDisclosureResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']),
+  "checkLevel": zod.enum(['basic', 'standard', 'enhanced', 'enhanced_barred']),
+  "certificateNumber": zod.string().nullish(),
+  "issueDate": zod.coerce.date(),
+  "onUpdateService": zod.boolean(),
+  "convictionDetails": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "updateChecks": zod.array(zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().nullish(),
+  "reviewDate": zod.coerce.date(),
+  "signedOffByUserId": zod.number().nullish(),
+  "signedOffByName": zod.string().nullish(),
+  "signedOffAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional()
+})
+
+
+/**
+ * @summary Update a disclosure record
+ */
+export const UpdateEmployeeDisclosureParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const UpdateEmployeeDisclosureBody = zod.object({
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']).optional(),
+  "checkLevel": zod.enum(['basic', 'standard', 'enhanced', 'enhanced_barred']).optional(),
+  "certificateNumber": zod.string().optional(),
+  "issueDate": zod.coerce.date().optional(),
+  "onUpdateService": zod.boolean().optional(),
+  "convictionDetails": zod.string().optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateEmployeeDisclosureResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']),
+  "checkLevel": zod.enum(['basic', 'standard', 'enhanced', 'enhanced_barred']),
+  "certificateNumber": zod.string().nullish(),
+  "issueDate": zod.coerce.date(),
+  "onUpdateService": zod.boolean(),
+  "convictionDetails": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "updateChecks": zod.array(zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().nullish(),
+  "reviewDate": zod.coerce.date(),
+  "signedOffByUserId": zod.number().nullish(),
+  "signedOffByName": zod.string().nullish(),
+  "signedOffAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+}),zod.null()]).optional()
+})
+
+
+/**
+ * @summary Delete a disclosure record
+ */
+export const DeleteEmployeeDisclosureParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const DeleteEmployeeDisclosureResponse = zod.void()
+
+
+/**
+ * @summary List Update Service check results for a disclosure
+ */
+export const ListDisclosureUpdateChecksParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const ListDisclosureUpdateChecksResponseItem = zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListDisclosureUpdateChecksResponse = zod.array(ListDisclosureUpdateChecksResponseItem)
+
+
+/**
+ * @summary Add an Update Service check result
+ */
+export const CreateDisclosureUpdateCheckParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const CreateDisclosureUpdateCheckBody = zod.object({
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().optional()
+})
+
+export const CreateDisclosureUpdateCheckResponse = zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "checkedDate": zod.coerce.date(),
+  "result": zod.enum(['clear', 'not_clear', 'changes_shown']),
+  "checkedBy": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete an Update Service check result
+ */
+export const DeleteDisclosureUpdateCheckParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number(),
+  "checkId": zod.coerce.number()
+})
+
+export const DeleteDisclosureUpdateCheckResponse = zod.void()
+
+
+/**
+ * @summary Create or update the conviction review for a disclosure
+ */
+export const SubmitDisclosureReviewParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const SubmitDisclosureReviewBody = zod.object({
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().optional(),
+  "reviewDate": zod.coerce.date()
+})
+
+export const SubmitDisclosureReviewResponse = zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().nullish(),
+  "reviewDate": zod.coerce.date(),
+  "signedOffByUserId": zod.number().nullish(),
+  "signedOffByName": zod.string().nullish(),
+  "signedOffAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Sign off the conviction review (requires review_disclosures permission)
+ */
+export const SignOffDisclosureReviewParams = zod.object({
+  "id": zod.coerce.number(),
+  "disclosureId": zod.coerce.number()
+})
+
+export const SignOffDisclosureReviewResponse = zod.object({
+  "id": zod.number(),
+  "disclosureId": zod.number(),
+  "recommendation": zod.enum(['approved', 'not_approved', 'further_review']),
+  "reviewerNotes": zod.string().nullish(),
+  "reviewDate": zod.coerce.date(),
+  "signedOffByUserId": zod.number().nullish(),
+  "signedOffByName": zod.string().nullish(),
+  "signedOffAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**
@@ -1533,7 +1800,7 @@ export const ListRolesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullable(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystem": zod.boolean(),
   "userCount": zod.number(),
   "createdAt": zod.coerce.date()
@@ -1550,14 +1817,14 @@ export const ListRolesResponse = zod.array(ListRolesResponseItem)
 export const CreateRoleBody = zod.object({
   "name": zod.string().min(1),
   "description": zod.string().optional(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll']))
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures']))
 })
 
 export const CreateRoleResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullable(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystem": zod.boolean(),
   "userCount": zod.number(),
   "createdAt": zod.coerce.date()
@@ -1575,7 +1842,7 @@ export const GetRoleResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullable(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystem": zod.boolean(),
   "userCount": zod.number(),
   "createdAt": zod.coerce.date()
@@ -1595,14 +1862,14 @@ export const UpdateRoleParams = zod.object({
 export const UpdateRoleBody = zod.object({
   "name": zod.string().min(1).optional(),
   "description": zod.string().nullish(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])).optional()
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])).optional()
 })
 
 export const UpdateRoleResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "description": zod.string().nullable(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystem": zod.boolean(),
   "userCount": zod.number(),
   "createdAt": zod.coerce.date()
@@ -1635,7 +1902,7 @@ export const ListUsersResponseItem = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -1666,7 +1933,7 @@ export const CreateUserBody = zod.object({
   "password": zod.string().min(createUserBodyPasswordMin),
   "roleId": zod.number(),
   "isSystemAccount": zod.boolean().default(createUserBodyIsSystemAccountDefault),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])).default(createUserBodyPermissionsDefault)
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])).default(createUserBodyPermissionsDefault)
 })
 
 export const CreateUserResponse = zod.object({
@@ -1676,7 +1943,7 @@ export const CreateUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -1704,7 +1971,7 @@ export const GetUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -1734,7 +2001,7 @@ export const UpdateUserBody = zod.object({
   "email": zod.string().min(1).optional(),
   "status": zod.enum(['active', 'inactive', 'suspended']).optional(),
   "roleId": zod.number().optional(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])).optional()
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])).optional()
 })
 
 export const UpdateUserResponse = zod.object({
@@ -1744,7 +2011,7 @@ export const UpdateUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({
@@ -1801,7 +2068,7 @@ export const GetSysadminSummaryResponse = zod.object({
   "status": zod.enum(['active', 'inactive', 'suspended']),
   "roleId": zod.number(),
   "roleName": zod.string(),
-  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll'])),
+  "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
   "employee": zod.union([zod.object({

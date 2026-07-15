@@ -23,4 +23,6 @@ export const Permission = {
   manage_leave: 'manage_leave',
   view_reports: 'view_reports',
   view_payroll: 'view_payroll',
+  view_disclosures: 'view_disclosures',
+  review_disclosures: 'review_disclosures',
 } as const;

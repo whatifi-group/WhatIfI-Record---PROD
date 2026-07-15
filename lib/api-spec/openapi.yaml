@@ -1409,6 +1409,251 @@ paths:
         "404":
           description: Not found
 
+  /employees/{id}/disclosures:
+    get:
+      operationId: listEmployeeDisclosures
+      tags: [employee-sections]
+      summary: List disclosure records for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of disclosures
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeDisclosure"
+    post:
+      operationId: createEmployeeDisclosure
+      tags: [employee-sections]
+      summary: Add a disclosure record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeDisclosureInput"
+      responses:
+        "201":
+          description: Created disclosure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDisclosure"
+        "400":
+          description: Validation error
+
+  /employees/{id}/disclosures/{disclosureId}:
+    patch:
+      operationId: updateEmployeeDisclosure
+      tags: [employee-sections]
+      summary: Update a disclosure record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeDisclosureUpdate"
+      responses:
+        "200":
+          description: Updated disclosure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDisclosure"
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeDisclosure
+      tags: [employee-sections]
+      summary: Delete a disclosure record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/disclosures/{disclosureId}/update-checks:
+    get:
+      operationId: listDisclosureUpdateChecks
+      tags: [employee-sections]
+      summary: List Update Service check results for a disclosure
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of update check results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DisclosureUpdateCheck"
+    post:
+      operationId: createDisclosureUpdateCheck
+      tags: [employee-sections]
+      summary: Add an Update Service check result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisclosureUpdateCheckInput"
+      responses:
+        "201":
+          description: Created check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisclosureUpdateCheck"
+        "400":
+          description: Validation error
+
+  /employees/{id}/disclosures/{disclosureId}/update-checks/{checkId}:
+    delete:
+      operationId: deleteDisclosureUpdateCheck
+      tags: [employee-sections]
+      summary: Delete an Update Service check result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: checkId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /employees/{id}/disclosures/{disclosureId}/review:
+    post:
+      operationId: submitDisclosureReview
+      tags: [employee-sections]
+      summary: Create or update the conviction review for a disclosure
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisclosureReviewInput"
+      responses:
+        "200":
+          description: Review record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisclosureReview"
+        "400":
+          description: Validation error
+        "404":
+          description: Disclosure not found
+
+  /employees/{id}/disclosures/{disclosureId}/review/sign-off:
+    post:
+      operationId: signOffDisclosureReview
+      tags: [employee-sections]
+      summary: Sign off the conviction review (requires review_disclosures permission)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: disclosureId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Signed-off review record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DisclosureReview"
+        "404":
+          description: Review not found
+        "409":
+          description: Already signed off
+
   /leave-requests:
     get:
       operationId: listLeaveRequests
@@ -2394,6 +2639,8 @@ components:
         - manage_leave
         - view_reports
         - view_payroll
+        - view_disclosures
+        - review_disclosures
 
     UserStatus:
       type: string
@@ -3297,6 +3544,166 @@ components:
         daysUntilExpiry:
           type: integer
           description: Negative values mean the qualification has already expired
+    EmployeeDisclosure:
+      type: object
+      required: [id, employeeId, checkType, checkLevel, issueDate, onUpdateService, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        checkType:
+          type: string
+          enum: [dbs, pvg, access_ni]
+        checkLevel:
+          type: string
+          enum: [basic, standard, enhanced, enhanced_barred]
+        certificateNumber:
+          type: ["string", "null"]
+        issueDate:
+          type: string
+          format: date
+        onUpdateService:
+          type: boolean
+        convictionDetails:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        updateChecks:
+          type: array
+          items:
+            $ref: "#/components/schemas/DisclosureUpdateCheck"
+        review:
+          oneOf:
+            - $ref: "#/components/schemas/DisclosureReview"
+            - type: "null"
+
+    EmployeeDisclosureInput:
+      type: object
+      required: [checkType, checkLevel, issueDate, onUpdateService]
+      properties:
+        checkType:
+          type: string
+          enum: [dbs, pvg, access_ni]
+        checkLevel:
+          type: string
+          enum: [basic, standard, enhanced, enhanced_barred]
+        certificateNumber:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        onUpdateService:
+          type: boolean
+        convictionDetails:
+          type: string
+        notes:
+          type: string
+
+    EmployeeDisclosureUpdate:
+      type: object
+      properties:
+        checkType:
+          type: string
+          enum: [dbs, pvg, access_ni]
+        checkLevel:
+          type: string
+          enum: [basic, standard, enhanced, enhanced_barred]
+        certificateNumber:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        onUpdateService:
+          type: boolean
+        convictionDetails:
+          type: string
+        notes:
+          type: string
+
+    DisclosureUpdateCheck:
+      type: object
+      required: [id, disclosureId, checkedDate, result, checkedBy, createdAt]
+      properties:
+        id:
+          type: integer
+        disclosureId:
+          type: integer
+        checkedDate:
+          type: string
+          format: date
+        result:
+          type: string
+          enum: [clear, not_clear, changes_shown]
+        checkedBy:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    DisclosureUpdateCheckInput:
+      type: object
+      required: [checkedDate, result, checkedBy]
+      properties:
+        checkedDate:
+          type: string
+          format: date
+        result:
+          type: string
+          enum: [clear, not_clear, changes_shown]
+        checkedBy:
+          type: string
+        notes:
+          type: string
+
+    DisclosureReview:
+      type: object
+      required: [id, disclosureId, recommendation, reviewDate, createdAt]
+      properties:
+        id:
+          type: integer
+        disclosureId:
+          type: integer
+        recommendation:
+          type: string
+          enum: [approved, not_approved, further_review]
+        reviewerNotes:
+          type: ["string", "null"]
+        reviewDate:
+          type: string
+          format: date
+        signedOffByUserId:
+          type: ["integer", "null"]
+        signedOffByName:
+          type: ["string", "null"]
+        signedOffAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    DisclosureReviewInput:
+      type: object
+      required: [recommendation, reviewDate]
+      properties:
+        recommendation:
+          type: string
+          enum: [approved, not_approved, further_review]
+        reviewerNotes:
+          type: string
+        reviewDate:
+          type: string
+          format: date
+
     UploadPolicy:
       type: object
       required: [maxFileSizeBytes, allowedContentTypes]

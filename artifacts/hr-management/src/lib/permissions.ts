@@ -21,4 +21,6 @@ export const PERMISSION_LABELS = {
   manage_leave: "Approve/Reject Leave",
   view_reports: "View HR Reports",
   view_payroll: "View Payroll & Pay Rates",
+  view_disclosures: "View Disclosure Records (DBS/PVG/AccessNI)",
+  review_disclosures: "Sign Off Disclosure Reviews",
 } satisfies Record<Permission, string>;

@@ -271,6 +271,8 @@ export const Permission = {
   manage_leave: 'manage_leave',
   view_reports: 'view_reports',
   view_payroll: 'view_payroll',
+  view_disclosures: 'view_disclosures',
+  review_disclosures: 'review_disclosures',
 } as const;
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
@@ -762,9 +764,15 @@ export interface WorkRecordRow {
   employeeDepartmentName?: string | null;
   /** @nullable */
   employeeAvatarUrl?: string | null;
-  /** @nullable */
+  /**
+     * Leaving date of the employee; null for active employees
+     * @nullable
+     */
   employeeLeaverDate?: string | null;
-  /** @nullable */
+  /**
+     * Leaver reason LOV value; null for active employees
+     * @nullable
+     */
   employeeLeaverReason?: string | null;
 }
 
@@ -834,6 +842,178 @@ export interface ExpiringQualification {
   notes: string | null;
   /** Negative values mean the qualification has already expired */
   daysUntilExpiry: number;
+}
+
+export type EmployeeDisclosureCheckType = typeof EmployeeDisclosureCheckType[keyof typeof EmployeeDisclosureCheckType];
+
+
+export const EmployeeDisclosureCheckType = {
+  dbs: 'dbs',
+  pvg: 'pvg',
+  access_ni: 'access_ni',
+} as const;
+
+export type EmployeeDisclosureCheckLevel = typeof EmployeeDisclosureCheckLevel[keyof typeof EmployeeDisclosureCheckLevel];
+
+
+export const EmployeeDisclosureCheckLevel = {
+  basic: 'basic',
+  standard: 'standard',
+  enhanced: 'enhanced',
+  enhanced_barred: 'enhanced_barred',
+} as const;
+
+export type DisclosureUpdateCheckResult = typeof DisclosureUpdateCheckResult[keyof typeof DisclosureUpdateCheckResult];
+
+
+export const DisclosureUpdateCheckResult = {
+  clear: 'clear',
+  not_clear: 'not_clear',
+  changes_shown: 'changes_shown',
+} as const;
+
+export interface DisclosureUpdateCheck {
+  id: number;
+  disclosureId: number;
+  checkedDate: string;
+  result: DisclosureUpdateCheckResult;
+  checkedBy: string;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type DisclosureReviewRecommendation = typeof DisclosureReviewRecommendation[keyof typeof DisclosureReviewRecommendation];
+
+
+export const DisclosureReviewRecommendation = {
+  approved: 'approved',
+  not_approved: 'not_approved',
+  further_review: 'further_review',
+} as const;
+
+export interface DisclosureReview {
+  id: number;
+  disclosureId: number;
+  recommendation: DisclosureReviewRecommendation;
+  /** @nullable */
+  reviewerNotes?: string | null;
+  reviewDate: string;
+  /** @nullable */
+  signedOffByUserId?: number | null;
+  /** @nullable */
+  signedOffByName?: string | null;
+  /** @nullable */
+  signedOffAt?: string | null;
+  createdAt: string;
+}
+
+export interface EmployeeDisclosure {
+  id: number;
+  employeeId: number;
+  checkType: EmployeeDisclosureCheckType;
+  checkLevel: EmployeeDisclosureCheckLevel;
+  /** @nullable */
+  certificateNumber?: string | null;
+  issueDate: string;
+  onUpdateService: boolean;
+  /** @nullable */
+  convictionDetails?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  updateChecks?: DisclosureUpdateCheck[];
+  review?: DisclosureReview | null;
+}
+
+export type EmployeeDisclosureInputCheckType = typeof EmployeeDisclosureInputCheckType[keyof typeof EmployeeDisclosureInputCheckType];
+
+
+export const EmployeeDisclosureInputCheckType = {
+  dbs: 'dbs',
+  pvg: 'pvg',
+  access_ni: 'access_ni',
+} as const;
+
+export type EmployeeDisclosureInputCheckLevel = typeof EmployeeDisclosureInputCheckLevel[keyof typeof EmployeeDisclosureInputCheckLevel];
+
+
+export const EmployeeDisclosureInputCheckLevel = {
+  basic: 'basic',
+  standard: 'standard',
+  enhanced: 'enhanced',
+  enhanced_barred: 'enhanced_barred',
+} as const;
+
+export interface EmployeeDisclosureInput {
+  checkType: EmployeeDisclosureInputCheckType;
+  checkLevel: EmployeeDisclosureInputCheckLevel;
+  certificateNumber?: string;
+  issueDate: string;
+  onUpdateService: boolean;
+  convictionDetails?: string;
+  notes?: string;
+}
+
+export type EmployeeDisclosureUpdateCheckType = typeof EmployeeDisclosureUpdateCheckType[keyof typeof EmployeeDisclosureUpdateCheckType];
+
+
+export const EmployeeDisclosureUpdateCheckType = {
+  dbs: 'dbs',
+  pvg: 'pvg',
+  access_ni: 'access_ni',
+} as const;
+
+export type EmployeeDisclosureUpdateCheckLevel = typeof EmployeeDisclosureUpdateCheckLevel[keyof typeof EmployeeDisclosureUpdateCheckLevel];
+
+
+export const EmployeeDisclosureUpdateCheckLevel = {
+  basic: 'basic',
+  standard: 'standard',
+  enhanced: 'enhanced',
+  enhanced_barred: 'enhanced_barred',
+} as const;
+
+export interface EmployeeDisclosureUpdate {
+  checkType?: EmployeeDisclosureUpdateCheckType;
+  checkLevel?: EmployeeDisclosureUpdateCheckLevel;
+  certificateNumber?: string;
+  issueDate?: string;
+  onUpdateService?: boolean;
+  convictionDetails?: string;
+  notes?: string;
+}
+
+export type DisclosureUpdateCheckInputResult = typeof DisclosureUpdateCheckInputResult[keyof typeof DisclosureUpdateCheckInputResult];
+
+
+export const DisclosureUpdateCheckInputResult = {
+  clear: 'clear',
+  not_clear: 'not_clear',
+  changes_shown: 'changes_shown',
+} as const;
+
+export interface DisclosureUpdateCheckInput {
+  checkedDate: string;
+  result: DisclosureUpdateCheckInputResult;
+  checkedBy: string;
+  notes?: string;
+}
+
+export type DisclosureReviewInputRecommendation = typeof DisclosureReviewInputRecommendation[keyof typeof DisclosureReviewInputRecommendation];
+
+
+export const DisclosureReviewInputRecommendation = {
+  approved: 'approved',
+  not_approved: 'not_approved',
+  further_review: 'further_review',
+} as const;
+
+export interface DisclosureReviewInput {
+  recommendation: DisclosureReviewInputRecommendation;
+  reviewerNotes?: string;
+  reviewDate: string;
 }
 
 export interface UploadPolicy {

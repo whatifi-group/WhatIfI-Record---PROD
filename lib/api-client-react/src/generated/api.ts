@@ -24,6 +24,10 @@ import type {
   Department,
   DepartmentInput,
   DepartmentUpdate,
+  DisclosureReview,
+  DisclosureReviewInput,
+  DisclosureUpdateCheck,
+  DisclosureUpdateCheckInput,
   Employee,
   EmployeeAddress,
   EmployeeAddressInput,
@@ -32,6 +36,9 @@ import type {
   EmployeeAttachmentInput,
   EmployeeDietary,
   EmployeeDietaryInput,
+  EmployeeDisclosure,
+  EmployeeDisclosureInput,
+  EmployeeDisclosureUpdate,
   EmployeeInput,
   EmployeeMedical,
   EmployeeMedicalInput,
@@ -4462,6 +4469,680 @@ export const useDeleteEmployeeServicePeriod = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteEmployeeServicePeriodMutationOptions(options));
+    }
+
+export const getListEmployeeDisclosuresUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures`
+}
+
+/**
+ * @summary List disclosure records for an employee
+ */
+export const listEmployeeDisclosures = async (id: number, options?: RequestInit): Promise<EmployeeDisclosure[]> => {
+
+  return customFetch<EmployeeDisclosure[]>(getListEmployeeDisclosuresUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmployeeDisclosuresQueryKey = (id: number,) => {
+    return [
+    `/api/employees/${id}/disclosures`
+    ] as const;
+    }
+
+
+export const getListEmployeeDisclosuresQueryOptions = <TData = Awaited<ReturnType<typeof listEmployeeDisclosures>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmployeeDisclosures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmployeeDisclosuresQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployeeDisclosures>>> = ({ signal }) => listEmployeeDisclosures(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmployeeDisclosures>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEmployeeDisclosuresQueryResult = NonNullable<Awaited<ReturnType<typeof listEmployeeDisclosures>>>
+export type ListEmployeeDisclosuresQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List disclosure records for an employee
+ */
+
+export function useListEmployeeDisclosures<TData = Awaited<ReturnType<typeof listEmployeeDisclosures>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEmployeeDisclosures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEmployeeDisclosuresQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEmployeeDisclosureUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures`
+}
+
+/**
+ * @summary Add a disclosure record
+ */
+export const createEmployeeDisclosure = async (id: number,
+    employeeDisclosureInput: EmployeeDisclosureInput, options?: RequestInit): Promise<EmployeeDisclosure> => {
+
+  return customFetch<EmployeeDisclosure>(getCreateEmployeeDisclosureUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeeDisclosureInput)
+  }
+);}
+
+
+
+
+
+export const getCreateEmployeeDisclosureMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployeeDisclosure>>, TError,{id: number;data: BodyType<EmployeeDisclosureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEmployeeDisclosure>>, TError,{id: number;data: BodyType<EmployeeDisclosureInput>}, TContext> => {
+
+const mutationKey = ['createEmployeeDisclosure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEmployeeDisclosure>>, {id: number;data: BodyType<EmployeeDisclosureInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createEmployeeDisclosure(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEmployeeDisclosureMutationResult = NonNullable<Awaited<ReturnType<typeof createEmployeeDisclosure>>>
+    export type CreateEmployeeDisclosureMutationBody = BodyType<EmployeeDisclosureInput>
+    export type CreateEmployeeDisclosureMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a disclosure record
+ */
+export const useCreateEmployeeDisclosure = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEmployeeDisclosure>>, TError,{id: number;data: BodyType<EmployeeDisclosureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEmployeeDisclosure>>,
+        TError,
+        {id: number;data: BodyType<EmployeeDisclosureInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEmployeeDisclosureMutationOptions(options));
+    }
+
+export const getUpdateEmployeeDisclosureUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}`
+}
+
+/**
+ * @summary Update a disclosure record
+ */
+export const updateEmployeeDisclosure = async (id: number,
+    disclosureId: number,
+    employeeDisclosureUpdate: EmployeeDisclosureUpdate, options?: RequestInit): Promise<EmployeeDisclosure> => {
+
+  return customFetch<EmployeeDisclosure>(getUpdateEmployeeDisclosureUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeeDisclosureUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateEmployeeDisclosureMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeDisclosure>>, TError,{id: number;disclosureId: number;data: BodyType<EmployeeDisclosureUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeDisclosure>>, TError,{id: number;disclosureId: number;data: BodyType<EmployeeDisclosureUpdate>}, TContext> => {
+
+const mutationKey = ['updateEmployeeDisclosure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployeeDisclosure>>, {id: number;disclosureId: number;data: BodyType<EmployeeDisclosureUpdate>}> = (props) => {
+          const {id,disclosureId,data} = props ?? {};
+
+          return  updateEmployeeDisclosure(id,disclosureId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEmployeeDisclosureMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployeeDisclosure>>>
+    export type UpdateEmployeeDisclosureMutationBody = BodyType<EmployeeDisclosureUpdate>
+    export type UpdateEmployeeDisclosureMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a disclosure record
+ */
+export const useUpdateEmployeeDisclosure = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeDisclosure>>, TError,{id: number;disclosureId: number;data: BodyType<EmployeeDisclosureUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEmployeeDisclosure>>,
+        TError,
+        {id: number;disclosureId: number;data: BodyType<EmployeeDisclosureUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateEmployeeDisclosureMutationOptions(options));
+    }
+
+export const getDeleteEmployeeDisclosureUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}`
+}
+
+/**
+ * @summary Delete a disclosure record
+ */
+export const deleteEmployeeDisclosure = async (id: number,
+    disclosureId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteEmployeeDisclosureUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteEmployeeDisclosureMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeDisclosure>>, TError,{id: number;disclosureId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeDisclosure>>, TError,{id: number;disclosureId: number}, TContext> => {
+
+const mutationKey = ['deleteEmployeeDisclosure'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEmployeeDisclosure>>, {id: number;disclosureId: number}> = (props) => {
+          const {id,disclosureId} = props ?? {};
+
+          return  deleteEmployeeDisclosure(id,disclosureId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEmployeeDisclosureMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEmployeeDisclosure>>>
+
+    export type DeleteEmployeeDisclosureMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a disclosure record
+ */
+export const useDeleteEmployeeDisclosure = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeeDisclosure>>, TError,{id: number;disclosureId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEmployeeDisclosure>>,
+        TError,
+        {id: number;disclosureId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEmployeeDisclosureMutationOptions(options));
+    }
+
+export const getListDisclosureUpdateChecksUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}/update-checks`
+}
+
+/**
+ * @summary List Update Service check results for a disclosure
+ */
+export const listDisclosureUpdateChecks = async (id: number,
+    disclosureId: number, options?: RequestInit): Promise<DisclosureUpdateCheck[]> => {
+
+  return customFetch<DisclosureUpdateCheck[]>(getListDisclosureUpdateChecksUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDisclosureUpdateChecksQueryKey = (id: number,
+    disclosureId: number,) => {
+    return [
+    `/api/employees/${id}/disclosures/${disclosureId}/update-checks`
+    ] as const;
+    }
+
+
+export const getListDisclosureUpdateChecksQueryOptions = <TData = Awaited<ReturnType<typeof listDisclosureUpdateChecks>>, TError = ErrorType<unknown>>(id: number,
+    disclosureId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDisclosureUpdateChecks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDisclosureUpdateChecksQueryKey(id,disclosureId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDisclosureUpdateChecks>>> = ({ signal }) => listDisclosureUpdateChecks(id,disclosureId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && disclosureId !== null && disclosureId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDisclosureUpdateChecks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDisclosureUpdateChecksQueryResult = NonNullable<Awaited<ReturnType<typeof listDisclosureUpdateChecks>>>
+export type ListDisclosureUpdateChecksQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Update Service check results for a disclosure
+ */
+
+export function useListDisclosureUpdateChecks<TData = Awaited<ReturnType<typeof listDisclosureUpdateChecks>>, TError = ErrorType<unknown>>(
+ id: number,
+    disclosureId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDisclosureUpdateChecks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDisclosureUpdateChecksQueryOptions(id,disclosureId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateDisclosureUpdateCheckUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}/update-checks`
+}
+
+/**
+ * @summary Add an Update Service check result
+ */
+export const createDisclosureUpdateCheck = async (id: number,
+    disclosureId: number,
+    disclosureUpdateCheckInput: DisclosureUpdateCheckInput, options?: RequestInit): Promise<DisclosureUpdateCheck> => {
+
+  return customFetch<DisclosureUpdateCheck>(getCreateDisclosureUpdateCheckUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(disclosureUpdateCheckInput)
+  }
+);}
+
+
+
+
+
+export const getCreateDisclosureUpdateCheckMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureUpdateCheckInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureUpdateCheckInput>}, TContext> => {
+
+const mutationKey = ['createDisclosureUpdateCheck'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDisclosureUpdateCheck>>, {id: number;disclosureId: number;data: BodyType<DisclosureUpdateCheckInput>}> = (props) => {
+          const {id,disclosureId,data} = props ?? {};
+
+          return  createDisclosureUpdateCheck(id,disclosureId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDisclosureUpdateCheckMutationResult = NonNullable<Awaited<ReturnType<typeof createDisclosureUpdateCheck>>>
+    export type CreateDisclosureUpdateCheckMutationBody = BodyType<DisclosureUpdateCheckInput>
+    export type CreateDisclosureUpdateCheckMutationError = ErrorType<void>
+
+    /**
+ * @summary Add an Update Service check result
+ */
+export const useCreateDisclosureUpdateCheck = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureUpdateCheckInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDisclosureUpdateCheck>>,
+        TError,
+        {id: number;disclosureId: number;data: BodyType<DisclosureUpdateCheckInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDisclosureUpdateCheckMutationOptions(options));
+    }
+
+export const getDeleteDisclosureUpdateCheckUrl = (id: number,
+    disclosureId: number,
+    checkId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}/update-checks/${checkId}`
+}
+
+/**
+ * @summary Delete an Update Service check result
+ */
+export const deleteDisclosureUpdateCheck = async (id: number,
+    disclosureId: number,
+    checkId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDisclosureUpdateCheckUrl(id,disclosureId,checkId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteDisclosureUpdateCheckMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;checkId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;checkId: number}, TContext> => {
+
+const mutationKey = ['deleteDisclosureUpdateCheck'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>, {id: number;disclosureId: number;checkId: number}> = (props) => {
+          const {id,disclosureId,checkId} = props ?? {};
+
+          return  deleteDisclosureUpdateCheck(id,disclosureId,checkId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDisclosureUpdateCheckMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>>
+
+    export type DeleteDisclosureUpdateCheckMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an Update Service check result
+ */
+export const useDeleteDisclosureUpdateCheck = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>, TError,{id: number;disclosureId: number;checkId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDisclosureUpdateCheck>>,
+        TError,
+        {id: number;disclosureId: number;checkId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDisclosureUpdateCheckMutationOptions(options));
+    }
+
+export const getSubmitDisclosureReviewUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}/review`
+}
+
+/**
+ * @summary Create or update the conviction review for a disclosure
+ */
+export const submitDisclosureReview = async (id: number,
+    disclosureId: number,
+    disclosureReviewInput: DisclosureReviewInput, options?: RequestInit): Promise<DisclosureReview> => {
+
+  return customFetch<DisclosureReview>(getSubmitDisclosureReviewUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(disclosureReviewInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitDisclosureReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDisclosureReview>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitDisclosureReview>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureReviewInput>}, TContext> => {
+
+const mutationKey = ['submitDisclosureReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitDisclosureReview>>, {id: number;disclosureId: number;data: BodyType<DisclosureReviewInput>}> = (props) => {
+          const {id,disclosureId,data} = props ?? {};
+
+          return  submitDisclosureReview(id,disclosureId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitDisclosureReviewMutationResult = NonNullable<Awaited<ReturnType<typeof submitDisclosureReview>>>
+    export type SubmitDisclosureReviewMutationBody = BodyType<DisclosureReviewInput>
+    export type SubmitDisclosureReviewMutationError = ErrorType<void>
+
+    /**
+ * @summary Create or update the conviction review for a disclosure
+ */
+export const useSubmitDisclosureReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDisclosureReview>>, TError,{id: number;disclosureId: number;data: BodyType<DisclosureReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitDisclosureReview>>,
+        TError,
+        {id: number;disclosureId: number;data: BodyType<DisclosureReviewInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitDisclosureReviewMutationOptions(options));
+    }
+
+export const getSignOffDisclosureReviewUrl = (id: number,
+    disclosureId: number,) => {
+
+
+
+
+  return `/api/employees/${id}/disclosures/${disclosureId}/review/sign-off`
+}
+
+/**
+ * @summary Sign off the conviction review (requires review_disclosures permission)
+ */
+export const signOffDisclosureReview = async (id: number,
+    disclosureId: number, options?: RequestInit): Promise<DisclosureReview> => {
+
+  return customFetch<DisclosureReview>(getSignOffDisclosureReviewUrl(id,disclosureId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSignOffDisclosureReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signOffDisclosureReview>>, TError,{id: number;disclosureId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signOffDisclosureReview>>, TError,{id: number;disclosureId: number}, TContext> => {
+
+const mutationKey = ['signOffDisclosureReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signOffDisclosureReview>>, {id: number;disclosureId: number}> = (props) => {
+          const {id,disclosureId} = props ?? {};
+
+          return  signOffDisclosureReview(id,disclosureId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignOffDisclosureReviewMutationResult = NonNullable<Awaited<ReturnType<typeof signOffDisclosureReview>>>
+
+    export type SignOffDisclosureReviewMutationError = ErrorType<void>
+
+    /**
+ * @summary Sign off the conviction review (requires review_disclosures permission)
+ */
+export const useSignOffDisclosureReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signOffDisclosureReview>>, TError,{id: number;disclosureId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signOffDisclosureReview>>,
+        TError,
+        {id: number;disclosureId: number},
+        TContext
+      > => {
+      return useMutation(getSignOffDisclosureReviewMutationOptions(options));
     }
 
 export const getListLeaveRequestsUrl = (params?: ListLeaveRequestsParams,) => {

@@ -37,6 +37,7 @@ import EmployeeNextOfKinTab from "./employee-tabs/EmployeeNextOfKinTab";
 import EmployeeQualificationsTab from "./employee-tabs/EmployeeQualificationsTab";
 import EmployeeWorkRecordsTab from "./employee-tabs/EmployeeWorkRecordsTab";
 import EmployeeServiceHistoryTab from "./employee-tabs/EmployeeServiceHistoryTab";
+import EmployeeDisclosuresTab from "./employee-tabs/EmployeeDisclosuresTab";
 
 const employeeUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -52,7 +53,7 @@ const employeeUpdateSchema = z.object({
 
 type EmployeeUpdateValues = z.infer<typeof employeeUpdateSchema>;
 
-const VALID_TABS = ["details","addresses","payroll","attachments","medical","dietary","next-of-kin","qualifications","work-record","service-history"] as const;
+const VALID_TABS = ["details","addresses","payroll","attachments","medical","dietary","next-of-kin","qualifications","work-record","service-history","disclosures"] as const;
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -67,6 +68,7 @@ export default function EmployeeProfile() {
   const canEdit = hasPermission('edit_employees');
   const canDelete = hasPermission('sysadmin');
   const canViewPayroll = hasPermission('view_payroll') || hasPermission('sysadmin');
+  const canViewDisclosures = hasPermission('view_disclosures') || hasPermission('sysadmin');
 
   const [isEditing, setIsEditing] = useState(canEdit);
   const [isMarkingLeaver, setIsMarkingLeaver] = useState(false);
@@ -359,6 +361,7 @@ export default function EmployeeProfile() {
               <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
               <TabsTrigger value="work-record">Work Record</TabsTrigger>
               <TabsTrigger value="service-history">Service History</TabsTrigger>
+              {canViewDisclosures && <TabsTrigger value="disclosures">Disclosures</TabsTrigger>}
             </TabsList>
 
             {/* Details Tab */}
@@ -594,6 +597,16 @@ export default function EmployeeProfile() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {canViewDisclosures && (
+              <TabsContent value="disclosures">
+                <Card className="border-border/50 shadow-sm">
+                  <CardContent className="pt-6">
+                    <EmployeeDisclosuresTab employeeId={employeeId} />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
           </Tabs>
         </div>
       </div>

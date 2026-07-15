@@ -31,8 +31,14 @@ export interface WorkRecordRow {
   employeeDepartmentName?: string | null;
   /** @nullable */
   employeeAvatarUrl?: string | null;
-  /** @nullable */
-  employeeLeaverDate?: string | null;
-  /** @nullable */
+  /**
+     * Leaving date of the employee; null for active employees
+     * @nullable
+     */
+  employeeLeaverDate?: Date | null;
+  /**
+     * Leaver reason LOV value; null for active employees
+     * @nullable
+     */
   employeeLeaverReason?: string | null;
 }

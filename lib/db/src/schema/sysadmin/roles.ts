@@ -23,6 +23,8 @@ export const permissionValues = [
   "manage_leave",
   "view_reports",
   "view_payroll",
+  "view_disclosures",
+  "review_disclosures",
   // Employee self-service permissions (granted to the employee_self_service role)
   "view_own_profile",
   "upload_qualifications",

@@ -50,6 +50,13 @@
       "when": 1752624001000,
       "tag": "0008_work_records_index",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1752710400000,
+      "tag": "0009_employee_disclosures",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,10 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
-import { verifyPassword } from "../lib/password";
+import { eq, and, gt } from "drizzle-orm";
+import crypto from "crypto";
+import { db, employeesTable, rolesTable, usersTable, passwordResetTokensTable } from "@workspace/db";
+import { verifyPassword, hashPassword } from "../lib/password";
 import { LoginBody } from "@workspace/api-zod";
+import { sendPasswordResetEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -147,6 +149,94 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   }
 
   res.json(userRow(row));
+});
+
+// POST /api/auth/forgot-password
+router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body ?? {};
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+
+  const [user] = await db
+    .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, status: usersTable.status })
+    .from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase().trim()))
+    .limit(1);
+
+  // Always respond the same way to prevent email enumeration
+  if (!user || user.status !== "active") {
+    res.json({ message: "If that email is registered, a reset link has been sent." });
+    return;
+  }
+
+  // Invalidate any existing unused tokens for this user
+  await db
+    .delete(passwordResetTokensTable)
+    .where(eq(passwordResetTokensTable.userId, user.id));
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.insert(passwordResetTokensTable).values({
+    userId: user.id,
+    token,
+    expiresAt,
+  });
+
+  const appUrl =
+    process.env.APP_URL?.replace(/\/$/, "") ??
+    "https://record.whatifigroup.co.uk";
+  const resetUrl = `${appUrl}/reset-password?token=${token}`;
+
+  await sendPasswordResetEmail(user.email, user.name, resetUrl);
+
+  res.json({ message: "If that email is registered, a reset link has been sent." });
+});
+
+// POST /api/auth/reset-password
+router.post("/auth/reset-password", async (req, res): Promise<void> => {
+  const { token, password } = req.body ?? {};
+  if (!token || typeof token !== "string" || !password || typeof password !== "string") {
+    res.status(400).json({ error: "Token and password are required" });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const now = new Date();
+  const [row] = await db
+    .select()
+    .from(passwordResetTokensTable)
+    .where(
+      and(
+        eq(passwordResetTokensTable.token, token),
+        gt(passwordResetTokensTable.expiresAt, now),
+      ),
+    )
+    .limit(1);
+
+  if (!row || row.usedAt) {
+    res.status(400).json({ error: "Reset link is invalid or has expired." });
+    return;
+  }
+
+  // Mark token as used
+  await db
+    .update(passwordResetTokensTable)
+    .set({ usedAt: now })
+    .where(eq(passwordResetTokensTable.id, row.id));
+
+  // Update password
+  await db
+    .update(usersTable)
+    .set({ passwordHash: hashPassword(password), updatedAt: now })
+    .where(eq(usersTable.id, row.userId));
+
+  res.json({ message: "Password has been reset successfully." });
 });
 
 export default router;

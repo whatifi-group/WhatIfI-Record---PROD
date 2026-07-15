@@ -22,6 +22,8 @@ import PastEmployeesList from '@/pages/PastEmployeesList';
 import WorkRecordsList from '@/pages/WorkRecordsList';
 import ExpiringQualifications from '@/pages/ExpiringQualifications';
 import LoginPage from '@/pages/LoginPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -147,14 +149,19 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   const [location, setLocation] = useLocation();
 
+  const isPublicRoute =
+    location === '/login' ||
+    location === '/forgot-password' ||
+    location.startsWith('/reset-password');
+
   useEffect(() => {
     if (isLoading) return;
-    if (!isAuthenticated && location !== '/login') {
+    if (!isAuthenticated && !isPublicRoute) {
       setLocation('/login');
-    } else if (isAuthenticated && location === '/login') {
+    } else if (isAuthenticated && isPublicRoute) {
       setLocation('/');
     }
-  }, [isLoading, isAuthenticated, location, setLocation]);
+  }, [isLoading, isAuthenticated, isPublicRoute, setLocation]);
 
   if (isLoading) {
     return (
@@ -168,17 +175,19 @@ function Router() {
   }
 
   // Prevent flash of content before redirecting
-  if (!isAuthenticated && location !== '/login') {
-    return null; 
+  if (!isAuthenticated && !isPublicRoute) {
+    return null;
   }
-  
-  if (isAuthenticated && location === '/login') {
+
+  if (isAuthenticated && isPublicRoute) {
     return null;
   }
 
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={MainRoutes} />
     </Switch>
   );

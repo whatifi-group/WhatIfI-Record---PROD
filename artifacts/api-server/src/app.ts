@@ -19,6 +19,10 @@ const PgSession = connectPgSimple(session);
 
 const app: Express = express();
 
+// Trust the first proxy hop — required for secure cookies and correct
+// client-IP detection behind Replit's autoscale reverse proxy.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -48,6 +52,8 @@ app.use(
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "user_sessions",
+      // Create the table automatically if it doesn't exist in the target DB.
+      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,
@@ -55,6 +61,9 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: "lax",
+      // Require HTTPS in production so the cookie is only sent over encrypted
+      // connections; allow HTTP in development for curl / local testing.
+      secure: process.env.NODE_ENV === "production",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   }),

@@ -1,7 +1,11 @@
 import { Router, type IRouter } from "express";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, departmentsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
-import { requirePermission, getEffectivePermissions } from "../../middlewares/requirePermission";
+import {
+  requirePermission,
+  getEffectivePermissions,
+  invalidatePermissionsCache,
+} from "../../middlewares/requirePermission";
 import { hashPassword } from "../../lib/password";
 import {
   CreateEmployeeBody,
@@ -280,6 +284,14 @@ router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res):
     return;
   }
 
+  // Resolve the linked user (if any) before deletion so we can evict their
+  // cached permissions.  The FK cascade deletes the user row automatically.
+  const [linkedUser] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.employeeId, params.data.id))
+    .limit(1);
+
   // Cascade via FK deletes linked user automatically
   const [deleted] = await db
     .delete(employeesTable)
@@ -289,6 +301,12 @@ router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res):
   if (!deleted) {
     res.status(404).json({ error: "Employee not found" });
     return;
+  }
+
+  // Evict stale cached permissions so a deleted user cannot retain access
+  // for up to 60 s on a still-active session.
+  if (linkedUser) {
+    invalidatePermissionsCache(linkedUser.id);
   }
 
   res.sendStatus(204);

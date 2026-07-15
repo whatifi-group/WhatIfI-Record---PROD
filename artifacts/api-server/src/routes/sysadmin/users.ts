@@ -3,6 +3,9 @@ import { and, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import { hashPassword } from "../../lib/password";
 import {
+  invalidatePermissionsCache,
+} from "../../middlewares/requirePermission";
+import {
   CreateUserBody,
   UpdateUserBody,
   GetUserParams,
@@ -176,6 +179,10 @@ router.patch("/sysadmin/users/:id", async (req, res): Promise<void> => {
     .set({ ...parsed.data, updatedAt: new Date() })
     .where(eq(usersTable.id, params.data.id));
 
+  // Evict stale cached permissions for this user so the next request picks up
+  // the new role/permission values immediately without waiting for the TTL.
+  invalidatePermissionsCache(params.data.id);
+
   const [row] = await userSelection().where(eq(usersTable.id, params.data.id));
   res.json(UpdateUserResponse.parse(row));
 });
@@ -196,6 +203,10 @@ router.delete("/sysadmin/users/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "User not found" });
     return;
   }
+
+  // Evict stale cached permissions so a deleted user cannot retain access for
+  // up to 60 s on a still-active session.
+  invalidatePermissionsCache(params.data.id);
 
   res.sendStatus(204);
 });

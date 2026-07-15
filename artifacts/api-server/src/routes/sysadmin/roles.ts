@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db, rolesTable, usersTable } from "@workspace/db";
+import { clearPermissionsCache } from "../../middlewares/requirePermission";
 import {
   CreateRoleBody,
   UpdateRoleBody,
@@ -112,6 +113,14 @@ router.patch("/sysadmin/roles/:id", async (req, res): Promise<void> => {
     .update(rolesTable)
     .set(parsed.data)
     .where(eq(rolesTable.id, params.data.id));
+
+  // Only clear the full cache when permissions changed — name/description
+  // edits don't affect what users can do.  Any number of users may hold this
+  // role, so we clear the entire cache rather than querying to find them;
+  // entries are repopulated on the next authenticated request.
+  if (parsed.data.permissions !== undefined) {
+    clearPermissionsCache();
+  }
 
   const [row] = await roleSelection().where(eq(rolesTable.id, params.data.id));
   res.json(UpdateRoleResponse.parse(row));

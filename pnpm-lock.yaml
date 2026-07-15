@@ -115,6 +115,9 @@ importers:
       google-auth-library:
         specifier: ^10.9.0
         version: 10.9.0
+      lru-cache:
+        specifier: ^11.5.2
+        version: 11.5.2
       nodemailer:
         specifier: ^9.0.3
         version: 9.0.3

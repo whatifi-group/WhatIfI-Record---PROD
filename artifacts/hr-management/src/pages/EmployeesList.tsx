@@ -28,7 +28,6 @@ const employeeSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
   employmentType: z.string().min(1, "Engagement type is required"),
@@ -66,7 +65,6 @@ export default function EmployeesList() {
       firstName: "",
       lastName: "",
       email: "",
-      phone: "",
       jobTitle: "",
       departmentId: null,
       employmentType: "full_time",
@@ -157,9 +155,6 @@ export default function EmployeesList() {
                   )} />
                   <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>Phone (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="jobTitle" render={({ field }) => (
                     <FormItem className="md:col-span-2"><FormLabel>Role / Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>

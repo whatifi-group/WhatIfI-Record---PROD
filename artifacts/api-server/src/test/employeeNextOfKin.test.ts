@@ -39,7 +39,6 @@ describe("Employee Next of Kin", () => {
         .send({
           name: "Jane Doe",
           relationship: "Spouse",
-          phone: "07700000000",
           email: "jane@example.com",
         });
 
@@ -56,7 +55,7 @@ describe("Employee Next of Kin", () => {
         .send({ name: "Parent" });
 
       expect(res.status).toBe(201);
-      expect(res.body.phone).toBeNull();
+      expect(res.body.phones).toEqual([]);
     });
 
     it("returns 400 when name is missing", async () => {
@@ -85,11 +84,11 @@ describe("Employee Next of Kin", () => {
 
       const res = await api
         .patch(`/api/employees/${empId}/next-of-kin/${kinId}`)
-        .send({ name: "Updated Name", phone: "07711111111" });
+        .send({ name: "Updated Name" });
 
       expect(res.status).toBe(200);
       expect(res.body.name).toBe("Updated Name");
-      expect(res.body.phone).toBe("07711111111");
+      expect(res.body.phones).toBeDefined();
     });
 
     it("returns 404 when kinId does not exist", async () => {

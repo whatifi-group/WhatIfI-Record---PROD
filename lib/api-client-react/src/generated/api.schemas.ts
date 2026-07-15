@@ -94,13 +94,25 @@ export interface DepartmentUpdate {
   headEmployeeId?: number | null;
 }
 
+export interface EmployeePhoneEntry {
+  id: number;
+  number: string;
+  label: string;
+  isPrimary: boolean;
+}
+
+export interface KinPhoneEntry {
+  id: number;
+  number: string;
+  label: string;
+  isPrimary: boolean;
+}
+
 export interface Employee {
   id: number;
   firstName: string;
   lastName: string;
   email: string;
-  /** @nullable */
-  phone: string | null;
   jobTitle: string;
   /** @nullable */
   departmentId: number | null;
@@ -124,6 +136,7 @@ export interface Employee {
      */
   leaverDate: string | null;
   createdAt: string;
+  phones: EmployeePhoneEntry[];
   /** True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise. */
   pendingDisclosureReview?: boolean;
 }
@@ -135,7 +148,6 @@ export interface EmployeeInput {
   lastName: string;
   /** @minLength 1 */
   email: string;
-  phone?: string;
   /** @minLength 1 */
   jobTitle: string;
   /** @nullable */
@@ -163,8 +175,6 @@ export interface EmployeeUpdate {
   lastName?: string;
   /** @minLength 1 */
   email?: string;
-  /** @nullable */
-  phone?: string | null;
   /** @minLength 1 */
   jobTitle?: string;
   /** @nullable */
@@ -504,19 +514,17 @@ export interface EmployeeNextOfKin {
   /** @nullable */
   relationship?: string | null;
   /** @nullable */
-  phone?: string | null;
-  /** @nullable */
   email?: string | null;
   /** @nullable */
   address?: string | null;
   createdAt: string;
+  phones: KinPhoneEntry[];
 }
 
 export interface EmployeeNextOfKinInput {
   /** @minLength 1 */
   name: string;
   relationship?: string;
-  phone?: string;
   email?: string;
   address?: string;
 }
@@ -527,11 +535,35 @@ export interface EmployeeNextOfKinUpdate {
   /** @nullable */
   relationship?: string | null;
   /** @nullable */
-  phone?: string | null;
-  /** @nullable */
   email?: string | null;
   /** @nullable */
   address?: string | null;
+}
+
+export type PhoneLabel = 'Mobile' | 'Home' | 'Work' | 'Other';
+
+export interface EmployeePhoneInput {
+  number: string;
+  label: PhoneLabel;
+  isPrimary: boolean;
+}
+
+export interface EmployeePhoneUpdate {
+  number?: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
+}
+
+export interface KinPhoneInput {
+  number: string;
+  label: PhoneLabel;
+  isPrimary: boolean;
+}
+
+export interface KinPhoneUpdate {
+  number?: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
 }
 
 export interface EmployeeQualification {

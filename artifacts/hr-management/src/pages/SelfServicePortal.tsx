@@ -20,13 +20,15 @@ import { Loader2, User, Users, Search, Building2, Phone, Mail, GraduationCap } f
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+interface PhoneEntry { number: string; label: string; }
+
 interface DirectoryEmployee {
   id: number;
   firstName: string;
   lastName: string;
   jobTitle: string;
   email: string;
-  phone: string | null;
+  phones: PhoneEntry[];
 }
 
 interface DirectoryEmployeeDetail extends DirectoryEmployee {
@@ -34,7 +36,7 @@ interface DirectoryEmployeeDetail extends DirectoryEmployee {
     id: number;
     name: string;
     relationship: string | null;
-    phone: string | null;
+    phones: PhoneEntry[];
     email: string | null;
   }>;
   qualifications: Array<{
@@ -144,10 +146,10 @@ export default function SelfServicePortal() {
                       <Mail className="w-3.5 h-3.5 shrink-0" />
                       <span className="break-all">{profile.email}</span>
                     </div>
-                    {profile.phone && (
+                    {profile.phones?.[0] && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Phone className="w-3.5 h-3.5 shrink-0" />
-                        <span>{profile.phone}</span>
+                        <span>{profile.phones[0].number}</span>
                       </div>
                     )}
                   </div>
@@ -211,8 +213,8 @@ export default function SelfServicePortal() {
                         </p>
                         <p className="text-xs text-muted-foreground truncate">{emp.jobTitle}</p>
                         <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
-                        {emp.phone && (
-                          <p className="text-xs text-muted-foreground">{emp.phone}</p>
+                        {emp.phones?.[0] && (
+                          <p className="text-xs text-muted-foreground">{emp.phones[0].number}</p>
                         )}
                       </div>
                     </div>

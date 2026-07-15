@@ -20,6 +20,7 @@ import {
   onboardingSubmissionsTable,
   onboardingSubmissionQualificationsTable,
   employeesTable,
+  employeePhonesTable,
   employeeQualificationsTable,
   qualificationTypesTable,
   qualificationCertificatesTable,
@@ -407,7 +408,6 @@ router.post(
           firstName: submission.firstName,
           lastName: submission.lastName,
           email: submission.email,
-          phone: submission.phone,
           jobTitle: submission.jobTitle,
           departmentId: submission.departmentId,
           employmentType: submission.employmentType,
@@ -415,6 +415,16 @@ router.post(
           status: "active",
         })
         .returning();
+
+      // Migrate submission phone → employee_phones
+      if (submission.phone) {
+        await tx.insert(employeePhonesTable).values({
+          employeeId: employee.id,
+          number: submission.phone,
+          label: "Mobile",
+          isPrimary: true,
+        });
+      }
 
       // Open initial service period
       await tx.insert(employeeServicePeriodsTable).values({
@@ -519,7 +529,6 @@ router.post(
           firstName: submission.firstName,
           lastName: submission.lastName,
           email: submission.email,
-          phone: submission.phone,
           jobTitle: submission.jobTitle,
           departmentId: submission.departmentId,
           employmentType: submission.employmentType,
@@ -529,6 +538,16 @@ router.post(
           leaverDate: today,
         })
         .returning();
+
+      // Migrate submission phone → employee_phones
+      if (submission.phone) {
+        await tx.insert(employeePhonesTable).values({
+          employeeId: employee.id,
+          number: submission.phone,
+          label: "Mobile",
+          isPrimary: true,
+        });
+      }
 
       // 2. Copy qualifications from submission
       await copySubmissionQualifications(tx, submission.id, employee.id);

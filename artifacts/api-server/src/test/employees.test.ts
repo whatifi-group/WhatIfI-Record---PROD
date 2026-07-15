@@ -345,3 +345,25 @@ describe("PATCH /api/employees/:id — auto-close open pay rates on leaver", () 
     expect(rates[0].effectiveTo).toMatch(new RegExp(`^${leaverDate}`));
   });
 });
+
+// ── GET /employees/:id — phones embedded in response ─────────────────────────
+
+describe("GET /api/employees/:id — phones in response", () => {
+  let empId: number;
+
+  beforeEach(async () => {
+    empId = await createTestEmployee();
+  });
+
+  afterEach(async () => {
+    await cleanupEmployee(empId);
+  });
+
+  it("returns phones as an empty array when no phones exist", async () => {
+    const api = buildApp(router, viewerUserId);
+    const res = await api.get(`/api/employees/${empId}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.phones)).toBe(true);
+    expect(res.body.phones).toHaveLength(0);
+  });
+});

@@ -86,13 +86,13 @@ describe("GET /api/directory — field exclusions", () => {
     }
   });
 
-  it("includes only the safe fields (id, firstName, lastName, jobTitle, email, phone)", async () => {
+  it("includes only the safe fields (id, firstName, lastName, jobTitle, email, phones)", async () => {
     const api = buildApp(directoryRouter, userId);
     const res = await api.get("/api/directory");
     const row = (res.body as Array<{ id: number }>).find((r) => r.id === empId);
     expect(row).toBeDefined();
     const keys = Object.keys(row!).sort();
-    expect(keys).toEqual(["email", "firstName", "id", "jobTitle", "lastName", "phone"].sort());
+    expect(keys).toEqual(["email", "firstName", "id", "jobTitle", "lastName", "phones"].sort());
   });
 
   it("returns 403 when user lacks view_employee_directory permission", async () => {

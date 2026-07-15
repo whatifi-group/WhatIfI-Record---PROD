@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq } from "drizzle-orm";
-import { db, employeeNextOfKinTable } from "@workspace/db";
+import { db, employeeNextOfKinTable, employeeNextOfKinPhonesTable } from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router({ mergeParams: true });
@@ -14,7 +14,6 @@ const KinIdParam = z.object({
 const NextOfKinInput = z.object({
   name: z.string().min(1),
   relationship: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
 });
@@ -22,10 +21,23 @@ const NextOfKinInput = z.object({
 const NextOfKinUpdate = z.object({
   name: z.string().min(1).optional(),
   relationship: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
 });
+
+/** Fetch phones for a given kin id, ordered by creation. */
+async function getKinPhones(kinId: number) {
+  return db
+    .select({
+      id: employeeNextOfKinPhonesTable.id,
+      number: employeeNextOfKinPhonesTable.number,
+      label: employeeNextOfKinPhonesTable.label,
+      isPrimary: employeeNextOfKinPhonesTable.isPrimary,
+    })
+    .from(employeeNextOfKinPhonesTable)
+    .where(eq(employeeNextOfKinPhonesTable.kinId, kinId))
+    .orderBy(employeeNextOfKinPhonesTable.createdAt);
+}
 
 router.get("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
@@ -38,7 +50,15 @@ router.get("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
     .from(employeeNextOfKinTable)
     .where(eq(employeeNextOfKinTable.employeeId, params.data.id))
     .orderBy(employeeNextOfKinTable.createdAt);
-  res.json(rows);
+
+  // Attach phones to each kin record
+  const withPhones = await Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      phones: await getKinPhones(row.id),
+    })),
+  );
+  res.json(withPhones);
 });
 
 router.post("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
@@ -56,7 +76,7 @@ router.post("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
     .insert(employeeNextOfKinTable)
     .values({ ...parsed.data, employeeId: params.data.id })
     .returning();
-  res.status(201).json(created);
+  res.status(201).json({ ...created, phones: [] });
 });
 
 router.patch(
@@ -86,7 +106,8 @@ router.patch(
       res.status(404).json({ error: "Next of kin record not found" });
       return;
     }
-    res.json(updated);
+    const phones = await getKinPhones(updated.id);
+    res.json({ ...updated, phones });
   },
 );
 

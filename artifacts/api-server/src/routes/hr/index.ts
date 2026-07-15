@@ -13,6 +13,8 @@ import employeeWorkRecordsRouter from "./employeeWorkRecords";
 import employeePayRatesRouter from "./employeePayRates";
 import employeeServicePeriodsRouter from "./employeeServicePeriods";
 import employeeDisclosuresRouter from "./employeeDisclosures";
+import employeePhonesRouter from "./employeePhones";
+import employeeNextOfKinPhonesRouter from "./employeeNextOfKinPhones";
 
 import { payrollVisibilityMiddleware, salaryRedactionMiddleware } from "../../lib/salaryGuard";
 
@@ -43,5 +45,7 @@ router.use(employeeWorkRecordsRouter);
 router.use(employeePayRatesRouter);
 router.use(employeeServicePeriodsRouter);
 router.use(employeeDisclosuresRouter);
+router.use(employeePhonesRouter);
+router.use(employeeNextOfKinPhonesRouter);
 
 export default router;

@@ -38,12 +38,12 @@ import EmployeeQualificationsTab from "./employee-tabs/EmployeeQualificationsTab
 import EmployeeWorkRecordsTab from "./employee-tabs/EmployeeWorkRecordsTab";
 import EmployeeServiceHistoryTab from "./employee-tabs/EmployeeServiceHistoryTab";
 import EmployeeDisclosuresTab from "./employee-tabs/EmployeeDisclosuresTab";
+import { EmployeePhoneList } from "@/components/PhoneList";
 
 const employeeUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional().nullable(),
   jobTitle: z.string().min(1, "Job title is required"),
   departmentId: z.coerce.number().optional().nullable(),
   employmentType: z.string().min(1, "Engagement type is required"),
@@ -90,7 +90,6 @@ export default function EmployeeProfile() {
       firstName: "",
       lastName: "",
       email: "",
-      phone: "",
       jobTitle: "",
       departmentId: null,
       employmentType: "full_time",
@@ -108,7 +107,6 @@ export default function EmployeeProfile() {
         firstName: employee.firstName,
         lastName: employee.lastName,
         email: employee.email,
-        phone: employee.phone || "",
         jobTitle: employee.jobTitle,
         departmentId: employee.departmentId,
         employmentType: employee.employmentType,
@@ -209,10 +207,10 @@ export default function EmployeeProfile() {
                   <Mail className="w-4 h-4 mr-3 shrink-0" />
                   <a href={`mailto:${employee.email}`} className="truncate hover:text-primary transition-colors">{employee.email}</a>
                 </div>
-                {employee.phone && (
+                {employee.phones?.find(p => p.isPrimary)?.number && (
                   <div className="flex items-center text-muted-foreground">
                     <Phone className="w-4 h-4 mr-3 shrink-0" />
-                    <span>{employee.phone}</span>
+                    <span>{employee.phones.find(p => p.isPrimary)!.number}</span>
                   </div>
                 )}
                 <div className="flex items-center text-muted-foreground">
@@ -388,9 +386,6 @@ export default function EmployeeProfile() {
                             <FormField control={form.control} name="email" render={({ field }) => (
                               <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
-                            <FormField control={form.control} name="phone" render={({ field }) => (
-                              <FormItem><FormLabel>Phone</FormLabel><FormControl><Input {...field} value={field.value || ""} /></FormControl><FormMessage /></FormItem>
-                            )} />
                             <FormField control={form.control} name="jobTitle" render={({ field }) => (
                               <FormItem className="md:col-span-2"><FormLabel>Role / Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
@@ -472,9 +467,9 @@ export default function EmployeeProfile() {
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Email Address</h3>
                         <p className="text-base font-medium">{employee.email}</p>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-1">Phone Number</h3>
-                        <p className="text-base font-medium">{employee.phone || "Not provided"}</p>
+                      <div className="md:col-span-2">
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Phone Numbers</h3>
+                        <EmployeePhoneList employeeId={employeeId} />
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Role / Title</h3>

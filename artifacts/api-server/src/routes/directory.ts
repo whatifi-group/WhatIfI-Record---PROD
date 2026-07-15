@@ -1,8 +1,8 @@
 /**
  * Employee directory — restricted view for self-service users.
  *
- * GET /api/directory          — active employees: id, name, jobTitle, email, phone
- * GET /api/directory/:id      — same base fields + next-of-kin + qualifications
+ * GET /api/directory          — active employees: id, name, jobTitle, email, phones
+ * GET /api/directory/:id      — same base fields + next-of-kin (with phones) + qualifications
  *
  * Both routes require the `view_employee_directory` permission.
  * Salary, pay rates, and medical data are excluded at the query level.
@@ -14,6 +14,8 @@ import {
   db,
   employeesTable,
   employeeNextOfKinTable,
+  employeeNextOfKinPhonesTable,
+  employeePhonesTable,
   employeeQualificationsTable,
   qualificationTypesTable,
   qualificationCertificatesTable,
@@ -37,13 +39,24 @@ router.get(
         lastName: employeesTable.lastName,
         jobTitle: employeesTable.jobTitle,
         email: employeesTable.email,
-        phone: employeesTable.phone,
       })
       .from(employeesTable)
       .where(eq(employeesTable.status, "active"))
       .orderBy(asc(employeesTable.lastName), asc(employeesTable.firstName));
 
-    res.json(rows);
+    // Attach primary phone for each employee
+    const withPhones = await Promise.all(
+      rows.map(async (emp) => {
+        const phones = await db
+          .select({ number: employeePhonesTable.number, label: employeePhonesTable.label })
+          .from(employeePhonesTable)
+          .where(eq(employeePhonesTable.employeeId, emp.id))
+          .orderBy(employeePhonesTable.createdAt);
+        return { ...emp, phones };
+      }),
+    );
+
+    res.json(withPhones);
   },
 );
 
@@ -66,7 +79,6 @@ router.get(
         lastName: employeesTable.lastName,
         jobTitle: employeesTable.jobTitle,
         email: employeesTable.email,
-        phone: employeesTable.phone,
       })
       .from(employeesTable)
       .where(
@@ -82,18 +94,35 @@ router.get(
       return;
     }
 
-    // Next of kin — name, relationship, phone, email (no address)
-    const nextOfKin = await db
+    // Employee phones
+    const phones = await db
+      .select({ number: employeePhonesTable.number, label: employeePhonesTable.label })
+      .from(employeePhonesTable)
+      .where(eq(employeePhonesTable.employeeId, params.data.employeeId))
+      .orderBy(employeePhonesTable.createdAt);
+
+    // Next of kin — name, relationship, email (no address); with their phones
+    const kinRows = await db
       .select({
         id: employeeNextOfKinTable.id,
         name: employeeNextOfKinTable.name,
         relationship: employeeNextOfKinTable.relationship,
-        phone: employeeNextOfKinTable.phone,
         email: employeeNextOfKinTable.email,
       })
       .from(employeeNextOfKinTable)
       .where(eq(employeeNextOfKinTable.employeeId, params.data.employeeId))
       .orderBy(asc(employeeNextOfKinTable.createdAt));
+
+    const nextOfKin = await Promise.all(
+      kinRows.map(async (kin) => {
+        const kinPhones = await db
+          .select({ number: employeeNextOfKinPhonesTable.number, label: employeeNextOfKinPhonesTable.label })
+          .from(employeeNextOfKinPhonesTable)
+          .where(eq(employeeNextOfKinPhonesTable.kinId, kin.id))
+          .orderBy(employeeNextOfKinPhonesTable.createdAt);
+        return { ...kin, phones: kinPhones };
+      }),
+    );
 
     // Qualifications with type name + certificate URLs
     const qualifications = await db
@@ -110,24 +139,16 @@ router.get(
       .from(employeeQualificationsTable)
       .leftJoin(
         qualificationTypesTable,
-        eq(
-          employeeQualificationsTable.qualificationTypeId,
-          qualificationTypesTable.id,
-        ),
+        eq(employeeQualificationsTable.qualificationTypeId, qualificationTypesTable.id),
       )
       .leftJoin(
         qualificationCertificatesTable,
-        eq(
-          qualificationCertificatesTable.qualificationId,
-          employeeQualificationsTable.id,
-        ),
+        eq(qualificationCertificatesTable.qualificationId, employeeQualificationsTable.id),
       )
-      .where(
-        eq(employeeQualificationsTable.employeeId, params.data.employeeId),
-      )
+      .where(eq(employeeQualificationsTable.employeeId, params.data.employeeId))
       .orderBy(asc(employeeQualificationsTable.createdAt));
 
-    res.json({ ...employee, nextOfKin, qualifications });
+    res.json({ ...employee, phones, nextOfKin, qualifications });
   },
 );
 

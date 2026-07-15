@@ -16,7 +16,6 @@ export const employeeNextOfKinTable = pgTable("employee_next_of_kin", {
     .references(() => employeesTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   relationship: text("relationship"),
-  phone: text("phone"),
   email: text("email"),
   address: text("address"),
   createdAt: timestamp("created_at", { withTimezone: true })

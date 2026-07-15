@@ -25,7 +25,6 @@ export const employeesTable = pgTable("employees", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
-  phone: text("phone"),
   jobTitle: text("job_title").notNull(),
   departmentId: integer("department_id").references(
     () => departmentsTable.id,

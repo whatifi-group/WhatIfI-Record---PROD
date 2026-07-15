@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Loader2, Users } from "lucide-react";
 import TabErrorState from "@/components/TabErrorState";
+import { KinPhoneList } from "@/components/PhoneList";
 
 interface Props {
   employeeId: number;
@@ -24,12 +25,11 @@ interface Props {
 interface FormData {
   name: string;
   relationship: string;
-  phone: string;
   email: string;
   address: string;
 }
 
-const defaultForm: FormData = { name: "", relationship: "", phone: "", email: "", address: "" };
+const defaultForm: FormData = { name: "", relationship: "", email: "", address: "" };
 
 export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const { toast } = useToast();
@@ -37,6 +37,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<EmployeeNextOfKin | null>(null);
   const [form, setForm] = useState<FormData>(defaultForm);
+  const [expandedKinId, setExpandedKinId] = useState<number | null>(null);
 
   const { data: records, isLoading, isError, refetch } = useListEmployeeNextOfKin(employeeId);
   const createNok = useCreateEmployeeNextOfKin();
@@ -56,7 +57,6 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
     setForm({
       name: record.name,
       relationship: record.relationship || "",
-      phone: record.phone || "",
       email: record.email || "",
       address: record.address || "",
     });
@@ -77,7 +77,6 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
           data: {
             name: form.name,
             relationship: form.relationship || null,
-            phone: form.phone || null,
             email: form.email || null,
             address: form.address || null,
           },
@@ -94,13 +93,17 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
           data: {
             name: form.name,
             relationship: form.relationship || undefined,
-            phone: form.phone || undefined,
             email: form.email || undefined,
             address: form.address || undefined,
           },
         },
         {
-          onSuccess: () => { toast({ title: "Next of kin added" }); invalidate(); setDialogOpen(false); },
+          onSuccess: (created) => {
+            toast({ title: "Next of kin added" });
+            invalidate();
+            setDialogOpen(false);
+            setExpandedKinId(created.id);
+          },
           onError: () => toast({ title: "Failed to add", variant: "destructive" }),
         }
       );
@@ -151,10 +154,39 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-foreground">{record.name}</p>
                   {record.relationship && <p className="text-xs text-muted-foreground mt-0.5 capitalize">{record.relationship}</p>}
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-2 text-xs text-muted-foreground">
-                    {record.phone && <span>📞 {record.phone}</span>}
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                     {record.email && <span>✉ {record.email}</span>}
                     {record.address && <span>📍 {record.address}</span>}
+                  </div>
+                  {/* Inline phone list — toggled open after creation or by clicking phones */}
+                  <div className="mt-3">
+                    {expandedKinId === record.id || (record.phones && record.phones.length > 0) ? (
+                      <div>
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-1"
+                          onClick={() => setExpandedKinId(expandedKinId === record.id ? null : record.id)}
+                        >
+                          📞 Phone numbers {expandedKinId === record.id ? "▲" : "▼"}
+                        </button>
+                        {expandedKinId === record.id && (
+                          <KinPhoneList employeeId={employeeId} kinId={record.id} />
+                        )}
+                        {expandedKinId !== record.id && record.phones && record.phones.length > 0 && (
+                          <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                            {record.phones.map((ph) => (
+                              <span key={ph.id}>{ph.number} <span className="opacity-60">({ph.label}{ph.isPrimary ? ", primary" : ""})</span></span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setExpandedKinId(record.id)}
+                      >
+                        📞 Add phone numbers
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
@@ -170,7 +202,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Remove {record.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+                        <AlertDialogDescription>This will also remove all their phone numbers and cannot be undone.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -200,10 +232,6 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
               <Input className="mt-1" value={form.relationship} onChange={e => setForm(f => ({ ...f, relationship: e.target.value }))} placeholder="Parent, Spouse, Sibling..." />
             </div>
             <div>
-              <Label>Phone</Label>
-              <Input className="mt-1" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-            </div>
-            <div>
               <Label>Email</Label>
               <Input className="mt-1" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </div>
@@ -211,6 +239,9 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
               <Label>Address</Label>
               <Input className="mt-1" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
             </div>
+            {editingRecord && (
+              <p className="text-xs text-muted-foreground">Phone numbers are managed on the record card below.</p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

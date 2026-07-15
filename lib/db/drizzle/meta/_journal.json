@@ -57,6 +57,13 @@
       "when": 1752710400000,
       "tag": "0009_employee_disclosures",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1752796800000,
+      "tag": "0010_employee_phones",
+      "breakpoints": true
     }
   ]
 }

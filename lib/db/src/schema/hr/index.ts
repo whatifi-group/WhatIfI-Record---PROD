@@ -15,3 +15,5 @@ export * from "./employeeWorkRecords";
 export * from "./employeePayRates";
 export * from "./employeeServicePeriods";
 export * from "./employeeDisclosures";
+export * from "./employeePhones";
+export * from "./employeeNextOfKinPhones";

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeeDisclosuresTable, employeeDisclosureReviewsTable, employeePayRatesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { db, departmentsTable, employeeDisclosuresTable, employeeDisclosureReviewsTable, employeePayRatesTable, employeePhonesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import {
   requirePermission,
   invalidatePermissionsCache,
@@ -34,7 +34,6 @@ function employeeSelection() {
       firstName: employeesTable.firstName,
       lastName: employeesTable.lastName,
       email: employeesTable.email,
-      phone: employeesTable.phone,
       jobTitle: employeesTable.jobTitle,
       departmentId: employeesTable.departmentId,
       departmentName: departmentsTable.name,
@@ -52,6 +51,20 @@ function employeeSelection() {
       departmentsTable,
       eq(employeesTable.departmentId, departmentsTable.id),
     );
+}
+
+/** Fetch phones for a single employee. */
+async function getEmployeePhones(employeeId: number) {
+  return db
+    .select({
+      id: employeePhonesTable.id,
+      number: employeePhonesTable.number,
+      label: employeePhonesTable.label,
+      isPrimary: employeePhonesTable.isPrimary,
+    })
+    .from(employeePhonesTable)
+    .where(eq(employeePhonesTable.employeeId, employeeId))
+    .orderBy(employeePhonesTable.createdAt);
 }
 
 
@@ -185,7 +198,8 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
   });
 
   const [row] = await employeeSelection().where(eq(employeesTable.id, created.id));
-  res.status(201).json(CreateEmployeeResponse.parse(row));
+  const phones = await getEmployeePhones(created.id);
+  res.status(201).json(CreateEmployeeResponse.parse({ ...row, phones }));
 });
 
 router.get("/employees/:id", async (req, res): Promise<void> => {
@@ -204,7 +218,8 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetEmployeeResponse.parse(row));
+  const phones = await getEmployeePhones(params.data.id);
+  res.json(GetEmployeeResponse.parse({ ...row, phones }));
 });
 
 router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
@@ -342,13 +357,14 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   const [row] = await employeeSelection().where(
     eq(employeesTable.id, updated.id),
   );
+  const phones = await getEmployeePhones(updated.id);
 
   // Best-effort sync — keep the linked onboarding submission current.
   await syncOnboardingSubmission(updated.id).catch((err) => {
     console.error("onboarding sync failed after employee update:", err);
   });
 
-  res.json(UpdateEmployeeResponse.parse(row));
+  res.json(UpdateEmployeeResponse.parse({ ...row, phones }));
 });
 
 router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {

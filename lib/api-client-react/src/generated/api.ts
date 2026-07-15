@@ -46,6 +46,13 @@ import type {
   EmployeeNextOfKin,
   EmployeeNextOfKinInput,
   EmployeeNextOfKinUpdate,
+  EmployeePhoneEntry,
+  EmployeePhoneInput,
+  EmployeePhoneUpdate,
+  KinPhoneEntry,
+  KinPhoneInput,
+  KinPhoneUpdate,
+  PhoneLabel,
   EmployeePayRate,
   EmployeePayRateInput,
   EmployeePayroll,
@@ -7319,3 +7326,189 @@ export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = E
 
 
 
+
+// ── Employee Phone CRUD ───────────────────────────────────────────────────────
+
+export const getListEmployeePhonesUrl = (id: number,) => `/api/employees/${id}/phones`;
+
+export const listEmployeePhones = async (id: number, options?: RequestInit): Promise<EmployeePhoneEntry[]> => {
+  return customFetch<EmployeePhoneEntry[]>(getListEmployeePhonesUrl(id), { ...options });
+}
+
+export const getListEmployeePhonesQueryKey = (id: number,) => [`/api/employees/${id}/phones`] as const;
+
+export const getListEmployeePhonesQueryOptions = <TData = Awaited<ReturnType<typeof listEmployeePhones>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhones>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListEmployeePhonesQueryKey(id);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployeePhones>>> = ({ signal }) => listEmployeePhones(id, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhones>>, TError, TData> & { queryKey: QueryKey };
+}
+
+export function useListEmployeePhones<TData = Awaited<ReturnType<typeof listEmployeePhones>>, TError = ErrorType<unknown>>(id: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listEmployeePhones>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListEmployeePhonesQueryOptions(id, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateEmployeePhoneUrl = (id: number,) => `/api/employees/${id}/phones`;
+
+export const createEmployeePhone = async (id: number, employeePhoneInput: EmployeePhoneInput, options?: RequestInit): Promise<EmployeePhoneEntry> => {
+  return customFetch<EmployeePhoneEntry>(getCreateEmployeePhoneUrl(id), {
+    ...options, method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeePhoneInput)
+  });
+}
+
+export const getCreateEmployeePhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createEmployeePhone>>, TError, { id: number; data: BodyType<EmployeePhoneInput> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof createEmployeePhone>>, TError, { id: number; data: BodyType<EmployeePhoneInput> }, TContext> => {
+  const mutationKey = ['createEmployeePhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEmployeePhone>>, { id: number; data: BodyType<EmployeePhoneInput> }> = (props) => {
+    const { id, data } = props ?? {};
+    return createEmployeePhone(id, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export type CreateEmployeePhoneMutationResult = NonNullable<Awaited<ReturnType<typeof createEmployeePhone>>>
+export type CreateEmployeePhoneMutationBody = BodyType<EmployeePhoneInput>
+export type CreateEmployeePhoneMutationError = ErrorType<unknown>
+
+export const useCreateEmployeePhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createEmployeePhone>>, TError, { id: number; data: BodyType<EmployeePhoneInput> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof createEmployeePhone>>, TError, { id: number; data: BodyType<EmployeePhoneInput> }, TContext> => {
+  return useMutation(getCreateEmployeePhoneMutationOptions(options));
+}
+
+export const getUpdateEmployeePhoneUrl = (id: number, phoneId: number,) => `/api/employees/${id}/phones/${phoneId}`;
+
+export const updateEmployeePhone = async (id: number, phoneId: number, employeePhoneUpdate: EmployeePhoneUpdate, options?: RequestInit): Promise<EmployeePhoneEntry> => {
+  return customFetch<EmployeePhoneEntry>(getUpdateEmployeePhoneUrl(id, phoneId), {
+    ...options, method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(employeePhoneUpdate)
+  });
+}
+
+export const getUpdateEmployeePhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateEmployeePhone>>, TError, { id: number; phoneId: number; data: BodyType<EmployeePhoneUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateEmployeePhone>>, TError, { id: number; phoneId: number; data: BodyType<EmployeePhoneUpdate> }, TContext> => {
+  const mutationKey = ['updateEmployeePhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployeePhone>>, { id: number; phoneId: number; data: BodyType<EmployeePhoneUpdate> }> = (props) => {
+    const { id, phoneId, data } = props ?? {};
+    return updateEmployeePhone(id, phoneId, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export const useUpdateEmployeePhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateEmployeePhone>>, TError, { id: number; phoneId: number; data: BodyType<EmployeePhoneUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateEmployeePhone>>, TError, { id: number; phoneId: number; data: BodyType<EmployeePhoneUpdate> }, TContext> => {
+  return useMutation(getUpdateEmployeePhoneMutationOptions(options));
+}
+
+export const getDeleteEmployeePhoneUrl = (id: number, phoneId: number,) => `/api/employees/${id}/phones/${phoneId}`;
+
+export const deleteEmployeePhone = async (id: number, phoneId: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(getDeleteEmployeePhoneUrl(id, phoneId), { ...options, method: 'DELETE' });
+}
+
+export const getDeleteEmployeePhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhone>>, TError, { id: number; phoneId: number }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhone>>, TError, { id: number; phoneId: number }, TContext> => {
+  const mutationKey = ['deleteEmployeePhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEmployeePhone>>, { id: number; phoneId: number }> = (props) => {
+    const { id, phoneId } = props ?? {};
+    return deleteEmployeePhone(id, phoneId, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export const useDeleteEmployeePhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteEmployeePhone>>, TError, { id: number; phoneId: number }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof deleteEmployeePhone>>, TError, { id: number; phoneId: number }, TContext> => {
+  return useMutation(getDeleteEmployeePhoneMutationOptions(options));
+}
+
+// ── Next-of-kin Phone CRUD ────────────────────────────────────────────────────
+
+export const getListKinPhonesUrl = (id: number, kinId: number,) => `/api/employees/${id}/next-of-kin/${kinId}/phones`;
+
+export const listKinPhones = async (id: number, kinId: number, options?: RequestInit): Promise<KinPhoneEntry[]> => {
+  return customFetch<KinPhoneEntry[]>(getListKinPhonesUrl(id, kinId), { ...options });
+}
+
+export const getListKinPhonesQueryKey = (id: number, kinId: number,) => [`/api/employees/${id}/next-of-kin/${kinId}/phones`] as const;
+
+export const getListKinPhonesQueryOptions = <TData = Awaited<ReturnType<typeof listKinPhones>>, TError = ErrorType<unknown>>(id: number, kinId: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listKinPhones>>, TError, TData>, request?: SecondParameter<typeof customFetch> }) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListKinPhonesQueryKey(id, kinId);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKinPhones>>> = ({ signal }) => listKinPhones(id, kinId, { signal, ...requestOptions });
+  return { queryKey, queryFn, enabled: id !== null && id !== undefined && kinId !== null && kinId !== undefined, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof listKinPhones>>, TError, TData> & { queryKey: QueryKey };
+}
+
+export function useListKinPhones<TData = Awaited<ReturnType<typeof listKinPhones>>, TError = ErrorType<unknown>>(id: number, kinId: number, options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof listKinPhones>>, TError, TData>, request?: SecondParameter<typeof customFetch> }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListKinPhonesQueryOptions(id, kinId, options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateKinPhoneUrl = (id: number, kinId: number,) => `/api/employees/${id}/next-of-kin/${kinId}/phones`;
+
+export const createKinPhone = async (id: number, kinId: number, kinPhoneInput: KinPhoneInput, options?: RequestInit): Promise<KinPhoneEntry> => {
+  return customFetch<KinPhoneEntry>(getCreateKinPhoneUrl(id, kinId), {
+    ...options, method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kinPhoneInput)
+  });
+}
+
+export const getCreateKinPhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createKinPhone>>, TError, { id: number; kinId: number; data: BodyType<KinPhoneInput> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof createKinPhone>>, TError, { id: number; kinId: number; data: BodyType<KinPhoneInput> }, TContext> => {
+  const mutationKey = ['createKinPhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKinPhone>>, { id: number; kinId: number; data: BodyType<KinPhoneInput> }> = (props) => {
+    const { id, kinId, data } = props ?? {};
+    return createKinPhone(id, kinId, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export const useCreateKinPhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof createKinPhone>>, TError, { id: number; kinId: number; data: BodyType<KinPhoneInput> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof createKinPhone>>, TError, { id: number; kinId: number; data: BodyType<KinPhoneInput> }, TContext> => {
+  return useMutation(getCreateKinPhoneMutationOptions(options));
+}
+
+export const getUpdateKinPhoneUrl = (id: number, kinId: number, phoneId: number,) => `/api/employees/${id}/next-of-kin/${kinId}/phones/${phoneId}`;
+
+export const updateKinPhone = async (id: number, kinId: number, phoneId: number, kinPhoneUpdate: KinPhoneUpdate, options?: RequestInit): Promise<KinPhoneEntry> => {
+  return customFetch<KinPhoneEntry>(getUpdateKinPhoneUrl(id, kinId, phoneId), {
+    ...options, method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kinPhoneUpdate)
+  });
+}
+
+export const getUpdateKinPhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateKinPhone>>, TError, { id: number; kinId: number; phoneId: number; data: BodyType<KinPhoneUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof updateKinPhone>>, TError, { id: number; kinId: number; phoneId: number; data: BodyType<KinPhoneUpdate> }, TContext> => {
+  const mutationKey = ['updateKinPhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateKinPhone>>, { id: number; kinId: number; phoneId: number; data: BodyType<KinPhoneUpdate> }> = (props) => {
+    const { id, kinId, phoneId, data } = props ?? {};
+    return updateKinPhone(id, kinId, phoneId, data, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export const useUpdateKinPhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof updateKinPhone>>, TError, { id: number; kinId: number; phoneId: number; data: BodyType<KinPhoneUpdate> }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof updateKinPhone>>, TError, { id: number; kinId: number; phoneId: number; data: BodyType<KinPhoneUpdate> }, TContext> => {
+  return useMutation(getUpdateKinPhoneMutationOptions(options));
+}
+
+export const getDeleteKinPhoneUrl = (id: number, kinId: number, phoneId: number,) => `/api/employees/${id}/next-of-kin/${kinId}/phones/${phoneId}`;
+
+export const deleteKinPhone = async (id: number, kinId: number, phoneId: number, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(getDeleteKinPhoneUrl(id, kinId, phoneId), { ...options, method: 'DELETE' });
+}
+
+export const getDeleteKinPhoneMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteKinPhone>>, TError, { id: number; kinId: number; phoneId: number }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationOptions<Awaited<ReturnType<typeof deleteKinPhone>>, TError, { id: number; kinId: number; phoneId: number }, TContext> => {
+  const mutationKey = ['deleteKinPhone'];
+  const { mutation: mutationOptions, request: requestOptions } = options ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ? options : { ...options, mutation: { ...options.mutation, mutationKey } } : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteKinPhone>>, { id: number; kinId: number; phoneId: number }> = (props) => {
+    const { id, kinId, phoneId } = props ?? {};
+    return deleteKinPhone(id, kinId, phoneId, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export const useDeleteKinPhone = <TError = ErrorType<unknown>, TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteKinPhone>>, TError, { id: number; kinId: number; phoneId: number }, TContext>, request?: SecondParameter<typeof customFetch> }): UseMutationResult<Awaited<ReturnType<typeof deleteKinPhone>>, TError, { id: number; kinId: number; phoneId: number }, TContext> => {
+  return useMutation(getDeleteKinPhoneMutationOptions(options));
+}

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PhoneSummary } from './phoneSummary';
 
 export interface EmployeeNextOfKin {
   id: number;
@@ -13,10 +14,10 @@ export interface EmployeeNextOfKin {
   /** @nullable */
   relationship?: string | null;
   /** @nullable */
-  phone?: string | null;
-  /** @nullable */
   email?: string | null;
   /** @nullable */
   address?: string | null;
   createdAt: Date;
+  /** Phone numbers for this next-of-kin record */
+  phones?: PhoneSummary[];
 }

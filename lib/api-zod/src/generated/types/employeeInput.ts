@@ -15,7 +15,6 @@ export interface EmployeeInput {
   lastName: string;
   /** @minLength 1 */
   email: string;
-  phone?: string;
   /** @minLength 1 */
   jobTitle: string;
   /** @nullable */

@@ -143,6 +143,7 @@ async function copySubmissionQualifications(
         dateAchieved: qual.dateAchieved,
         expiryDate: qual.expiryDate,
         notes: qual.notes,
+        verificationStatus: "pending",
       })
       .returning();
 
@@ -682,7 +683,7 @@ router.patch(
 
     await db
       .update(lovItemsTable)
-      .set({ label: passphrase, isActive: true, updatedAt: new Date() })
+      .set({ label: passphrase, isActive: true })
       .where(eq(lovItemsTable.id, existing.id));
 
     res.json({ success: true, isSet: true });

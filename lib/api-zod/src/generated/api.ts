@@ -231,18 +231,17 @@ export const ListEmployeesQueryParams = zod.object({
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional()
 })
 
-export const EmployeePhoneEntry = zod.object({
-  "id": zod.number(),
-  "number": zod.string(),
-  "label": zod.string(),
-  "isPrimary": zod.boolean()
-})
-
 export const ListEmployeesResponseItem = zod.object({
   "id": zod.number(),
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
@@ -290,6 +289,12 @@ export const CreateEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
@@ -301,7 +306,6 @@ export const CreateEmployeeResponse = zod.object({
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(EmployeePhoneEntry),
   "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
@@ -318,6 +322,12 @@ export const GetEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
@@ -329,7 +339,6 @@ export const GetEmployeeResponse = zod.object({
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(EmployeePhoneEntry),
   "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
@@ -367,6 +376,12 @@ export const UpdateEmployeeResponse = zod.object({
   "firstName": zod.string(),
   "lastName": zod.string(),
   "email": zod.string(),
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
   "departmentId": zod.number().nullable(),
   "departmentName": zod.string().nullable(),
@@ -378,7 +393,6 @@ export const UpdateEmployeeResponse = zod.object({
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(EmployeePhoneEntry),
   "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
@@ -677,13 +691,6 @@ export const ListEmployeeNextOfKinParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const KinPhoneEntry = zod.object({
-  "id": zod.number(),
-  "number": zod.string(),
-  "label": zod.string(),
-  "isPrimary": zod.boolean()
-})
-
 export const ListEmployeeNextOfKinResponseItem = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
@@ -692,7 +699,12 @@ export const ListEmployeeNextOfKinResponseItem = zod.object({
   "email": zod.string().nullish(),
   "address": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(KinPhoneEntry)
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this next-of-kin record')
 })
 export const ListEmployeeNextOfKinResponse = zod.array(ListEmployeeNextOfKinResponseItem)
 
@@ -722,7 +734,12 @@ export const CreateEmployeeNextOfKinResponse = zod.object({
   "email": zod.string().nullish(),
   "address": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(KinPhoneEntry)
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this next-of-kin record')
 })
 
 
@@ -752,7 +769,12 @@ export const UpdateEmployeeNextOfKinResponse = zod.object({
   "email": zod.string().nullish(),
   "address": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
-  "phones": zod.array(KinPhoneEntry)
+  "phones": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean()
+})).optional().describe('Phone numbers for this next-of-kin record')
 })
 
 
@@ -765,6 +787,174 @@ export const DeleteEmployeeNextOfKinParams = zod.object({
 })
 
 export const DeleteEmployeeNextOfKinResponse = zod.void()
+
+
+/**
+ * @summary List phone numbers for an employee
+ */
+export const ListEmployeePhonesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeePhonesResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeePhonesResponse = zod.array(ListEmployeePhonesResponseItem)
+
+
+/**
+ * @summary Add a phone number to an employee
+ */
+export const CreateEmployeePhoneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateEmployeePhoneBody = zod.object({
+  "number": zod.string().min(1),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']).optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const CreateEmployeePhoneResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a phone number
+ */
+export const UpdateEmployeePhoneParams = zod.object({
+  "id": zod.coerce.number(),
+  "phoneId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateEmployeePhoneBody = zod.object({
+  "number": zod.string().min(1).optional(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']).optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const UpdateEmployeePhoneResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a phone number
+ */
+export const DeleteEmployeePhoneParams = zod.object({
+  "id": zod.coerce.number(),
+  "phoneId": zod.coerce.number()
+})
+
+export const DeleteEmployeePhoneResponse = zod.void()
+
+
+/**
+ * @summary List phone numbers for a next-of-kin record
+ */
+export const ListKinPhonesParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number()
+})
+
+export const ListKinPhonesResponseItem = zod.object({
+  "id": zod.number(),
+  "kinId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListKinPhonesResponse = zod.array(ListKinPhonesResponseItem)
+
+
+/**
+ * @summary Add a phone number to a next-of-kin record
+ */
+export const CreateKinPhoneParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number()
+})
+
+
+
+
+export const CreateKinPhoneBody = zod.object({
+  "number": zod.string().min(1),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']).optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const CreateKinPhoneResponse = zod.object({
+  "id": zod.number(),
+  "kinId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a next-of-kin phone number
+ */
+export const UpdateKinPhoneParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number(),
+  "phoneId": zod.coerce.number()
+})
+
+
+
+
+export const UpdateKinPhoneBody = zod.object({
+  "number": zod.string().min(1).optional(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']).optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const UpdateKinPhoneResponse = zod.object({
+  "id": zod.number(),
+  "kinId": zod.number(),
+  "number": zod.string(),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a next-of-kin phone number
+ */
+export const DeleteKinPhoneParams = zod.object({
+  "id": zod.coerce.number(),
+  "kinId": zod.coerce.number(),
+  "phoneId": zod.coerce.number()
+})
+
+export const DeleteKinPhoneResponse = zod.void()
 
 
 /**
@@ -783,7 +973,12 @@ export const ListEmployeeQualificationsResponseItem = zod.object({
   "dateAchieved": zod.coerce.date(),
   "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish()
 })
 export const ListEmployeeQualificationsResponse = zod.array(ListEmployeeQualificationsResponseItem)
 
@@ -810,7 +1005,12 @@ export const CreateEmployeeQualificationResponse = zod.object({
   "dateAchieved": zod.coerce.date(),
   "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish()
 })
 
 
@@ -837,7 +1037,12 @@ export const UpdateEmployeeQualificationResponse = zod.object({
   "dateAchieved": zod.coerce.date(),
   "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish()
 })
 
 
@@ -874,7 +1079,12 @@ export const RevalidateEmployeeQualificationResponse = zod.object({
   "dateAchieved": zod.coerce.date(),
   "expiryDate": zod.coerce.date().nullish(),
   "notes": zod.string().nullish(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish()
 })
 
 
@@ -950,6 +1160,69 @@ export const DeleteQualificationCertificateParams = zod.object({
 })
 
 export const DeleteQualificationCertificateResponse = zod.void()
+
+
+/**
+ * @summary Verify or reject a qualification (HR Manager only)
+ */
+export const VerifyEmployeeQualificationParams = zod.object({
+  "id": zod.coerce.number(),
+  "qualId": zod.coerce.number()
+})
+
+export const VerifyEmployeeQualificationBody = zod.object({
+  "status": zod.enum(['verified', 'rejected']),
+  "notes": zod.string().nullish()
+})
+
+export const VerifyEmployeeQualificationResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary List qualifications pending/verified/rejected for HR review
+ */
+export const listQualificationVerificationsQueryStatusDefault = `pending`;
+
+export const ListQualificationVerificationsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'verified', 'rejected']).default(listQualificationVerificationsQueryStatusDefault)
+})
+
+export const ListQualificationVerificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeFirstName": zod.string(),
+  "employeeLastName": zod.string(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullish(),
+  "awardingBody": zod.string().nullish(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "verificationStatus": zod.enum(['pending', 'verified', 'rejected']),
+  "verificationNotes": zod.string().nullish(),
+  "verifiedBy": zod.number().nullish(),
+  "verifiedByName": zod.string().nullish(),
+  "verifiedAt": zod.coerce.date().nullish(),
+  "certificateUrl": zod.string().nullish(),
+  "certificateFileName": zod.string().nullish()
+})
+export const ListQualificationVerificationsResponse = zod.array(ListQualificationVerificationsResponseItem)
 
 
 /**

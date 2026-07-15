@@ -12,8 +12,6 @@ export interface EmployeeNextOfKinUpdate {
   /** @nullable */
   relationship?: string | null;
   /** @nullable */
-  phone?: string | null;
-  /** @nullable */
   email?: string | null;
   /** @nullable */
   address?: string | null;

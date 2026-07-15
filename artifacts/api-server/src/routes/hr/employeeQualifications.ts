@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, asc, lte, lt, isNotNull, sql } from "drizzle-orm";
+import { and, eq, asc, lte, lt, isNotNull, sql, desc } from "drizzle-orm";
 import {
   db,
   employeeQualificationsTable,
@@ -7,7 +7,9 @@ import {
   qualificationRevalidationsTable,
   qualificationCertificatesTable,
   employeesTable,
+  usersTable,
 } from "@workspace/db";
+import { requirePermission } from "../../middlewares/requirePermission";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_CONTENT_TYPES } from "../../lib/uploadPolicy";
@@ -70,6 +72,153 @@ function calcExpiryDate(
   return d.toISOString().split("T")[0];
 }
 
+// PATCH /employees/:id/qualifications/:qualId/verify  (HR Manager only)
+const VerifyInput = z.object({
+  status: z.enum(["verified", "rejected"]),
+  notes: z.string().optional().nullable(),
+});
+
+router.patch(
+  "/employees/:id/qualifications/:qualId/verify",
+  requirePermission(["hr:access", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = QualIdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const parsed = VerifyInput.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const userId = req.session?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const [existing] = await db
+      .select({ id: employeeQualificationsTable.id })
+      .from(employeeQualificationsTable)
+      .where(
+        and(
+          eq(employeeQualificationsTable.id, params.data.qualId),
+          eq(employeeQualificationsTable.employeeId, params.data.id),
+        ),
+      )
+      .limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "Qualification not found" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(employeeQualificationsTable)
+      .set({
+        verificationStatus: parsed.data.status,
+        verificationNotes: parsed.data.notes ?? null,
+        verifiedBy: userId,
+        verifiedAt: new Date(),
+      })
+      .where(eq(employeeQualificationsTable.id, params.data.qualId))
+      .returning();
+
+    // Join verifier name for response
+    const [verifier] = await db
+      .select({ name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+
+    const [qualType] = await db
+      .select({ name: qualificationTypesTable.name, awardingBody: qualificationTypesTable.awardingBody })
+      .from(qualificationTypesTable)
+      .where(eq(qualificationTypesTable.id, updated.qualificationTypeId))
+      .limit(1);
+
+    res.json({
+      ...updated,
+      qualificationTypeName: qualType?.name ?? null,
+      awardingBody: qualType?.awardingBody ?? null,
+      verifiedByName: verifier?.name ?? null,
+    });
+  },
+);
+
+// GET /qualification-verifications  (HR Manager only)
+const VerificationStatusParam = z.object({
+  status: z.enum(["pending", "verified", "rejected"]).default("pending"),
+});
+
+router.get(
+  "/qualification-verifications",
+  requirePermission(["hr:access", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const parsed = VerificationStatusParam.safeParse(req.query);
+    const status = parsed.success ? parsed.data.status : "pending";
+
+    // Alias the users table for the verifier join to avoid conflict
+    const verifierAlias = usersTable;
+
+    const rows = await db
+      .select({
+        id: employeeQualificationsTable.id,
+        employeeId: employeeQualificationsTable.employeeId,
+        employeeFirstName: employeesTable.firstName,
+        employeeLastName: employeesTable.lastName,
+        qualificationTypeId: employeeQualificationsTable.qualificationTypeId,
+        qualificationTypeName: qualificationTypesTable.name,
+        awardingBody: qualificationTypesTable.awardingBody,
+        dateAchieved: employeeQualificationsTable.dateAchieved,
+        expiryDate: employeeQualificationsTable.expiryDate,
+        notes: employeeQualificationsTable.notes,
+        createdAt: employeeQualificationsTable.createdAt,
+        verificationStatus: employeeQualificationsTable.verificationStatus,
+        verificationNotes: employeeQualificationsTable.verificationNotes,
+        verifiedBy: employeeQualificationsTable.verifiedBy,
+        verifiedByName: verifierAlias.name,
+        verifiedAt: employeeQualificationsTable.verifiedAt,
+      })
+      .from(employeeQualificationsTable)
+      .innerJoin(employeesTable, eq(employeeQualificationsTable.employeeId, employeesTable.id))
+      .leftJoin(qualificationTypesTable, eq(employeeQualificationsTable.qualificationTypeId, qualificationTypesTable.id))
+      .leftJoin(verifierAlias, eq(employeeQualificationsTable.verifiedBy, verifierAlias.id))
+      .where(eq(employeeQualificationsTable.verificationStatus, status))
+      .orderBy(asc(employeeQualificationsTable.dateAchieved));
+
+    // For pending items, also attach the most recent certificate URL
+    const qualIds = rows.map((r) => r.id);
+    const certMap = new Map<number, { fileUrl: string | null; fileName: string | null }>();
+    if (qualIds.length > 0) {
+      const { inArray } = await import("drizzle-orm");
+      const certs = await db
+        .select({
+          qualificationId: qualificationCertificatesTable.qualificationId,
+          fileUrl: qualificationCertificatesTable.fileUrl,
+          fileName: qualificationCertificatesTable.fileName,
+        })
+        .from(qualificationCertificatesTable)
+        .where(inArray(qualificationCertificatesTable.qualificationId, qualIds))
+        .orderBy(desc(qualificationCertificatesTable.uploadedAt));
+      for (const c of certs) {
+        if (!certMap.has(c.qualificationId)) {
+          certMap.set(c.qualificationId, { fileUrl: c.fileUrl, fileName: c.fileName });
+        }
+      }
+    }
+
+    res.json(
+      rows.map((r) => ({
+        ...r,
+        certificateUrl: certMap.get(r.id)?.fileUrl ?? null,
+        certificateFileName: certMap.get(r.id)?.fileName ?? null,
+      })),
+    );
+  },
+);
+
 // GET /qualifications/expiring?withinDays=30
 // Returns all qualification records with an expiry date that is expired or expiring soon.
 // withinDays=0  → only already expired (expiryDate < today)
@@ -108,7 +257,13 @@ router.get("/qualifications/expiring", async (req, res): Promise<void> => {
     .from(employeeQualificationsTable)
     .innerJoin(employeesTable, eq(employeeQualificationsTable.employeeId, employeesTable.id))
     .leftJoin(qualificationTypesTable, eq(employeeQualificationsTable.qualificationTypeId, qualificationTypesTable.id))
-    .where(and(isNotNull(employeeQualificationsTable.expiryDate), dateCondition))
+    .where(
+      and(
+        isNotNull(employeeQualificationsTable.expiryDate),
+        dateCondition,
+        eq(employeeQualificationsTable.verificationStatus, "verified"),
+      ),
+    )
     .orderBy(asc(employeeQualificationsTable.expiryDate));
 
   res.json(rows);
@@ -134,6 +289,11 @@ router.get(
         createdAt: employeeQualificationsTable.createdAt,
         qualificationTypeName: qualificationTypesTable.name,
         awardingBody: qualificationTypesTable.awardingBody,
+        verificationStatus: employeeQualificationsTable.verificationStatus,
+        verificationNotes: employeeQualificationsTable.verificationNotes,
+        verifiedBy: employeeQualificationsTable.verifiedBy,
+        verifiedByName: usersTable.name,
+        verifiedAt: employeeQualificationsTable.verifiedAt,
       })
       .from(employeeQualificationsTable)
       .leftJoin(
@@ -143,6 +303,7 @@ router.get(
           qualificationTypesTable.id,
         ),
       )
+      .leftJoin(usersTable, eq(employeeQualificationsTable.verifiedBy, usersTable.id))
       .where(eq(employeeQualificationsTable.employeeId, params.data.id))
       .orderBy(asc(employeeQualificationsTable.createdAt));
     res.json(rows);
@@ -191,6 +352,7 @@ router.post(
         dateAchieved: parsed.data.dateAchieved,
         expiryDate,
         notes: parsed.data.notes ?? null,
+        verificationStatus: "pending",
       })
       .returning();
 

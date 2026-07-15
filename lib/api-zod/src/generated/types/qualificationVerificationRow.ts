@@ -5,11 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { EmployeeQualificationVerificationStatus } from './employeeQualificationVerificationStatus';
+import type { QualificationVerificationRowVerificationStatus } from './qualificationVerificationRowVerificationStatus';
 
-export interface EmployeeQualification {
+export interface QualificationVerificationRow {
   id: number;
   employeeId: number;
+  employeeFirstName: string;
+  employeeLastName: string;
   qualificationTypeId: number;
   /** @nullable */
   qualificationTypeName?: string | null;
@@ -21,7 +23,7 @@ export interface EmployeeQualification {
   /** @nullable */
   notes?: string | null;
   createdAt: Date;
-  verificationStatus: EmployeeQualificationVerificationStatus;
+  verificationStatus: QualificationVerificationRowVerificationStatus;
   /** @nullable */
   verificationNotes?: string | null;
   /** @nullable */
@@ -30,4 +32,8 @@ export interface EmployeeQualification {
   verifiedByName?: string | null;
   /** @nullable */
   verifiedAt?: Date | null;
+  /** @nullable */
+  certificateUrl?: string | null;
+  /** @nullable */
+  certificateFileName?: string | null;
 }

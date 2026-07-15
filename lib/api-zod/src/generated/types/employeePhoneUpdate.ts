@@ -5,11 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PhoneLabel } from './phoneLabel';
 
-export interface EmployeeNextOfKinInput {
+export interface EmployeePhoneUpdate {
   /** @minLength 1 */
-  name: string;
-  relationship?: string;
-  email?: string;
-  address?: string;
+  number?: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
 }

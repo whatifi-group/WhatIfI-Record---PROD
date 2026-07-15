@@ -64,6 +64,13 @@
       "when": 1752796800000,
       "tag": "0010_employee_phones",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1752883200000,
+      "tag": "0011_qualification_verification",
+      "breakpoints": true
     }
   ]
 }

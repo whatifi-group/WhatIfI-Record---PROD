@@ -209,12 +209,6 @@ export default function EmployeeProfile() {
                   <Mail className="w-4 h-4 mr-3 shrink-0" />
                   <a href={`mailto:${employee.email}`} className="truncate hover:text-primary transition-colors">{employee.email}</a>
                 </div>
-                {employee.phones?.find(p => p.isPrimary)?.number && (
-                  <div className="flex items-center text-muted-foreground">
-                    <Phone className="w-4 h-4 mr-3 shrink-0" />
-                    <span>{employee.phones.find(p => p.isPrimary)!.number}</span>
-                  </div>
-                )}
                 <div className="flex items-center text-muted-foreground">
                   <Briefcase className="w-4 h-4 mr-3 shrink-0" />
                   <span className="capitalize">{employee.employmentType.replace("_", " ")}</span>

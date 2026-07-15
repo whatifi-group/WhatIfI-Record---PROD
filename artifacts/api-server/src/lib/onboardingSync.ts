@@ -91,6 +91,7 @@ export async function syncOnboardingSubmission(
       dateAchieved: employeeQualificationsTable.dateAchieved,
       expiryDate: employeeQualificationsTable.expiryDate,
       notes: employeeQualificationsTable.notes,
+      verificationStatus: employeeQualificationsTable.verificationStatus,
     })
     .from(employeeQualificationsTable)
     .where(eq(employeeQualificationsTable.employeeId, employeeId));

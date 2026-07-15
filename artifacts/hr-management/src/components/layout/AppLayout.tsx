@@ -55,6 +55,7 @@ const modules: Module[] = [
       { name: "Work Records", href: "/work-records", icon: ClipboardList },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
       { name: "Expiring Qualifications", href: "/expiring-qualifications", icon: AlertTriangle },
+      { name: "Qual. Verification", href: "/qualification-verification", icon: ShieldCheck },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
       { name: "Onboarding Queue", href: "/onboarding-queue", icon: ClipboardCheck },
     ],

@@ -25,4 +25,7 @@ export const Permission = {
   view_payroll: 'view_payroll',
   view_disclosures: 'view_disclosures',
   review_disclosures: 'review_disclosures',
+  view_own_profile: 'view_own_profile',
+  upload_qualifications: 'upload_qualifications',
+  view_employee_directory: 'view_employee_directory',
 } as const;

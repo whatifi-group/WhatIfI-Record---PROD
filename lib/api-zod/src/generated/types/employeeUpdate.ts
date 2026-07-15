@@ -15,8 +15,6 @@ export interface EmployeeUpdate {
   lastName?: string;
   /** @minLength 1 */
   email?: string;
-  /** @nullable */
-  phone?: string | null;
   /** @minLength 1 */
   jobTitle?: string;
   /** @nullable */

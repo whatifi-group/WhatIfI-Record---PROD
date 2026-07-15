@@ -63,6 +63,9 @@ import {
   Paperclip,
   ExternalLink,
   Upload,
+  CheckCircle2,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
 
@@ -107,6 +110,50 @@ function formatDate(dateStr: string | null | undefined): string {
   } catch {
     return dateStr;
   }
+}
+
+type VerificationStatus = "pending" | "verified" | "rejected";
+
+function VerificationBadge({
+  status,
+  verifiedByName,
+  verifiedAt,
+}: {
+  status: VerificationStatus;
+  verifiedByName?: string | null;
+  verifiedAt?: string | null;
+}) {
+  if (status === "verified") {
+    const tooltip =
+      verifiedByName && verifiedAt
+        ? `Verified by ${verifiedByName} on ${formatDate(verifiedAt)}`
+        : verifiedByName
+          ? `Verified by ${verifiedByName}`
+          : "Verified";
+    return (
+      <span
+        title={tooltip}
+        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700 border border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 cursor-default"
+      >
+        <CheckCircle2 className="w-2.5 h-2.5" />
+        Verified
+      </span>
+    );
+  }
+  if (status === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive/10 text-destructive border border-destructive/20">
+        <XCircle className="w-2.5 h-2.5" />
+        Rejected
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+      <Clock className="w-2.5 h-2.5" />
+      Pending verification
+    </span>
+  );
 }
 
 function ExpiryBadge({ expiryDate }: { expiryDate: string | null | undefined }) {
@@ -596,6 +643,11 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
                       {record.qualificationTypeName ?? `Type #${record.qualificationTypeId}`}
                     </p>
                     <ExpiryBadge expiryDate={record.expiryDate} />
+                    <VerificationBadge
+                      status={(record.verificationStatus as VerificationStatus) ?? "pending"}
+                      verifiedByName={record.verifiedByName}
+                      verifiedAt={record.verifiedAt as unknown as string | null}
+                    />
                   </div>
                   {record.awardingBody && (
                     <p className="text-xs text-muted-foreground mt-0.5">{record.awardingBody}</p>

@@ -94,17 +94,20 @@ export interface DepartmentUpdate {
   headEmployeeId?: number | null;
 }
 
-export interface EmployeePhoneEntry {
-  id: number;
-  number: string;
-  label: string;
-  isPrimary: boolean;
-}
+export type PhoneLabel = typeof PhoneLabel[keyof typeof PhoneLabel];
 
-export interface KinPhoneEntry {
+
+export const PhoneLabel = {
+  Mobile: 'Mobile',
+  Home: 'Home',
+  Work: 'Work',
+  Other: 'Other',
+} as const;
+
+export interface PhoneSummary {
   id: number;
   number: string;
-  label: string;
+  label: PhoneLabel;
   isPrimary: boolean;
 }
 
@@ -113,6 +116,8 @@ export interface Employee {
   firstName: string;
   lastName: string;
   email: string;
+  /** Phone numbers for this employee (only present on single-record responses) */
+  phones?: PhoneSummary[];
   jobTitle: string;
   /** @nullable */
   departmentId: number | null;
@@ -136,7 +141,6 @@ export interface Employee {
      */
   leaverDate: string | null;
   createdAt: string;
-  phones: EmployeePhoneEntry[];
   /** True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise. */
   pendingDisclosureReview?: boolean;
 }
@@ -521,7 +525,8 @@ export interface EmployeeNextOfKin {
   /** @nullable */
   address?: string | null;
   createdAt: string;
-  phones: KinPhoneEntry[];
+  /** Phone numbers for this next-of-kin record */
+  phones?: PhoneSummary[];
 }
 
 export interface EmployeeNextOfKinInput {
@@ -543,31 +548,14 @@ export interface EmployeeNextOfKinUpdate {
   address?: string | null;
 }
 
-export type PhoneLabel = 'Mobile' | 'Home' | 'Work' | 'Other';
+export type EmployeeQualificationVerificationStatus = typeof EmployeeQualificationVerificationStatus[keyof typeof EmployeeQualificationVerificationStatus];
 
-export interface EmployeePhoneInput {
-  number: string;
-  label: PhoneLabel;
-  isPrimary: boolean;
-}
 
-export interface EmployeePhoneUpdate {
-  number?: string;
-  label?: PhoneLabel;
-  isPrimary?: boolean;
-}
-
-export interface KinPhoneInput {
-  number: string;
-  label: PhoneLabel;
-  isPrimary: boolean;
-}
-
-export interface KinPhoneUpdate {
-  number?: string;
-  label?: PhoneLabel;
-  isPrimary?: boolean;
-}
+export const EmployeeQualificationVerificationStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
 
 export interface EmployeeQualification {
   id: number;
@@ -583,6 +571,15 @@ export interface EmployeeQualification {
   /** @nullable */
   notes?: string | null;
   createdAt: string;
+  verificationStatus: EmployeeQualificationVerificationStatus;
+  /** @nullable */
+  verificationNotes?: string | null;
+  /** @nullable */
+  verifiedBy?: number | null;
+  /** @nullable */
+  verifiedByName?: string | null;
+  /** @nullable */
+  verifiedAt?: string | null;
 }
 
 export interface EmployeeQualificationInput {
@@ -877,6 +874,92 @@ export interface EmployeeWorkRecordUpdate {
   notes?: string | null;
 }
 
+export interface EmployeePhoneEntry {
+  id: number;
+  employeeId: number;
+  number: string;
+  label: PhoneLabel;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface EmployeePhoneInput {
+  /** @minLength 1 */
+  number: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
+}
+
+export interface EmployeePhoneUpdate {
+  /** @minLength 1 */
+  number?: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
+}
+
+export interface KinPhoneEntry {
+  id: number;
+  kinId: number;
+  number: string;
+  label: PhoneLabel;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export type QualificationVerifyInputStatus = typeof QualificationVerifyInputStatus[keyof typeof QualificationVerifyInputStatus];
+
+
+export const QualificationVerifyInputStatus = {
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface QualificationVerifyInput {
+  status: QualificationVerifyInputStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type QualificationVerificationRowVerificationStatus = typeof QualificationVerificationRowVerificationStatus[keyof typeof QualificationVerificationRowVerificationStatus];
+
+
+export const QualificationVerificationRowVerificationStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
+
+export interface QualificationVerificationRow {
+  id: number;
+  employeeId: number;
+  employeeFirstName: string;
+  employeeLastName: string;
+  qualificationTypeId: number;
+  /** @nullable */
+  qualificationTypeName?: string | null;
+  /** @nullable */
+  awardingBody?: string | null;
+  dateAchieved: string;
+  /** @nullable */
+  expiryDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  verificationStatus: QualificationVerificationRowVerificationStatus;
+  /** @nullable */
+  verificationNotes?: string | null;
+  /** @nullable */
+  verifiedBy?: number | null;
+  /** @nullable */
+  verifiedByName?: string | null;
+  /** @nullable */
+  verifiedAt?: string | null;
+  /** @nullable */
+  certificateUrl?: string | null;
+  /** @nullable */
+  certificateFileName?: string | null;
+}
+
 export interface ExpiringQualification {
   id: number;
   employeeId: number;
@@ -1124,6 +1207,19 @@ search?: string;
 departmentId?: number;
 status?: EmployeeStatus;
 };
+
+export type ListQualificationVerificationsParams = {
+status?: ListQualificationVerificationsStatus;
+};
+
+export type ListQualificationVerificationsStatus = typeof ListQualificationVerificationsStatus[keyof typeof ListQualificationVerificationsStatus];
+
+
+export const ListQualificationVerificationsStatus = {
+  pending: 'pending',
+  verified: 'verified',
+  rejected: 'rejected',
+} as const;
 
 export type ListExpiringQualificationsParams = {
 /**

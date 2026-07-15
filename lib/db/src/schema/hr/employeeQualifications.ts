@@ -8,6 +8,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { employeesTable } from "./employees";
 import { qualificationTypesTable } from "./qualificationTypes";
+import { usersTable } from "../sysadmin/users";
+
+export const qualificationVerificationStatusValues = [
+  "pending",
+  "verified",
+  "rejected",
+] as const;
 
 export const employeeQualificationsTable = pgTable("employee_qualifications", {
   id: serial("id").primaryKey(),
@@ -23,6 +30,16 @@ export const employeeQualificationsTable = pgTable("employee_qualifications", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  verificationStatus: text("verification_status", {
+    enum: qualificationVerificationStatusValues,
+  })
+    .notNull()
+    .default("pending"),
+  verificationNotes: text("verification_notes"),
+  verifiedBy: integer("verified_by").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
 });
 
 export type EmployeeQualification =

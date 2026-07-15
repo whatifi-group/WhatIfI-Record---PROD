@@ -7,14 +7,15 @@
  */
 import type { EmployeeStatus } from './employeeStatus';
 import type { EmploymentType } from './employmentType';
+import type { PhoneSummary } from './phoneSummary';
 
 export interface Employee {
   id: number;
   firstName: string;
   lastName: string;
   email: string;
-  /** @nullable */
-  phone: string | null;
+  /** Phone numbers for this employee (only present on single-record responses) */
+  phones?: PhoneSummary[];
   jobTitle: string;
   /** @nullable */
   departmentId: number | null;

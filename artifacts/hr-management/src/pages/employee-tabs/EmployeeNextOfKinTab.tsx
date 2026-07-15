@@ -158,33 +158,24 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
                     {record.email && <span>✉ {record.email}</span>}
                     {record.address && <span>📍 {record.address}</span>}
                   </div>
-                  {/* Inline phone list — toggled open after creation or by clicking phones */}
+                  {/* Inline phone list — toggled open by clicking */}
                   <div className="mt-3">
-                    {expandedKinId === record.id || (record.phones && record.phones.length > 0) ? (
+                    {expandedKinId === record.id ? (
                       <div>
                         <button
                           className="text-xs text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-1"
-                          onClick={() => setExpandedKinId(expandedKinId === record.id ? null : record.id)}
+                          onClick={() => setExpandedKinId(null)}
                         >
-                          📞 Phone numbers {expandedKinId === record.id ? "▲" : "▼"}
+                          📞 Phone numbers ▲
                         </button>
-                        {expandedKinId === record.id && (
-                          <KinPhoneList employeeId={employeeId} kinId={record.id} />
-                        )}
-                        {expandedKinId !== record.id && record.phones && record.phones.length > 0 && (
-                          <div className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                            {record.phones.map((ph) => (
-                              <span key={ph.id}>{ph.number} <span className="opacity-60">({ph.label}{ph.isPrimary ? ", primary" : ""})</span></span>
-                            ))}
-                          </div>
-                        )}
+                        <KinPhoneList employeeId={employeeId} kinId={record.id} />
                       </div>
                     ) : (
                       <button
                         className="text-xs text-muted-foreground hover:text-foreground"
                         onClick={() => setExpandedKinId(record.id)}
                       >
-                        📞 Add phone numbers
+                        📞 Phone numbers
                       </button>
                     )}
                   </div>

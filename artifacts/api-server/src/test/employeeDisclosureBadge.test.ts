@@ -13,6 +13,8 @@
  * pushed to the database — tracked separately.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
+import { db, employeeDisclosuresTable, employeeDisclosureReviewsTable } from "@workspace/db";
 import router from "../routes/hr/index";
 import {
   buildApp,
@@ -111,6 +113,112 @@ describe("GET /api/employees — pendingDisclosureReview permission gating", () 
   it("does not 500 when called without any session (unauthenticated request)", async () => {
     // buildApp without userId → no session → badge skipped, returns false
     const res = await buildApp(router).get("/api/employees");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.pendingDisclosureReview).toBe(false);
+  });
+});
+
+// ── True-case integration tests ───────────────────────────────────────────────
+
+describe("GET /api/employees — pendingDisclosureReview: conviction with no review", () => {
+  let disclosureId: number;
+
+  beforeAll(async () => {
+    const [disc] = await db
+      .insert(employeeDisclosuresTable)
+      .values({
+        employeeId: empId,
+        checkType: "dbs",
+        checkLevel: "enhanced",
+        issueDate: "2024-01-01",
+        convictionDetails: "Minor offence disclosed on application",
+      })
+      .returning({ id: employeeDisclosuresTable.id });
+    disclosureId = disc.id;
+  });
+
+  afterAll(async () => {
+    await db
+      .delete(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.id, disclosureId));
+  });
+
+  it("pendingDisclosureReview is true for a view_disclosures user", async () => {
+    const res = await buildApp(router, disclosureUserId).get("/api/employees");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.pendingDisclosureReview).toBe(true);
+  });
+});
+
+describe("GET /api/employees — pendingDisclosureReview: conviction with signed-off review", () => {
+  let disclosureId: number;
+
+  beforeAll(async () => {
+    const [disc] = await db
+      .insert(employeeDisclosuresTable)
+      .values({
+        employeeId: empId,
+        checkType: "dbs",
+        checkLevel: "enhanced",
+        issueDate: "2024-01-01",
+        convictionDetails: "Minor offence disclosed on application",
+      })
+      .returning({ id: employeeDisclosuresTable.id });
+    disclosureId = disc.id;
+
+    await db.insert(employeeDisclosureReviewsTable).values({
+      disclosureId: disc.id,
+      recommendation: "approved",
+      reviewDate: "2024-06-01",
+      signedOffAt: new Date("2024-06-02T10:00:00Z"),
+    });
+  });
+
+  afterAll(async () => {
+    // Cascade delete removes the review row too
+    await db
+      .delete(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.id, disclosureId));
+  });
+
+  it("pendingDisclosureReview is false when the review has been signed off", async () => {
+    const res = await buildApp(router, disclosureUserId).get("/api/employees");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.pendingDisclosureReview).toBe(false);
+  });
+});
+
+describe("GET /api/employees — pendingDisclosureReview: disclosure with no conviction details", () => {
+  let disclosureId: number;
+
+  beforeAll(async () => {
+    const [disc] = await db
+      .insert(employeeDisclosuresTable)
+      .values({
+        employeeId: empId,
+        checkType: "dbs",
+        checkLevel: "standard",
+        issueDate: "2024-01-01",
+        convictionDetails: null,
+      })
+      .returning({ id: employeeDisclosuresTable.id });
+    disclosureId = disc.id;
+  });
+
+  afterAll(async () => {
+    await db
+      .delete(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.id, disclosureId));
+  });
+
+  it("pendingDisclosureReview is false when convictionDetails is null", async () => {
+    const res = await buildApp(router, disclosureUserId).get("/api/employees");
     expect(res.status).toBe(200);
     const emp = res.body.find((e: { id: number }) => e.id === empId);
     expect(emp).toBeDefined();

@@ -51,7 +51,7 @@ function AccessDenied() {
   );
 }
 
-function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+export function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const { hasPermission } = useAuth();
   const [location, setLocation] = useLocation();
   const allowed = hasPermission('sysadmin');

@@ -10,7 +10,7 @@
  * Uses the same test pattern as HrRoute.test.tsx and AdminRoute.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
 // ── Mock dependencies ─────────────────────────────────────────────────────────
 
@@ -33,42 +33,8 @@ vi.mock("wouter", () => ({
 
 // ── Import after vi.mock() ────────────────────────────────────────────────────
 
-// PastEmployeesRoute is not exported from App.tsx — import the whole module
-// and rely on App.tsx's internal default export structure to test the guard
-// by rendering it via a small wrapper that re-creates the guard logic.
-// We test the guard by importing from App.tsx using named re-export added below.
-//
-// Because PastEmployeesRoute is not currently exported we test it indirectly
-// through the observable side-effects: redirect call and rendered output.
-// The guard is defined as a file-internal function, so we duplicate its
-// contract here for isolated unit testing (keeping it in sync via this file).
 import { useAuth } from "@/contexts/AuthContext";
-
-// ── Local re-implementation of the guard (mirrors App.tsx exactly) ───────────
-// If the App.tsx implementation changes, update this mirror and re-run tests.
-
-import React, { useEffect } from "react";
-import { useLocation } from "wouter";
-
-function PastEmployeesRouteUnderTest({
-  component: Component,
-}: {
-  component: React.ComponentType;
-}) {
-  const { hasPermission } = useAuth();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (!hasPermission("hr:past_employees") && !hasPermission("sysadmin")) {
-      setLocation("/");
-    }
-  }, [hasPermission, setLocation]);
-
-  if (!hasPermission("hr:past_employees") && !hasPermission("sysadmin")) {
-    return null;
-  }
-  return <Component />;
-}
+import { PastEmployeesRoute } from "@/App";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -95,7 +61,7 @@ describe("PastEmployeesRoute — route guard", () => {
     mockAuth(() => false);
 
     const { container } = render(
-      <PastEmployeesRouteUnderTest component={ProtectedPage} />,
+      <PastEmployeesRoute component={ProtectedPage} />,
     );
 
     expect(screen.queryByText("Past Employees content")).not.toBeInTheDocument();
@@ -105,7 +71,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("redirects to / when the user lacks hr:past_employees and is not sysadmin", () => {
     mockAuth(() => false);
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(mockSetLocation).toHaveBeenCalledWith("/");
   });
@@ -113,7 +79,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("does NOT redirect when the user has hr:past_employees", () => {
     mockAuth((p) => p === "hr:past_employees");
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(mockSetLocation).not.toHaveBeenCalled();
   });
@@ -121,7 +87,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("renders the protected component when the user has hr:past_employees", () => {
     mockAuth((p) => p === "hr:past_employees");
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(screen.getByText("Past Employees content")).toBeInTheDocument();
   });
@@ -129,7 +95,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("renders the protected component when the user has hr:past_employees AND hr:access", () => {
     mockAuth((p) => p === "hr:past_employees" || p === "hr:access");
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(screen.getByText("Past Employees content")).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
@@ -138,7 +104,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("renders the protected component when the user is sysadmin (no hr:past_employees)", () => {
     mockAuth((p) => p === "sysadmin");
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(screen.getByText("Past Employees content")).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
@@ -147,7 +113,7 @@ describe("PastEmployeesRoute — route guard", () => {
   it("renders the protected component when the user has both hr:past_employees and sysadmin", () => {
     mockAuth((p) => p === "hr:past_employees" || p === "sysadmin");
 
-    render(<PastEmployeesRouteUnderTest component={ProtectedPage} />);
+    render(<PastEmployeesRoute component={ProtectedPage} />);
 
     expect(screen.getByText("Past Employees content")).toBeInTheDocument();
     expect(mockSetLocation).not.toHaveBeenCalled();
@@ -157,7 +123,7 @@ describe("PastEmployeesRoute — route guard", () => {
     mockAuth(() => false);
 
     const { container } = render(
-      <PastEmployeesRouteUnderTest component={ProtectedPage} />,
+      <PastEmployeesRoute component={ProtectedPage} />,
     );
 
     // Unlike HrRoute which shows AccessDenied, PastEmployeesRoute silently

@@ -27,8 +27,8 @@ export default function PastEmployeesList() {
       if (search !== "") {
         const q = search.toLowerCase();
         const nameEmailMatch =
-          emp.firstName.toLowerCase().includes(q) ||
-          emp.lastName.toLowerCase().includes(q) ||
+          (emp.firstName ?? "").toLowerCase().includes(q) ||
+          (emp.lastName ?? "").toLowerCase().includes(q) ||
           (emp.email ?? "").toLowerCase().includes(q);
         if (!nameEmailMatch) return false;
       }
@@ -174,7 +174,7 @@ export default function PastEmployeesList() {
                         <TableCell className="py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-display font-bold uppercase shrink-0">
-                              {employee.firstName[0]}{employee.lastName[0]}
+                              {employee.firstName?.[0] ?? ""}{employee.lastName?.[0] ?? ""}
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-medium text-foreground truncate group-hover:text-primary transition-colors">

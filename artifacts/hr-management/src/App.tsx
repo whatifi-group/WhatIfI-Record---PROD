@@ -81,7 +81,7 @@ export function HrRoute({ component: Component }: { component: React.ComponentTy
   return <Component />;
 }
 
-function PastEmployeesRoute({ component: Component }: { component: React.ComponentType }) {
+export function PastEmployeesRoute({ component: Component }: { component: React.ComponentType }) {
   const { hasPermission } = useAuth();
   const [, setLocation] = useLocation();
 

@@ -1,6 +1,5 @@
 /**
- * Confirm the PastEmployeesList search filter handles null/undefined email
- * gracefully so the page does not crash when a leaver has no email on record.
+ * PastEmployeesList — resilience tests.
  *
  * Tests cover:
  * - A leaver with a null email is not excluded from the list when no search is active
@@ -10,6 +9,9 @@
  * - A leaver with an undefined email is handled identically to null
  * - Mix of rows with and without email renders correctly and the search works for
  *   the rows that do have an email
+ * - A leaver with an empty or whitespace-only first/last name renders without crashing
+ * - Avatar initials fall back gracefully (no exception) when names are empty or null
+ * - Search filter does not throw when firstName/lastName are null or undefined
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -52,7 +54,7 @@ function renderPage() {
   render(<PastEmployeesList />, { wrapper: Wrapper });
 }
 
-// ── Tests ──────────────────────────────────────────────────────────────────────
+// ── Null/undefined email handling ──────────────────────────────────────────────
 describe("PastEmployeesList — null/undefined email handling", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -136,5 +138,89 @@ describe("PastEmployeesList — null/undefined email handling", () => {
 
     expect(screen.getByText("Alice NoEmail")).toBeInTheDocument();
     expect(screen.getByText("Bob HasEmail")).toBeInTheDocument();
+  });
+});
+
+// ── Empty / null name handling ─────────────────────────────────────────────────
+describe("PastEmployeesList — empty/null name handling", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("renders without crashing when firstName is an empty string", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "", lastName: "Smith" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    expect(() => renderPage()).not.toThrow();
+  });
+
+  it("renders without crashing when lastName is an empty string", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "Jane", lastName: "" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    expect(() => renderPage()).not.toThrow();
+  });
+
+  it("renders without crashing when both firstName and lastName are empty strings", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "", lastName: "" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    expect(() => renderPage()).not.toThrow();
+  });
+
+  it("renders without crashing when firstName is null", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: null, lastName: "Doe" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    expect(() => renderPage()).not.toThrow();
+  });
+
+  it("renders without crashing when lastName is null", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "John", lastName: null })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    expect(() => renderPage()).not.toThrow();
+  });
+
+  it("search filter does not throw when firstName is null", async () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: null, lastName: "Doe" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    const searchInput = screen.getByPlaceholderText(/search by name or email/i);
+
+    await expect(userEvent.type(searchInput, "Doe")).resolves.not.toThrow();
+  });
+
+  it("search filter does not throw when lastName is null", async () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "John", lastName: null })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    const searchInput = screen.getByPlaceholderText(/search by name or email/i);
+
+    await expect(userEvent.type(searchInput, "John")).resolves.not.toThrow();
+  });
+
+  it("avatar initial element does not throw for an empty-string firstName", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "", lastName: "Smith" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    // Rendering is the assertion — no crash means the guard is working
+    expect(() => renderPage()).not.toThrow();
   });
 });

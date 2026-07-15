@@ -2,7 +2,20 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, ...props }, ref) => {
+    const isDate = type === 'date';
+
+    const handleChange = React.useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        onChange?.(e);
+        // Auto-close the native date picker once a value is chosen
+        if (isDate && e.target.value) {
+          e.target.blur();
+        }
+      },
+      [onChange, isDate],
+    );
+
     return (
       <input
         type={type}
@@ -11,7 +24,9 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
           className,
         )}
         ref={ref}
+        onChange={isDate ? handleChange : onChange}
         {...props}
+        {...(isDate ? { 'data-has-value': props.value ? 'true' : 'false' } : {})}
       />
     );
   },

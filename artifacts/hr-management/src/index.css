@@ -308,3 +308,16 @@
     inset: -1px;
   }
 }
+
+/* ── Date input: suppress browser format hint (dd/mm/yyyy) when empty ──────
+   The format text is made transparent on unfocused empty fields so the input
+   looks blank rather than showing the locale date skeleton. It reappears on
+   focus so the user can see the field layout while editing.              */
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-text,
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-month-field,
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-day-field,
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-year-field,
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-hour-field,
+input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-minute-field {
+  color: transparent;
+}

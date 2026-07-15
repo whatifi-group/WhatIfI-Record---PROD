@@ -9,7 +9,7 @@ import {
   employeesTable,
   usersTable,
 } from "@workspace/db";
-import { requirePermission } from "../../middlewares/requirePermission";
+import { requirePermission, getEffectivePermissions } from "../../middlewares/requirePermission";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_CONTENT_TYPES } from "../../lib/uploadPolicy";
@@ -344,6 +344,16 @@ router.post(
           )
         : null;
 
+    // Auto-verify when the adding user is an HR Admin or Sysadmin —
+    // requiring them to re-verify what they just entered is redundant friction.
+    const userId = req.session?.userId;
+    let autoVerify = false;
+    if (userId) {
+      const perms = req.effectivePermissions ?? (await getEffectivePermissions(userId));
+      autoVerify = perms.has("hr:access") || perms.has("sysadmin");
+    }
+
+    const now = new Date();
     const [created] = await db
       .insert(employeeQualificationsTable)
       .values({
@@ -352,9 +362,24 @@ router.post(
         dateAchieved: parsed.data.dateAchieved,
         expiryDate,
         notes: parsed.data.notes ?? null,
-        verificationStatus: "pending",
+        verificationStatus: autoVerify ? "verified" : "pending",
+        ...(autoVerify && userId
+          ? { verifiedBy: userId, verifiedAt: now }
+          : {}),
       })
       .returning();
+
+    // Look up the verifier's display name so the UI can show it immediately
+    // without a separate refetch.
+    let verifiedByName: string | null = null;
+    if (autoVerify && userId) {
+      const [verifier] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      verifiedByName = verifier?.name ?? null;
+    }
 
     await syncOnboardingSubmission(params.data.id).catch((err) => {
       console.error("onboarding sync failed after qualification add:", err);
@@ -364,6 +389,7 @@ router.post(
       ...created,
       qualificationTypeName: qualType.name,
       awardingBody: qualType.awardingBody,
+      verifiedByName,
     });
   },
 );

@@ -95,8 +95,7 @@ export default function LoginPage() {
                       <FormLabel className="text-foreground">Email</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="name@whatifigroup.com" 
-                          type="email" 
+                                                    type="email" 
                           {...field} 
                           className="bg-background"
                           disabled={login.isPending}
@@ -115,8 +114,7 @@ export default function LoginPage() {
                       <FormLabel className="text-foreground">Password</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="••••••••" 
-                          type="password" 
+                                                    type="password" 
                           {...field} 
                           className="bg-background"
                           disabled={login.isPending}

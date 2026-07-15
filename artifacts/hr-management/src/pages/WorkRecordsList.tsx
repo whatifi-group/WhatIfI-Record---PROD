@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
 
@@ -42,8 +43,12 @@ export default function WorkRecordsList() {
   const [dateTo, setDateTo] = useState(today);
   const [shiftTypeFilter, setShiftTypeFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [includeFormer, setIncludeFormer] = useState(false);
 
-  const { data: employees, isLoading: loadingEmployees } = useListEmployees({ status: "active" as any });
+  // Omitting status returns all employees; passing "active" restricts to active only
+  const { data: employees, isLoading: loadingEmployees } = useListEmployees(
+    includeFormer ? {} : { status: "active" as any }
+  );
   const { data: departments } = useListDepartments();
   const { data: shiftTypes } = useListLovItems("shift_type");
 
@@ -111,13 +116,14 @@ export default function WorkRecordsList() {
 
   // Hours per employee
   const hoursByEmployee = useMemo(() => {
-    const map: Record<number, { name: string; hours: number; departmentName: string | null }> = {};
+    const map: Record<number, { name: string; hours: number; departmentName: string | null; isFormer: boolean }> = {};
     filteredRows.forEach(({ record, employee }) => {
       if (!map[employee.id]) {
         map[employee.id] = {
           name: `${employee.firstName} ${employee.lastName}`,
           hours: 0,
           departmentName: employee.departmentName,
+          isFormer: employee.status !== "active",
         };
       }
       map[employee.id].hours += record.hoursWorked ?? 0;
@@ -261,8 +267,18 @@ export default function WorkRecordsList() {
               </Select>
             </div>
           </div>
-          {(searchQuery || dateFrom !== thirtyDaysAgo || dateTo !== today || shiftTypeFilter !== "all" || departmentFilter !== "all") && (
-            <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="include-former"
+                checked={includeFormer}
+                onCheckedChange={setIncludeFormer}
+              />
+              <Label htmlFor="include-former" className="text-xs text-muted-foreground cursor-pointer select-none">
+                Include former employees
+              </Label>
+            </div>
+            {(searchQuery || dateFrom !== thirtyDaysAgo || dateTo !== today || shiftTypeFilter !== "all" || departmentFilter !== "all" || includeFormer) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -273,12 +289,13 @@ export default function WorkRecordsList() {
                   setDateTo(today);
                   setShiftTypeFilter("all");
                   setDepartmentFilter("all");
+                  setIncludeFormer(false);
                 }}
               >
                 Reset filters
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -352,9 +369,19 @@ export default function WorkRecordsList() {
                 </TableHeader>
                 <TableBody>
                   {sortedRows.map(({ record, employee }) => (
-                    <TableRow key={`${employee.id}-${record.id}`} className="border-border/30">
+                    <TableRow
+                      key={`${employee.id}-${record.id}`}
+                      className={`border-border/30 ${employee.status !== "active" ? "opacity-75" : ""}`}
+                    >
                       <TableCell className="font-medium text-sm whitespace-nowrap">
-                        {employee.firstName} {employee.lastName}
+                        <span className="flex items-center gap-1.5 flex-wrap">
+                          {employee.firstName} {employee.lastName}
+                          {employee.status !== "active" && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal text-muted-foreground border-muted-foreground/40 leading-none">
+                              Former
+                            </Badge>
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {employee.departmentName ?? <span className="italic">—</span>}
@@ -411,11 +438,14 @@ export default function WorkRecordsList() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 space-y-2">
-                {hoursByEmployee.slice(0, 10).map(({ employeeId, name, hours }) => (
+                {hoursByEmployee.slice(0, 10).map(({ employeeId, name, hours, isFormer }) => (
                   <div key={employeeId} className="flex items-center justify-between gap-2">
                     <Link href={`/employees/${employeeId}?tab=work-record`}>
-                      <span className="text-xs text-foreground hover:underline cursor-pointer truncate max-w-[120px]">
+                      <span className={`text-xs hover:underline cursor-pointer truncate max-w-[120px] ${isFormer ? "text-muted-foreground" : "text-foreground"}`}>
                         {name}
+                        {isFormer && (
+                          <span className="ml-1 text-[10px] text-muted-foreground/70">(Former)</span>
+                        )}
                       </span>
                     </Link>
                     <span className="text-xs font-medium tabular-nums shrink-0">{hours.toFixed(1)} h</span>

@@ -1,6 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedLov } from "./lib/seedLov";
+import { seedLov, assertLovSync } from "./lib/seedLov";
 import { seedRoles } from "./lib/seedRoles";
 import { runMigrations } from "@workspace/db";
 import path from "path";
@@ -27,7 +27,7 @@ const migrationsFolder = path.join(__dirname, "drizzle");
 runMigrations(migrationsFolder)
   .then(() => {
     logger.info("Database migrations applied");
-    return Promise.all([seedLov(), seedRoles()]);
+    return Promise.all([seedLov().then(() => assertLovSync()), seedRoles()]);
   })
   .then(() => {
     app.listen(port, (err) => {

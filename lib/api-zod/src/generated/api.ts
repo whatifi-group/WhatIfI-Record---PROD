@@ -1158,6 +1158,90 @@ export const DeleteEmployeeWorkRecordResponse = zod.void()
 
 
 /**
+ * @summary List all service periods for an employee
+ */
+export const ListEmployeeServicePeriodsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeeServicePeriodsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date().nullish(),
+  "endReason": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListEmployeeServicePeriodsResponse = zod.array(ListEmployeeServicePeriodsResponseItem)
+
+
+/**
+ * @summary Add a new service period to an employee
+ */
+export const CreateEmployeeServicePeriodParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateEmployeeServicePeriodBody = zod.object({
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date().nullish(),
+  "endReason": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const CreateEmployeeServicePeriodResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date().nullish(),
+  "endReason": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a service period
+ */
+export const UpdateEmployeeServicePeriodParams = zod.object({
+  "id": zod.coerce.number(),
+  "periodId": zod.coerce.number()
+})
+
+export const UpdateEmployeeServicePeriodBody = zod.object({
+  "startDate": zod.coerce.date().optional(),
+  "endDate": zod.coerce.date().nullish(),
+  "endReason": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateEmployeeServicePeriodResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date().nullish(),
+  "endReason": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a service period (rejected if it is the only one)
+ */
+export const DeleteEmployeeServicePeriodParams = zod.object({
+  "id": zod.coerce.number(),
+  "periodId": zod.coerce.number()
+})
+
+export const DeleteEmployeeServicePeriodResponse = zod.void()
+
+
+/**
  * @summary List leave requests
  */
 export const ListLeaveRequestsQueryParams = zod.object({

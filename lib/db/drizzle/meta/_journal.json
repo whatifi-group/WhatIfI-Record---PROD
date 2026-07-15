@@ -22,6 +22,13 @@
       "when": 1784077884608,
       "tag": "0002_add_employee_pay_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1752576000000,
+      "tag": "0005_add_employee_service_periods",
+      "breakpoints": true
     }
   ]
 }

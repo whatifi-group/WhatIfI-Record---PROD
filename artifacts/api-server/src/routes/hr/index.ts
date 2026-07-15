@@ -11,6 +11,7 @@ import employeeNextOfKinRouter from "./employeeNextOfKin";
 import employeeQualificationsRouter from "./employeeQualifications";
 import employeeWorkRecordsRouter from "./employeeWorkRecords";
 import employeePayRatesRouter from "./employeePayRates";
+import employeeServicePeriodsRouter from "./employeeServicePeriods";
 
 // HR module: departments, employees, leave requests, and employee section sub-resources.
 // Future modules (e.g. payroll, recruiting) should follow the same pattern:
@@ -29,5 +30,6 @@ router.use(employeeNextOfKinRouter);
 router.use(employeeQualificationsRouter);
 router.use(employeeWorkRecordsRouter);
 router.use(employeePayRatesRouter);
+router.use(employeeServicePeriodsRouter);
 
 export default router;

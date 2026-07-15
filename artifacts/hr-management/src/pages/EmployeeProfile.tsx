@@ -36,6 +36,7 @@ import EmployeeDietaryTab from "./employee-tabs/EmployeeDietaryTab";
 import EmployeeNextOfKinTab from "./employee-tabs/EmployeeNextOfKinTab";
 import EmployeeQualificationsTab from "./employee-tabs/EmployeeQualificationsTab";
 import EmployeeWorkRecordsTab from "./employee-tabs/EmployeeWorkRecordsTab";
+import EmployeeServiceHistoryTab from "./employee-tabs/EmployeeServiceHistoryTab";
 
 const employeeUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -51,7 +52,7 @@ const employeeUpdateSchema = z.object({
 
 type EmployeeUpdateValues = z.infer<typeof employeeUpdateSchema>;
 
-const VALID_TABS = ["details","addresses","payroll","attachments","medical","dietary","next-of-kin","qualifications","work-record"] as const;
+const VALID_TABS = ["details","addresses","payroll","attachments","medical","dietary","next-of-kin","qualifications","work-record","service-history"] as const;
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -357,6 +358,7 @@ export default function EmployeeProfile() {
               <TabsTrigger value="next-of-kin">Next of Kin</TabsTrigger>
               <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
               <TabsTrigger value="work-record">Work Record</TabsTrigger>
+              <TabsTrigger value="service-history">Service History</TabsTrigger>
             </TabsList>
 
             {/* Details Tab */}
@@ -581,6 +583,14 @@ export default function EmployeeProfile() {
               <Card className="border-border/50 shadow-sm">
                 <CardContent className="pt-6">
                   <EmployeeWorkRecordsTab employeeId={employeeId} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="service-history">
+              <Card className="border-border/50 shadow-sm">
+                <CardContent className="pt-6">
+                  <EmployeeServiceHistoryTab employeeId={employeeId} canEdit={canEdit} />
                 </CardContent>
               </Card>
             </TabsContent>

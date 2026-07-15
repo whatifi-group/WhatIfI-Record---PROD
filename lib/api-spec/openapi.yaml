@@ -1218,6 +1218,108 @@ paths:
         "404":
           description: Not found
 
+  /employees/{id}/service-periods:
+    get:
+      operationId: listEmployeeServicePeriods
+      tags: [employee-sections]
+      summary: List all service periods for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of service periods ordered by start date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeServicePeriod"
+    post:
+      operationId: createEmployeeServicePeriod
+      tags: [employee-sections]
+      summary: Add a new service period to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeServicePeriodInput"
+      responses:
+        "201":
+          description: Created service period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeServicePeriod"
+        "400":
+          description: Validation error
+
+  /employees/{id}/service-periods/{periodId}:
+    put:
+      operationId: updateEmployeeServicePeriod
+      tags: [employee-sections]
+      summary: Update a service period
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeServicePeriodUpdate"
+      responses:
+        "200":
+          description: Updated service period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeServicePeriod"
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeeServicePeriod
+      tags: [employee-sections]
+      summary: Delete a service period (rejected if it is the only one)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: periodId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Cannot delete the only service period
+        "404":
+          description: Not found
+
   /leave-requests:
     get:
       operationId: listLeaveRequests
@@ -2720,6 +2822,60 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+
+    EmployeeServicePeriod:
+      type: object
+      required: [id, employeeId, startDate, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: ["string", "null"]
+          format: date
+        endReason:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    EmployeeServicePeriodInput:
+      type: object
+      required: [startDate]
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: ["string", "null"]
+          format: date
+        endReason:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    EmployeeServicePeriodUpdate:
+      type: object
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: ["string", "null"]
+          format: date
+        endReason:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
 
     EmployeePayRate:
       type: object

@@ -33,6 +33,9 @@ export * from './employeePayrollInput';
 export * from './employeeQualification';
 export * from './employeeQualificationInput';
 export * from './employeeQualificationUpdate';
+export * from './employeeServicePeriod';
+export * from './employeeServicePeriodInput';
+export * from './employeeServicePeriodUpdate';
 export * from './employeeStatus';
 export * from './employeeUpdate';
 export * from './employeeWorkRecord';
@@ -69,9 +72,7 @@ export * from './role';
 export * from './roleInput';
 export * from './roleUpdate';
 export * from './searchParams';
-// SearchResponse is already exported (as a Zod schema) from ../api — re-exporting
-// the TS interface here would cause a duplicate-export conflict.
-export type { SearchResponse } from './searchResponse';
+export * from './searchResponse';
 export * from './searchResult';
 export * from './searchResultType';
 export * from './sysadminSummary';

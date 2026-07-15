@@ -628,6 +628,40 @@ export interface QualificationTypeUpdate {
   isActive?: boolean;
 }
 
+export interface EmployeeServicePeriod {
+  id: number;
+  employeeId: number;
+  startDate: string;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  endReason?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeServicePeriodInput {
+  startDate: string;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  endReason?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface EmployeeServicePeriodUpdate {
+  startDate?: string;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  endReason?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export type EmployeePayRateRateUnit = typeof EmployeePayRateRateUnit[keyof typeof EmployeePayRateRateUnit];
 
 

@@ -31,6 +31,9 @@ import {
   Plus,
   Trash2,
   Copy,
+  ChevronDown,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 import TabErrorState from "@/components/TabErrorState";
 import CopyPayRatesDialog from "./CopyPayRatesDialog";
@@ -128,6 +131,89 @@ interface PayRatesCardProps {
   employeeId: number;
 }
 
+/** Inline edit form shared between add and edit modes */
+function PayRateFormFields({
+  form,
+  onChange,
+  shiftTypes,
+  lockShiftType,
+}: {
+  form: PayRateForm;
+  onChange: (patch: Partial<PayRateForm>) => void;
+  shiftTypes: { value: string; label: string }[];
+  lockShiftType?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <Label className="text-xs">Shift Type</Label>
+        <select
+          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+          value={form.shiftType}
+          disabled={lockShiftType}
+          onChange={(e) => onChange({ shiftType: e.target.value })}
+        >
+          <option value="">Select shift type…</option>
+          {shiftTypes.map((s) => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <Label className="text-xs">Rate (£)</Label>
+        <Input
+          className="mt-1"
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="0.00"
+          value={form.rate}
+          onChange={(e) => onChange({ rate: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Rate Unit</Label>
+        <select
+          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          value={form.rateUnit}
+          onChange={(e) => onChange({ rateUnit: e.target.value as EmployeePayRateInputRateUnit })}
+        >
+          <option value="hourly">Hourly</option>
+          <option value="daily">Daily</option>
+          <option value="flat">Flat</option>
+        </select>
+      </div>
+      <div>
+        <Label className="text-xs">Notes (optional)</Label>
+        <Input
+          className="mt-1"
+          placeholder="Any notes…"
+          value={form.notes}
+          onChange={(e) => onChange({ notes: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Effective From <span className="text-destructive">*</span></Label>
+        <Input
+          className="mt-1"
+          type="date"
+          value={form.effectiveFrom}
+          onChange={(e) => onChange({ effectiveFrom: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label className="text-xs">Effective To (leave blank = open)</Label>
+        <Input
+          className="mt-1"
+          type="date"
+          value={form.effectiveTo}
+          onChange={(e) => onChange({ effectiveTo: e.target.value })}
+        />
+      </div>
+    </div>
+  );
+}
+
 function PayRatesCard({ employeeId }: PayRatesCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -137,6 +223,8 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
   const [addForm, setAddForm] = useState<PayRateForm>(defaultPayRateFormWithDate);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<PayRateForm>(defaultPayRateFormWithDate);
+  // Track which shift-type groups have their history expanded
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
 
   const { data: rates = [], isLoading: ratesLoading } =
     useListEmployeePayRates(employeeId, {
@@ -171,7 +259,6 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
       rate: parseFloat(addForm.rate),
       rateUnit: addForm.rateUnit,
       notes: addForm.notes || undefined,
-      // api-client-react generates date fields as string (useDates is zod-only)
       effectiveFrom: addForm.effectiveFrom as string & Date,
       effectiveTo: (addForm.effectiveTo || undefined) as (string & Date) | undefined,
     };
@@ -184,8 +271,10 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
           setShowAddForm(false);
           invalidateRates();
         },
-        onError: () =>
-          toast({ title: "Failed to add pay rate", variant: "destructive" }),
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error ?? "Failed to add pay rate";
+          toast({ title: msg, variant: "destructive" });
+        },
       },
     );
   };
@@ -223,8 +312,10 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
           setEditingId(null);
           invalidateRates();
         },
-        onError: () =>
-          toast({ title: "Failed to update pay rate", variant: "destructive" }),
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error ?? "Failed to update pay rate";
+          toast({ title: msg, variant: "destructive" });
+        },
       },
     );
   };
@@ -240,6 +331,126 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
         onError: () =>
           toast({ title: "Failed to delete pay rate", variant: "destructive" }),
       },
+    );
+  };
+
+  const toggleHistory = (shiftType: string) => {
+    setExpandedHistory((prev) => {
+      const next = new Set(prev);
+      if (next.has(shiftType)) {
+        next.delete(shiftType);
+      } else {
+        next.add(shiftType);
+      }
+      return next;
+    });
+  };
+
+  // Group rates by shiftType, sort each group newest-first by effectiveFrom
+  const groupedRates = (() => {
+    const map = new Map<string, EmployeePayRate[]>();
+    for (const rate of rates) {
+      if (!map.has(rate.shiftType)) map.set(rate.shiftType, []);
+      map.get(rate.shiftType)!.push(rate);
+    }
+    // Sort each group newest → oldest
+    for (const group of map.values()) {
+      group.sort((a, b) => {
+        const af = dateToIso(a.effectiveFrom);
+        const bf = dateToIso(b.effectiveFrom);
+        return bf.localeCompare(af);
+      });
+    }
+    // Sort groups: groups with any active rate first, then alphabetically by label
+    return Array.from(map.entries()).sort(([aKey, aRates], [bKey, bRates]) => {
+      const aActive = aRates.some(isRateActive);
+      const bActive = bRates.some(isRateActive);
+      if (aActive !== bActive) return aActive ? -1 : 1;
+      return shiftTypeLabel(aKey).localeCompare(shiftTypeLabel(bKey));
+    });
+  })();
+
+  /** Render a single rate row (read mode) */
+  const renderRateRow = (rate: EmployeePayRate, isHistory: boolean) => {
+    const active = isRateActive(rate);
+    if (editingId === rate.id) {
+      return (
+        <div key={rate.id} className="px-5 py-4 bg-muted/30">
+          <PayRateFormFields
+            form={editForm}
+            onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
+            shiftTypes={shiftTypes}
+            lockShiftType
+          />
+          <div className="flex gap-2 mt-3">
+            <Button size="sm" onClick={() => handleUpdate(rate.id)} disabled={updateMutation.isPending}>
+              {updateMutation.isPending
+                ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                : <Save className="w-4 h-4 mr-1" />}
+              Save
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+              <X className="w-4 h-4 mr-1" /> Cancel
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={rate.id}
+        className={`px-5 py-3 flex items-center justify-between gap-4 ${isHistory ? "bg-muted/20" : ""} ${!active ? "opacity-70" : ""}`}
+      >
+        {/* Timeline connector for history rows */}
+        <div className="min-w-0 flex-1 flex items-start gap-3">
+          {isHistory && (
+            <div className="flex flex-col items-center shrink-0 mt-1">
+              <div className="w-px h-2 bg-border/60" />
+              <div className="w-1.5 h-1.5 rounded-full bg-border/60 shrink-0" />
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-sm font-medium whitespace-nowrap ${!active ? "text-muted-foreground" : "text-foreground"}`}>
+                £{Number(rate.rate).toFixed(2)}
+                <span className="ml-1 text-xs text-muted-foreground font-sans font-normal">
+                  / {RATE_UNIT_LABELS[rate.rateUnit] ?? rate.rateUnit}
+                </span>
+              </span>
+              {!active && (
+                <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                  Closed
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Clock className="w-3 h-3 text-muted-foreground/60 shrink-0" />
+              <span className="text-xs text-muted-foreground">
+                {dateToIso(rate.effectiveFrom)}
+                {rate.effectiveTo ? ` → ${dateToIso(rate.effectiveTo)}` : " → present"}
+              </span>
+              {rate.notes && (
+                <span className="text-xs text-muted-foreground truncate">· {rate.notes}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(rate)}>
+            <Pencil className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => handleDelete(rate.id)}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
     );
   };
 
@@ -266,122 +477,31 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
       {showAddForm && (
         <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
           <p className="text-xs font-medium text-muted-foreground mb-3">New Pay Rate</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Shift Type</Label>
-              <select
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                value={addForm.shiftType}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, shiftType: e.target.value }))
-                }
-              >
-                <option value="">Select shift type…</option>
-                {shiftTypes.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label className="text-xs">Rate (£)</Label>
-              <Input
-                className="mt-1"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={addForm.rate}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, rate: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Rate Unit</Label>
-              <select
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                value={addForm.rateUnit}
-                onChange={(e) =>
-                  setAddForm((f) => ({
-                    ...f,
-                    rateUnit: e.target.value as EmployeePayRateInputRateUnit,
-                  }))
-                }
-              >
-                <option value="hourly">Hourly</option>
-                <option value="daily">Daily</option>
-                <option value="flat">Flat</option>
-              </select>
-            </div>
-            <div>
-              <Label className="text-xs">Notes (optional)</Label>
-              <Input
-                className="mt-1"
-                placeholder="Any notes…"
-                value={addForm.notes}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, notes: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Effective From <span className="text-destructive">*</span></Label>
-              <Input
-                className="mt-1"
-                type="date"
-                value={addForm.effectiveFrom}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, effectiveFrom: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Effective To (optional)</Label>
-              <Input
-                className="mt-1"
-                type="date"
-                value={addForm.effectiveTo}
-                onChange={(e) =>
-                  setAddForm((f) => ({ ...f, effectiveTo: e.target.value }))
-                }
-              />
-            </div>
-          </div>
+          <PayRateFormFields
+            form={addForm}
+            onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
+            shiftTypes={shiftTypes}
+          />
           <div className="flex gap-2 mt-3">
-            <Button
-              size="sm"
-              onClick={handleAdd}
-              disabled={createMutation.isPending}
-            >
-              {createMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-1" />
-              )}
+            <Button size="sm" onClick={handleAdd} disabled={createMutation.isPending}>
+              {createMutation.isPending
+                ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                : <Save className="w-4 h-4 mr-1" />}
               Save
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setShowAddForm(false);
-                setAddForm(defaultPayRateFormWithDate());
-              }}
-            >
+            <Button size="sm" variant="ghost" onClick={() => { setShowAddForm(false); setAddForm(defaultPayRateFormWithDate()); }}>
               <X className="w-4 h-4 mr-1" /> Cancel
             </Button>
           </div>
         </div>
       )}
 
-      {/* Rate list */}
+      {/* Rate list — grouped by shift type */}
       {ratesLoading ? (
         <div className="flex justify-center p-8">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
         </div>
-      ) : rates.length === 0 && !showAddForm ? (
+      ) : groupedRates.length === 0 && !showAddForm ? (
         <div className="text-center py-10 text-muted-foreground">
           <DollarSign className="w-7 h-7 mx-auto mb-2 opacity-30" />
           <p className="text-sm mb-3">No pay rates on record</p>
@@ -391,172 +511,49 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
         </div>
       ) : (
         <div className="divide-y divide-border/50">
-          {rates.map((rate) =>
-            editingId === rate.id ? (
-              /* inline edit row */
-              <div key={rate.id} className="px-5 py-4 bg-muted/30">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Shift Type</Label>
-                    <select
-                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      value={editForm.shiftType}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, shiftType: e.target.value }))
-                      }
+          {groupedRates.map(([shiftType, group]) => {
+            // Newest rate is first; subsequent ones are history
+            const [current, ...history] = group;
+            const hasHistory = history.length > 0;
+            const isExpanded = expandedHistory.has(shiftType);
+            const groupActive = isRateActive(current);
+
+            return (
+              <div key={shiftType}>
+                {/* Shift type header */}
+                <div className={`px-5 py-2 flex items-center gap-2 ${groupActive ? "bg-transparent" : "bg-muted/30"}`}>
+                  <span className={`text-xs font-semibold uppercase tracking-wide ${groupActive ? "text-primary" : "text-muted-foreground"}`}>
+                    {shiftTypeLabel(shiftType)}
+                  </span>
+                  {!groupActive && (
+                    <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                      All closed
+                    </span>
+                  )}
+                  {hasHistory && (
+                    <button
+                      className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => toggleHistory(shiftType)}
                     >
-                      <option value="">Select shift type…</option>
-                      {shiftTypes.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Rate (£)</Label>
-                    <Input
-                      className="mt-1"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={editForm.rate}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, rate: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Rate Unit</Label>
-                    <select
-                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      value={editForm.rateUnit}
-                      onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          rateUnit: e.target.value as EmployeePayRateInputRateUnit,
-                        }))
-                      }
-                    >
-                      <option value="hourly">Hourly</option>
-                      <option value="daily">Daily</option>
-                      <option value="flat">Flat</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label className="text-xs">Notes</Label>
-                    <Input
-                      className="mt-1"
-                      value={editForm.notes}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, notes: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Effective From</Label>
-                    <Input
-                      className="mt-1"
-                      type="date"
-                      value={editForm.effectiveFrom}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, effectiveFrom: e.target.value }))
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Effective To (leave blank = open)</Label>
-                    <Input
-                      className="mt-1"
-                      type="date"
-                      value={editForm.effectiveTo}
-                      onChange={(e) =>
-                        setEditForm((f) => ({ ...f, effectiveTo: e.target.value }))
-                      }
-                    />
-                  </div>
+                      {isExpanded
+                        ? <><ChevronDown className="w-3.5 h-3.5" /> Hide history</>
+                        : <><ChevronRight className="w-3.5 h-3.5" /> {history.length} earlier {history.length === 1 ? "rate" : "rates"}</>}
+                    </button>
+                  )}
                 </div>
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    onClick={() => handleUpdate(rate.id)}
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-1" />
-                    )}
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingId(null)}
-                  >
-                    <X className="w-4 h-4 mr-1" /> Cancel
-                  </Button>
-                </div>
+
+                {/* Current (most recent) rate */}
+                {renderRateRow(current, false)}
+
+                {/* Historical rates — collapsible */}
+                {hasHistory && isExpanded && (
+                  <div className="border-t border-border/30">
+                    {history.map((rate) => renderRateRow(rate, true))}
+                  </div>
+                )}
               </div>
-            ) : (
-              /* read row */
-              <div
-                key={rate.id}
-                className={`px-5 py-3 flex items-center justify-between gap-4 ${!isRateActive(rate) ? "opacity-60" : ""}`}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-sm font-medium whitespace-nowrap ${!isRateActive(rate) ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                      {shiftTypeLabel(rate.shiftType)}
-                    </span>
-                    {!isRateActive(rate) && (
-                      <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                        Inactive
-                      </span>
-                    )}
-                    <span className="text-sm text-foreground font-mono">
-                      £{Number(rate.rate).toFixed(2)}
-                      <span className="ml-1 text-xs text-muted-foreground font-sans">
-                        / {RATE_UNIT_LABELS[rate.rateUnit] ?? rate.rateUnit}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-muted-foreground">
-                      {dateToIso(rate.effectiveFrom)}
-                      {rate.effectiveTo
-                        ? ` → ${dateToIso(rate.effectiveTo)}`
-                        : " → present"}
-                    </span>
-                    {rate.notes && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        · {rate.notes}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => startEdit(rate)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(rate.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ),
-          )}
+            );
+          })}
         </div>
       )}
 

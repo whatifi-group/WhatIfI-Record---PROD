@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, isNull, or, gte, sql } from "drizzle-orm";
+import { and, eq, isNull, or, gte, lte, ne, sql } from "drizzle-orm";
 import { db, employeePayRatesTable, lovItemsTable } from "@workspace/db";
 import { z } from "zod";
 import { requirePermission } from "../../middlewares/requirePermission";
@@ -44,6 +44,54 @@ const PayRateUpdate = z.object({
   effectiveFrom: DateString.optional(),
   effectiveTo: DateString.optional().nullable(),
 });
+
+/**
+ * Returns true when there is already a pay rate for the same employee + shift
+ * type whose date range overlaps [newFrom, newTo].
+ *
+ * Two ranges overlap when neither ends before the other starts.
+ *   condition: (existing.effectiveTo IS NULL OR existing.effectiveTo >= newFrom)
+ *          AND (newTo IS NULL OR existing.effectiveFrom <= newTo)
+ *
+ * @param excludeRateId - id of the rate being updated (excluded from the check)
+ */
+async function hasOverlappingRate(
+  employeeId: number,
+  shiftType: string,
+  newFrom: string,
+  newTo: string | null | undefined,
+  excludeRateId?: number,
+): Promise<boolean> {
+  // Existing rate must not have ended before the new range starts
+  const existingStillOpen = or(
+    isNull(employeePayRatesTable.effectiveTo),
+    gte(employeePayRatesTable.effectiveTo, newFrom),
+  )!;
+
+  // New range must not end before the existing rate starts (only relevant when newTo is set)
+  const newNotEndedBeforeExisting = newTo
+    ? lte(employeePayRatesTable.effectiveFrom, newTo)
+    : undefined;
+
+  const overlapCondition = newNotEndedBeforeExisting
+    ? and(existingStillOpen, newNotEndedBeforeExisting)!
+    : existingStillOpen;
+
+  const conditions = [
+    eq(employeePayRatesTable.employeeId, employeeId),
+    eq(employeePayRatesTable.shiftType, shiftType),
+    overlapCondition,
+    ...(excludeRateId !== undefined ? [ne(employeePayRatesTable.id, excludeRateId)] : []),
+  ];
+
+  const [existing] = await db
+    .select({ id: employeePayRatesTable.id })
+    .from(employeePayRatesTable)
+    .where(and(...conditions))
+    .limit(1);
+
+  return existing !== undefined;
+}
 
 /** Returns true if the given shiftType is an active entry in the shift_type LOV category. */
 async function isValidShiftType(shiftType: string): Promise<boolean> {
@@ -138,6 +186,20 @@ router.post(
       res.status(400).json({ error: `Invalid shift type: "${parsed.data.shiftType}"` });
       return;
     }
+    if (
+      await hasOverlappingRate(
+        params.data.id,
+        parsed.data.shiftType,
+        parsed.data.effectiveFrom,
+        parsed.data.effectiveTo,
+      )
+    ) {
+      res.status(409).json({
+        error:
+          "A pay rate for this shift type already exists covering the same date range. Close or update the existing rate first.",
+      });
+      return;
+    }
     const [inserted] = await db
       .insert(employeePayRatesTable)
       .values({
@@ -169,39 +231,59 @@ router.put(
       return;
     }
 
-    // If both dates are supplied, check ordering
-    if (parsed.data.effectiveFrom !== undefined || parsed.data.effectiveTo !== undefined) {
-      // Fetch the existing row so we can fill in whichever date is missing
-      const [existing] = await db
-        .select({ effectiveFrom: employeePayRatesTable.effectiveFrom, effectiveTo: employeePayRatesTable.effectiveTo })
-        .from(employeePayRatesTable)
-        .where(
-          and(
-            eq(employeePayRatesTable.id, params.data.rateId),
-            eq(employeePayRatesTable.employeeId, params.data.id),
-          ),
-        )
-        .limit(1);
+    // Always fetch the existing row so we can merge missing fields for validation
+    const [existing] = await db
+      .select({
+        shiftType: employeePayRatesTable.shiftType,
+        effectiveFrom: employeePayRatesTable.effectiveFrom,
+        effectiveTo: employeePayRatesTable.effectiveTo,
+      })
+      .from(employeePayRatesTable)
+      .where(
+        and(
+          eq(employeePayRatesTable.id, params.data.rateId),
+          eq(employeePayRatesTable.employeeId, params.data.id),
+        ),
+      )
+      .limit(1);
 
-      if (!existing) {
-        res.status(404).json({ error: "Pay rate not found" });
-        return;
-      }
+    if (!existing) {
+      res.status(404).json({ error: "Pay rate not found" });
+      return;
+    }
 
-      const mergedFrom = parsed.data.effectiveFrom ?? existing.effectiveFrom;
-      const mergedTo = parsed.data.effectiveTo !== undefined
+    const mergedShiftType = parsed.data.shiftType ?? existing.shiftType;
+    const mergedFrom = parsed.data.effectiveFrom ?? existing.effectiveFrom;
+    const mergedTo =
+      parsed.data.effectiveTo !== undefined
         ? parsed.data.effectiveTo
         : existing.effectiveTo;
 
-      const dateError = validateDateRange(mergedFrom, mergedTo);
-      if (dateError) {
-        res.status(400).json({ error: dateError });
-        return;
-      }
+    const dateError = validateDateRange(mergedFrom, mergedTo);
+    if (dateError) {
+      res.status(400).json({ error: dateError });
+      return;
     }
 
     if (parsed.data.shiftType !== undefined && !(await isValidShiftType(parsed.data.shiftType))) {
       res.status(400).json({ error: `Invalid shift type: "${parsed.data.shiftType}"` });
+      return;
+    }
+
+    // Overlap check — exclude the rate being updated
+    if (
+      await hasOverlappingRate(
+        params.data.id,
+        mergedShiftType,
+        mergedFrom,
+        mergedTo,
+        params.data.rateId,
+      )
+    ) {
+      res.status(409).json({
+        error:
+          "A pay rate for this shift type already exists covering the same date range. Close or update the existing rate first.",
+      });
       return;
     }
 

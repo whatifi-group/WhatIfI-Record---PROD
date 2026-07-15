@@ -3,9 +3,10 @@ import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Users, ShieldCheck, ArrowUpRight, ShieldX, X } from "lucide-react";
+import { Users, ShieldCheck, ArrowUpRight, ShieldX, X, AlertTriangle, Loader2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useListExpiringQualifications } from "@workspace/api-client-react";
 
 interface ModuleLink {
   name: string;
@@ -34,11 +35,26 @@ const modules: ModuleLink[] = [
   },
 ];
 
+const EXPIRY_WINDOWS = [
+  { label: "Expiring within 30 days", days: 30 },
+  { label: "Expiring within 60 days", days: 60 },
+  { label: "Expiring within 90 days", days: 90 },
+] as const;
+
 export default function CompanyDashboard() {
   const [, setLocation] = useLocation();
   const { hasPermission } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const visibleModules = modules.filter((m) => !m.permission || hasPermission(m.permission));
+
+  const {
+    data: expiringRecords,
+    isLoading: expiringLoading,
+    isError: expiringError,
+  } = useListExpiringQualifications({ withinDays: 90 });
+
+  const countWithin = (days: number) =>
+    expiringRecords?.filter((r) => r.daysUntilExpiry >= 0 && r.daysUntilExpiry <= days).length ?? 0;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -92,6 +108,60 @@ export default function CompanyDashboard() {
             </Card>
           </Link>
         ))}
+      </div>
+
+      {/* Expiring Qualifications Summary */}
+      <div>
+        <h2 className="text-lg font-display font-semibold text-foreground mb-4">Alerts</h2>
+        <Link href="/expiring-qualifications">
+          <Card className="border-border/50 shadow-sm hover-elevate transition-all cursor-pointer group max-w-lg">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <CardTitle className="text-base font-semibold">Expiring Qualifications</CardTitle>
+                <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors ml-auto" />
+              </div>
+              <CardDescription>Qualifications expiring across all employees.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 pb-1">
+              {expiringLoading && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                </div>
+              )}
+              {expiringError && (
+                <p className="text-sm text-muted-foreground px-6 py-4">
+                  Could not load expiry data.
+                </p>
+              )}
+              {!expiringLoading && !expiringError && (
+                <table className="w-full text-sm">
+                  <tbody>
+                    {EXPIRY_WINDOWS.map((w, i) => (
+                      <tr
+                        key={w.days}
+                        className={`${i < EXPIRY_WINDOWS.length - 1 ? "border-b border-border/30" : ""} hover:bg-muted/20 transition-colors`}
+                      >
+                        <td className="px-6 py-3 text-muted-foreground">{w.label}</td>
+                        <td className="px-6 py-3 text-right font-semibold tabular-nums">
+                          <span
+                            className={
+                              countWithin(w.days) > 0
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {countWithin(w.days)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

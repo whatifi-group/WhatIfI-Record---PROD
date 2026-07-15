@@ -1,5 +1,5 @@
 /**
- * Task #54 — Confirm the Mark as Leaver dialog validates and submits correctly.
+ * Confirm the Mark as Leaver dialog validates and submits correctly.
  *
  * Tests cover:
  * - Confirm button is disabled when no reason is selected (client-side guard)
@@ -10,6 +10,8 @@
  * - onError callback shows a destructive toast on failure
  * - Both buttons are disabled while the mutation is pending
  * - Cancel calls onClose
+ * - Blank leaving date shows an inline error and disables Confirm
+ * - Any future leaving date shows an error and disables Confirm
  *
  * Note: Radix Select renders to a portal that JSDOM cannot trigger via pointer
  * events, so `@/components/ui/select` is replaced with native <select> elements
@@ -128,6 +130,16 @@ function renderDialog(opts: {
   return { mutateFn, onClose, onSuccess };
 }
 
+/** Returns an ISO date string offset by `days` from today (local time). */
+function offsetDate(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // ── Validation ────────────────────────────────────────────────────────────────
 describe("MarkAsLeaverDialog — validation", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -139,7 +151,7 @@ describe("MarkAsLeaverDialog — validation", () => {
     ).toBeDisabled();
   });
 
-  it("Confirm button is enabled after a reason is selected", async () => {
+  it("Confirm button is enabled after a reason is selected (date defaults to today)", async () => {
     renderDialog();
     await userEvent.selectOptions(
       screen.getByTestId("reason-select"),
@@ -153,17 +165,101 @@ describe("MarkAsLeaverDialog — validation", () => {
   it("only active reasons are rendered as options", () => {
     renderDialog();
     const select = screen.getByTestId("reason-select");
-    // Active reasons present
     expect(select).toContainElement(
       screen.getByRole("option", { name: /resignation/i }),
     );
     expect(select).toContainElement(
       screen.getByRole("option", { name: /redundancy/i }),
     );
-    // Inactive reason must NOT be rendered
     expect(
       screen.queryByRole("option", { name: /old reason/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("Confirm button is disabled when the leaving date is cleared", async () => {
+    renderDialog();
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).toBeDisabled();
+  });
+
+  it("shows a required-field error immediately when the date is blank", async () => {
+    renderDialog();
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/leaving date is required/i);
+    });
+  });
+
+  it("shows an error when the leaving date is 1 day in the future", async () => {
+    renderDialog();
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, offsetDate(1));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/cannot be in the future/i);
+    });
+  });
+
+  it("Confirm button is disabled when the leaving date is 1 day in the future", async () => {
+    renderDialog();
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, offsetDate(1));
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).toBeDisabled();
+  });
+
+  it("Confirm button is disabled when the leaving date is 30 days in the future", async () => {
+    renderDialog();
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, offsetDate(30));
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).toBeDisabled();
+  });
+
+  it("Confirm button is enabled when the date is today", async () => {
+    renderDialog();
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    // Date defaults to today — button should be enabled already
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).not.toBeDisabled();
+  });
+
+  it("Confirm button is enabled when the date is in the past", async () => {
+    renderDialog();
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, offsetDate(-7));
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).not.toBeDisabled();
   });
 });
 
@@ -185,11 +281,10 @@ describe("MarkAsLeaverDialog — submission", () => {
     expect(payload.id).toBe(42);
     expect(payload.data.status).toBe("leaver");
     expect(payload.data.leaverReason).toBe("resignation");
-    // leaverDate should be an ISO date string (defaults to today)
     expect(payload.data.leaverDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("uses the user-supplied leaverDate when changed", async () => {
+  it("uses the user-supplied leaverDate when changed to a past date", async () => {
     const { mutateFn } = renderDialog();
 
     await userEvent.selectOptions(
@@ -198,12 +293,42 @@ describe("MarkAsLeaverDialog — submission", () => {
     );
     const dateInput = screen.getByLabelText(/leaving date/i);
     await userEvent.clear(dateInput);
-    await userEvent.type(dateInput, "2026-09-30");
+    const pastDate = offsetDate(-14);
+    await userEvent.type(dateInput, pastDate);
 
     await userEvent.click(screen.getByRole("button", { name: /confirm leaver/i }));
 
     const [payload] = mutateFn.mock.calls[0];
-    expect(payload.data.leaverDate).toBe("2026-09-30");
+    expect(payload.data.leaverDate).toBe(pastDate);
+  });
+
+  it("does not call mutate when leaving date is blank", async () => {
+    const { mutateFn } = renderDialog();
+
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+
+    expect(screen.getByRole("button", { name: /confirm leaver/i })).toBeDisabled();
+    expect(mutateFn).not.toHaveBeenCalled();
+  });
+
+  it("does not call mutate when leaving date is in the future", async () => {
+    const { mutateFn } = renderDialog();
+
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    await userEvent.type(dateInput, offsetDate(5));
+
+    expect(screen.getByRole("button", { name: /confirm leaver/i })).toBeDisabled();
+    expect(mutateFn).not.toHaveBeenCalled();
   });
 
   it("invokes onSuccess and shows a success toast after the mutation resolves", async () => {

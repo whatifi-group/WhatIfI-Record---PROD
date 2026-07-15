@@ -37,6 +37,38 @@ interface MarkAsLeaverDialogProps {
   onSuccess: (updated: Employee) => void;
 }
 
+/** Returns today's date as YYYY-MM-DD in local time. */
+function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Validate the leaving date string.
+ * Returns:
+ *   { kind: "ok" }
+ *   { kind: "blank" }
+ *   { kind: "future" }
+ */
+function validateLeaverDate(
+  value: string,
+): { kind: "ok" } | { kind: "blank" } | { kind: "future" } {
+  if (!value) return { kind: "blank" };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const selected = new Date(value + "T00:00:00");
+  if (isNaN(selected.getTime())) return { kind: "blank" };
+
+  if (selected > today) return { kind: "future" };
+
+  return { kind: "ok" };
+}
+
 export default function MarkAsLeaverDialog({
   open,
   onClose,
@@ -44,7 +76,7 @@ export default function MarkAsLeaverDialog({
   employeeName,
   onSuccess,
 }: MarkAsLeaverDialogProps) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayISO();
   const [reason, setReason] = useState("");
   const [leaverDate, setLeaverDate] = useState(today);
   const { toast } = useToast();
@@ -55,15 +87,19 @@ export default function MarkAsLeaverDialog({
 
   const activeReasons = reasons?.filter((r) => r.isActive) ?? [];
 
+  const dateValidation = validateLeaverDate(leaverDate);
+  const dateIsValid = dateValidation.kind === "ok";
+
   const handleSubmit = () => {
-    if (!reason) return;
+    if (!reason || !dateIsValid) return;
+
     updateEmployee.mutate(
       {
         id: employeeId,
         data: {
           status: EmployeeStatus.leaver,
           leaverReason: reason,
-          leaverDate: leaverDate || today,
+          leaverDate: leaverDate,
         },
       },
       {
@@ -98,6 +134,9 @@ export default function MarkAsLeaverDialog({
     setLeaverDate(today);
     onClose();
   };
+
+  const showBlankError = dateValidation.kind === "blank";
+  const showFutureError = dateValidation.kind === "future";
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -139,13 +178,38 @@ export default function MarkAsLeaverDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="leaver-date">Leaving Date</Label>
+            <Label htmlFor="leaver-date">
+              Leaving Date <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="leaver-date"
               type="date"
               value={leaverDate}
               onChange={(e) => setLeaverDate(e.target.value)}
+              aria-invalid={showBlankError || showFutureError}
+              aria-describedby={
+                showBlankError
+                  ? "leaver-date-error"
+                  : showFutureError
+                    ? "leaver-date-error"
+                    : undefined
+              }
+              className={
+                showBlankError || showFutureError
+                  ? "border-destructive focus-visible:ring-destructive"
+                  : ""
+              }
             />
+            {showBlankError && (
+              <p id="leaver-date-error" className="text-sm text-destructive" role="alert">
+                Leaving date is required.
+              </p>
+            )}
+            {showFutureError && (
+              <p id="leaver-date-error" className="text-sm text-destructive" role="alert">
+                Leaving date cannot be in the future.
+              </p>
+            )}
           </div>
         </div>
 
@@ -155,7 +219,7 @@ export default function MarkAsLeaverDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!reason || updateEmployee.isPending}
+            disabled={!reason || !dateIsValid || updateEmployee.isPending}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
             {updateEmployee.isPending ? (

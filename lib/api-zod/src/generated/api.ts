@@ -1785,6 +1785,19 @@ export const CreateQualificationTypeResponse = zod.object({
 
 
 /**
+ * @summary Bulk-import qualification types from a CSV file
+ */
+export const ImportQualificationTypesResponse = zod.object({
+  "imported": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.array(zod.object({
+  "row": zod.number(),
+  "message": zod.string()
+}))
+})
+
+
+/**
  * @summary Update a qualification type
  */
 export const UpdateQualificationTypeParams = zod.object({

@@ -605,6 +605,17 @@ export interface QualificationType {
   createdAt: string;
 }
 
+export type QualificationTypeImportResultErrorsItem = {
+  row: number;
+  message: string;
+};
+
+export interface QualificationTypeImportResult {
+  imported: number;
+  skipped: number;
+  errors: QualificationTypeImportResultErrorsItem[];
+}
+
 export type QualificationTypeInputValidityUnit = typeof QualificationTypeInputValidityUnit[keyof typeof QualificationTypeInputValidityUnit];
 
 

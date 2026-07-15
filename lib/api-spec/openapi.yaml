@@ -1821,6 +1821,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/QualificationType"
 
+  /sysadmin/qualification-types/import:
+    post:
+      operationId: importQualificationTypes
+      tags: [sysadmin]
+      summary: Bulk-import qualification types from a CSV file
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QualificationTypeImportResult"
+        "400":
+          description: Parse error or empty file
+
   /sysadmin/qualification-types/{id}:
     patch:
       operationId: updateQualificationType
@@ -2825,6 +2846,25 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    QualificationTypeImportResult:
+      type: object
+      required: [imported, skipped, errors]
+      properties:
+        imported:
+          type: integer
+        skipped:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            required: [row, message]
+            properties:
+              row:
+                type: integer
+              message:
+                type: string
 
     QualificationTypeInput:
       type: object

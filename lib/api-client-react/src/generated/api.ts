@@ -72,6 +72,7 @@ import type {
   QualificationRevalidateInput,
   QualificationRevalidation,
   QualificationType,
+  QualificationTypeImportResult,
   QualificationTypeInput,
   QualificationTypeUpdate,
   ResetUserPasswordInput,
@@ -6080,6 +6081,77 @@ export const useCreateQualificationType = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateQualificationTypeMutationOptions(options));
+    }
+
+export const getImportQualificationTypesUrl = () => {
+
+
+
+
+  return `/api/sysadmin/qualification-types/import`
+}
+
+/**
+ * @summary Bulk-import qualification types from a CSV file
+ */
+export const importQualificationTypes = async (importQualificationTypesBody: string, options?: RequestInit): Promise<QualificationTypeImportResult> => {
+
+  return customFetch<QualificationTypeImportResult>(getImportQualificationTypesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain', ...options?.headers },
+    body: importQualificationTypesBody
+  }
+);}
+
+
+
+
+
+export const getImportQualificationTypesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importQualificationTypes>>, TError,{data: BodyType<string>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importQualificationTypes>>, TError,{data: BodyType<string>}, TContext> => {
+
+const mutationKey = ['importQualificationTypes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importQualificationTypes>>, {data: BodyType<string>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importQualificationTypes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportQualificationTypesMutationResult = NonNullable<Awaited<ReturnType<typeof importQualificationTypes>>>
+    export type ImportQualificationTypesMutationBody = BodyType<string>
+    export type ImportQualificationTypesMutationError = ErrorType<void>
+
+    /**
+ * @summary Bulk-import qualification types from a CSV file
+ */
+export const useImportQualificationTypes = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importQualificationTypes>>, TError,{data: BodyType<string>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importQualificationTypes>>,
+        TError,
+        {data: BodyType<string>},
+        TContext
+      > => {
+      return useMutation(getImportQualificationTypesMutationOptions(options));
     }
 
 export const getUpdateQualificationTypeUrl = (id: number,) => {

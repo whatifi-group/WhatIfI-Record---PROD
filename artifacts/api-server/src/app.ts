@@ -45,6 +45,7 @@ app.use(
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(express.text({ type: ["text/plain", "text/csv"], limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(

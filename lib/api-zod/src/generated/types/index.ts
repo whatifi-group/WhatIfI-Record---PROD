@@ -65,6 +65,8 @@ export * from './qualificationCertificateInput';
 export * from './qualificationRevalidateInput';
 export * from './qualificationRevalidation';
 export * from './qualificationType';
+export * from './qualificationTypeImportResult';
+export * from './qualificationTypeImportResultErrorsItem';
 export * from './qualificationTypeInput';
 export * from './qualificationTypeInputValidityUnit';
 export * from './qualificationTypeUpdate';

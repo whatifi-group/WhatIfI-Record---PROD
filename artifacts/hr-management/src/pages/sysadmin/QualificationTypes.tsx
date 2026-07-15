@@ -9,7 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import type { QualificationType } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Pencil, Trash2, GraduationCap, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, GraduationCap, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { CsvImportDialog } from "@/components/sysadmin/CsvImportDialog";
 
 interface FormData {
   name: string;
@@ -60,6 +61,7 @@ export default function QualificationTypes() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<QualificationType | null>(null);
   const [form, setForm] = useState<FormData>(defaultForm);
@@ -174,9 +176,14 @@ export default function QualificationTypes() {
             </p>
           </div>
         </div>
-        <Button onClick={openAdd} className="gap-2 shrink-0">
-          <Plus className="w-4 h-4" /> Add Type
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={() => setCsvImportOpen(true)} className="gap-2">
+            <Upload className="w-4 h-4" /> Import CSV
+          </Button>
+          <Button onClick={openAdd} className="gap-2">
+            <Plus className="w-4 h-4" /> Add Type
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden">
@@ -342,6 +349,13 @@ export default function QualificationTypes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* CSV Import */}
+      <CsvImportDialog
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        onImported={invalidate}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog

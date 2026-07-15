@@ -31,22 +31,7 @@ import {
   Role,
   Permission
 } from "@workspace/api-client-react";
-
-const PERMISSION_LABELS: Record<Permission, string> = {
-  sysadmin: "System Administrator (Full Access)",
-  "hr:access": "HR Access",
-  "hr:past_employees": "View Past Employees",
-  hr_admin: "HR Administrator (Department/Employee Settings)",
-  view_employees: "View Employee Directory",
-  edit_employees: "Edit Employee Records",
-  delete_employees: "Delete Employee Records",
-  view_departments: "View Departments",
-  edit_departments: "Manage Departments",
-  view_leave: "View Leave Requests",
-  manage_leave: "Approve/Reject Leave",
-  view_reports: "View HR Reports",
-  view_payroll: "View Payroll & Pay Rates",
-};
+import { PERMISSION_LABELS } from "@/lib/permissions";
 
 const roleSchema = z.object({
   name: z.string().min(2, "Role name is required"),

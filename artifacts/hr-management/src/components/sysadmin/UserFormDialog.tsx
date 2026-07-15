@@ -39,22 +39,7 @@ import {
   UserStatus,
   Permission,
 } from "@workspace/api-client-react";
-
-const PERMISSION_LABELS: Record<Permission, string> = {
-  sysadmin: "System Administrator",
-  "hr:access": "HR Access",
-  "hr:past_employees": "View Past Employees",
-  hr_admin: "HR Administrator",
-  view_employees: "View Employees",
-  edit_employees: "Edit Employees",
-  delete_employees: "Delete Employees",
-  view_departments: "View Departments",
-  edit_departments: "Edit Departments",
-  view_leave: "View Leave",
-  manage_leave: "Manage Leave",
-  view_reports: "View Reports",
-  view_payroll: "View Payroll & Pay Rates",
-};
+import { PERMISSION_LABELS } from "@/lib/permissions";
 
 const userSchema = z.object({
   name: z.string().min(2, "Name is required"),

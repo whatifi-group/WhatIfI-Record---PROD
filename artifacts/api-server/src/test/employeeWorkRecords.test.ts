@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import router from "../routes/hr/employeeWorkRecords";
 import { buildApp, cleanupEmployee, createTestEmployee } from "./helpers";
+import { db, employeesTable, departmentsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const api = buildApp(router);
 
@@ -13,6 +15,237 @@ describe("Employee Work Records", () => {
 
   afterEach(async () => {
     await cleanupEmployee(empId);
+  });
+
+  // ── GET /work-records — filter isolation ──────────────────────────────────
+
+  describe("GET /api/work-records — filter isolation", () => {
+    let emp1Id: number;
+    let emp2Id: number;
+    let dept1Id: number;
+    let dept2Id: number;
+    let emp1Email: string;
+
+    beforeEach(async () => {
+      const ts = `${Date.now()}`;
+
+      // Two unique departments for this test
+      const [d1] = await db
+        .insert(departmentsTable)
+        .values({ name: `WR-Filter-Dept-A-${ts}` })
+        .returning({ id: departmentsTable.id });
+      const [d2] = await db
+        .insert(departmentsTable)
+        .values({ name: `WR-Filter-Dept-B-${ts}` })
+        .returning({ id: departmentsTable.id });
+      dept1Id = d1.id;
+      dept2Id = d2.id;
+
+      // Two employees with distinct names, emails, statuses, departments
+      emp1Id = await createTestEmployee();
+      emp2Id = await createTestEmployee();
+
+      emp1Email = `wr-filter-alice-${ts}@test.invalid`;
+
+      await db
+        .update(employeesTable)
+        .set({
+          firstName: "WrFilterAlice",
+          lastName: `Smith${ts}`,
+          email: emp1Email,
+          departmentId: dept1Id,
+          status: "active",
+        })
+        .where(eq(employeesTable.id, emp1Id));
+
+      await db
+        .update(employeesTable)
+        .set({
+          firstName: "WrFilterBob",
+          lastName: `Jones${ts}`,
+          email: `wr-filter-bob-${ts}@test.invalid`,
+          departmentId: dept2Id,
+          status: "leaver",
+        })
+        .where(eq(employeesTable.id, emp2Id));
+
+      // emp1 has a regular shift on 2026-01-15
+      await api
+        .post(`/api/employees/${emp1Id}/work-records`)
+        .send({ shiftDate: "2026-01-15", shiftType: "regular" });
+
+      // emp2 has an overtime shift on 2026-02-20
+      await api
+        .post(`/api/employees/${emp2Id}/work-records`)
+        .send({ shiftDate: "2026-02-20", shiftType: "overtime" });
+    });
+
+    afterEach(async () => {
+      await cleanupEmployee(emp1Id);
+      await cleanupEmployee(emp2Id);
+      await db
+        .delete(departmentsTable)
+        .where(eq(departmentsTable.id, dept1Id));
+      await db
+        .delete(departmentsTable)
+        .where(eq(departmentsTable.id, dept2Id));
+    });
+
+    /**
+     * Fetch the rows array from GET /work-records with a large pageSize so all
+     * inserted records are returned in one call.  Extra filter params are passed
+     * as a query-string fragment starting with `&`.
+     */
+    async function getRows(extraQs = "") {
+      const res = await api.get(`/api/work-records?pageSize=200${extraQs}`);
+      expect(res.status).toBe(200);
+      return (res.body.rows ?? []) as Array<{
+        employeeId: number;
+        shiftDate: string;
+        shiftType: string;
+      }>;
+    }
+
+    function empIds(rows: Array<{ employeeId: number }>) {
+      return rows.map((r) => r.employeeId);
+    }
+
+    // ── happy path ──────────────────────────────────────────────────────────
+
+    it("returns records from all employees when no filters are applied", async () => {
+      const rows = await getRows();
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    it("row shape includes expected employee context fields", async () => {
+      const rows = await getRows(`&employeeStatus=active`);
+      const row = rows.find((r) => r.employeeId === emp1Id);
+      expect(row).toBeDefined();
+      expect(row).toHaveProperty("employeeFirstName");
+      expect(row).toHaveProperty("employeeLastName");
+      expect(row).toHaveProperty("employeeEmail");
+      expect(row).toHaveProperty("employeeStatus");
+      expect(row).toHaveProperty("employeeDepartmentId");
+      expect(row).toHaveProperty("shiftDate");
+      expect(row).toHaveProperty("shiftType");
+    });
+
+    // ── date range filters ───────────────────────────────────────────────────
+
+    it("from filter excludes records before the given date", async () => {
+      // from=2026-02-01 should include the Feb record but NOT the Jan record
+      const rows = await getRows("&from=2026-02-01");
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    it("to filter excludes records after the given date", async () => {
+      // to=2026-01-31 should include the Jan record but NOT the Feb record
+      const rows = await getRows("&to=2026-01-31");
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    it("from + to combined returns only records within the window", async () => {
+      const rows = await getRows("&from=2026-01-01&to=2026-01-31");
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    it("a from date strictly after all records returns an empty rows array", async () => {
+      const rows = await getRows("&from=2099-01-01");
+      // Neither of our employees should appear
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    // ── shiftType filter ────────────────────────────────────────────────────
+
+    it("shiftType filter returns only records with that shift type", async () => {
+      const rows = await getRows("&shiftType=overtime");
+      expect(empIds(rows)).not.toContain(emp1Id); // emp1 has regular, not overtime
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    it("shiftType filter for a type with no records returns empty rows", async () => {
+      const rows = await getRows("&shiftType=holiday");
+      // Neither employee has a holiday shift
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    // ── departmentId filter ─────────────────────────────────────────────────
+
+    it("departmentId filter returns only records for employees in that department", async () => {
+      const rows = await getRows(`&departmentId=${dept1Id}`);
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    it("departmentId filter for dept2 returns only emp2 records", async () => {
+      const rows = await getRows(`&departmentId=${dept2Id}`);
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    // ── employeeStatus filter ───────────────────────────────────────────────
+
+    it("employeeStatus=active excludes former-employee records", async () => {
+      const rows = await getRows("&employeeStatus=active");
+      expect(empIds(rows)).toContain(emp1Id);     // active
+      expect(empIds(rows)).not.toContain(emp2Id); // leaver
+    });
+
+    it("employeeStatus=leaver returns only former-employee records", async () => {
+      const rows = await getRows("&employeeStatus=leaver");
+      expect(empIds(rows)).not.toContain(emp1Id); // active
+      expect(empIds(rows)).toContain(emp2Id);     // leaver
+    });
+
+    it("omitting employeeStatus returns records from both active and leaver employees", async () => {
+      const rows = await getRows();
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    // ── search filter ────────────────────────────────────────────────────────
+
+    it("search by first name returns only matching employee records", async () => {
+      const rows = await getRows("&search=WrFilterAlice");
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    it("search by last name returns only matching employee records", async () => {
+      const rows = await getRows("&search=WrFilterBob");
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).toContain(emp2Id);
+    });
+
+    it("search by email substring returns only matching employee records", async () => {
+      // emp1Email contains "wr-filter-alice" which is unique to emp1
+      const rows = await getRows("&search=wr-filter-alice");
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    it("search with a term that matches no employee returns empty rows", async () => {
+      const rows = await getRows("&search=zzz-no-match-xyz");
+      expect(empIds(rows)).not.toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
+
+    // ── combined filter ──────────────────────────────────────────────────────
+
+    it("combining date range + employeeStatus + shiftType narrows results correctly", async () => {
+      // Only emp1's Jan regular shift matches all three constraints
+      const rows = await getRows(
+        "&from=2026-01-01&to=2026-01-31&employeeStatus=active&shiftType=regular",
+      );
+      expect(empIds(rows)).toContain(emp1Id);
+      expect(empIds(rows)).not.toContain(emp2Id);
+    });
   });
 
   // ── GET /work-records — aggregated paginated endpoint ──────────────────────

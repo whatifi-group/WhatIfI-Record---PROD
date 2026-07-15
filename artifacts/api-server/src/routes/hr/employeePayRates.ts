@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, eq, sql } from "drizzle-orm";
-import { db, employeePayRatesTable } from "@workspace/db";
+import { db, employeePayRatesTable, lovItemsTable } from "@workspace/db";
 import { z } from "zod";
 import { requirePermission } from "../../middlewares/requirePermission";
 
@@ -30,6 +30,22 @@ const PayRateUpdate = z.object({
   rateUnit: z.enum(["hourly", "daily", "flat"]).optional(),
   notes: z.string().optional().nullable(),
 });
+
+/** Returns true if the given shiftType is an active entry in the shift_type LOV category. */
+async function isValidShiftType(shiftType: string): Promise<boolean> {
+  const [row] = await db
+    .select({ value: lovItemsTable.value })
+    .from(lovItemsTable)
+    .where(
+      and(
+        eq(lovItemsTable.category, "shift_type"),
+        eq(lovItemsTable.value, shiftType),
+        eq(lovItemsTable.isActive, true),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
 
 /** Select all columns, casting rate numeric → JS number to match the OpenAPI contract. */
 function payRateSelection() {
@@ -76,6 +92,10 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+    if (!(await isValidShiftType(parsed.data.shiftType))) {
+      res.status(400).json({ error: `Invalid shift type: "${parsed.data.shiftType}"` });
+      return;
+    }
     const [inserted] = await db
       .insert(employeePayRatesTable)
       .values({
@@ -104,6 +124,10 @@ router.put(
     const parsed = PayRateUpdate.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    if (parsed.data.shiftType !== undefined && !(await isValidShiftType(parsed.data.shiftType))) {
+      res.status(400).json({ error: `Invalid shift type: "${parsed.data.shiftType}"` });
       return;
     }
 
@@ -165,9 +189,20 @@ router.post(
 
     const existingShiftTypes = new Set(existingRows.map((r) => r.shiftType));
 
-    const toInsert = sourceRates.filter((r) => !existingShiftTypes.has(r.shiftType));
+    // Fetch active shift types from the LOV so we don't copy orphaned values
+    const activeRows = await db
+      .select({ value: lovItemsTable.value })
+      .from(lovItemsTable)
+      .where(
+        and(eq(lovItemsTable.category, "shift_type"), eq(lovItemsTable.isActive, true)),
+      );
+    const activeLovValues = new Set(activeRows.map((r) => r.value));
+
+    const toInsert = sourceRates.filter(
+      (r) => !existingShiftTypes.has(r.shiftType) && activeLovValues.has(r.shiftType),
+    );
     const skipped = sourceRates
-      .filter((r) => existingShiftTypes.has(r.shiftType))
+      .filter((r) => existingShiftTypes.has(r.shiftType) || !activeLovValues.has(r.shiftType))
       .map((r) => r.shiftType);
 
     const copied = [];

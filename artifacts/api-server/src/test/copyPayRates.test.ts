@@ -214,7 +214,7 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — edge cases",
   });
 
   it("preserves rate, rateUnit, and notes when copying", async () => {
-    await insertPayRate(source, "overnight", 25.5, "flat", "Late shift bonus");
+    await insertPayRate(source, "night_shift", 25.5, "flat", "Late shift bonus");
 
     const api = buildApp(router, payrollUserId);
     const res = await api.post(
@@ -223,7 +223,7 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — edge cases",
 
     expect(res.status).toBe(200);
     const copied = res.body.copied[0];
-    expect(copied.shiftType).toBe("overnight");
+    expect(copied.shiftType).toBe("night_shift");
     expect(copied.rate).toBe(25.5);
     expect(copied.rateUnit).toBe("flat");
     expect(copied.notes).toBe("Late shift bonus");

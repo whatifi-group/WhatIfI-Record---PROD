@@ -310,14 +310,11 @@
 }
 
 /* ── Date input: suppress browser format hint (dd/mm/yyyy) when empty ──────
-   The format text is made transparent on unfocused empty fields so the input
-   looks blank rather than showing the locale date skeleton. It reappears on
-   focus so the user can see the field layout while editing.              */
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-text,
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-month-field,
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-day-field,
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-year-field,
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-hour-field,
-input[type="date"][data-has-value="false"]:not(:focus)::-webkit-datetime-edit-minute-field {
+   The .date-empty class is applied by the Input component when type="date"
+   and no value is set. Making the text transparent hides the locale skeleton
+   (e.g. mm/dd/yyyy) without affecting the calendar picker icon, which is
+   rendered separately by the browser. The color reverts on focus so the
+   user can see the field layout while editing.                             */
+input.date-empty:not(:focus) {
   color: transparent;
 }

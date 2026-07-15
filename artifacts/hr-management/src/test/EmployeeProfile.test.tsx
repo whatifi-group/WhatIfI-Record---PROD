@@ -23,6 +23,18 @@ vi.mock("@workspace/api-client-react", () => ({
   getGetEmployeeQueryKey: vi.fn(() => ["employee", 1]),
   getListEmployeesQueryKey: vi.fn(() => ["employees"]),
   EmployeeStatus: { active: "active", on_leave: "on_leave", leaver: "leaver" },
+  // PhoneList hooks — EmployeePhoneList is rendered directly in EmployeeProfile
+  useListEmployeePhones: vi.fn(() => ({ data: [], isLoading: false })),
+  useCreateEmployeePhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUpdateEmployeePhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useDeleteEmployeePhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  getListEmployeePhonesQueryKey: vi.fn(() => ["employee-phones"]),
+  // Kin phone hooks — imported at module level by PhoneList.tsx
+  useListKinPhones: vi.fn(() => ({ data: [], isLoading: false })),
+  useCreateKinPhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useUpdateKinPhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  useDeleteKinPhone: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
+  getListKinPhonesQueryKey: vi.fn(() => ["kin-phones"]),
 }));
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -39,6 +51,8 @@ vi.mock("@/pages/employee-tabs/EmployeeDietaryTab", () => ({ default: () => null
 vi.mock("@/pages/employee-tabs/EmployeeNextOfKinTab", () => ({ default: () => null }));
 vi.mock("@/pages/employee-tabs/EmployeeQualificationsTab", () => ({ default: () => null }));
 vi.mock("@/pages/employee-tabs/EmployeeWorkRecordsTab", () => ({ default: () => null }));
+vi.mock("@/pages/employee-tabs/EmployeeServiceHistoryTab", () => ({ default: () => null }));
+vi.mock("@/pages/employee-tabs/EmployeeDisclosuresTab", () => ({ default: () => null }));
 
 // ── Imports that must come after vi.mock() calls ──────────────────────────────
 import { useGetEmployee } from "@workspace/api-client-react";

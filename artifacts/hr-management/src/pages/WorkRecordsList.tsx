@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search } from "lucide-react";
+import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
 
 const shiftTypeColor: Record<string, string> = {
@@ -141,14 +141,60 @@ export default function WorkRecordsList() {
 
   const isLoading = loadingEmployees || isLoadingRecords;
 
+  function exportCsv() {
+    const headers = ["Employee Name", "Department", "Date", "Shift Type", "Start", "End", "Hours", "Notes"];
+
+    function escapeCsv(value: string | number | null | undefined): string {
+      const str = value == null ? "" : String(value);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }
+
+    const rows = sortedRows.map(({ record, employee }) => [
+      escapeCsv(`${employee.firstName} ${employee.lastName}`),
+      escapeCsv(employee.departmentName ?? ""),
+      escapeCsv(record.shiftDate),
+      escapeCsv(shiftTypes?.find((t) => t.value === record.shiftType)?.label ?? record.shiftType),
+      escapeCsv(record.startTime ?? ""),
+      escapeCsv(record.endTime ?? ""),
+      escapeCsv(record.hoursWorked ?? ""),
+      escapeCsv(record.notes ?? ""),
+    ]);
+
+    const csv = [headers.map(escapeCsv).join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const fromPart = dateFrom || "all";
+    const toPart = dateTo || "all";
+    a.href = url;
+    a.download = `work-records-${fromPart}-to-${toPart}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Work Records</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Shift log across all employees — filter by date, shift type, or department.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Work Records</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Shift log across all employees — filter by date, shift type, or department.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={exportCsv}
+          disabled={isLoading || sortedRows.length === 0}
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </Button>
       </div>
 
       {/* Filters */}

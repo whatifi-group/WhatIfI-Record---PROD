@@ -5,8 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { EmployeeStatus } from './employeeStatus';
 
-export interface EmployeeWorkRecord {
+export interface WorkRecordRow {
   id: number;
   employeeId: number;
   shiftDate: Date;
@@ -20,4 +21,14 @@ export interface EmployeeWorkRecord {
   /** @nullable */
   notes?: string | null;
   createdAt: Date;
+  employeeFirstName: string;
+  employeeLastName: string;
+  employeeEmail: string;
+  employeeStatus: EmployeeStatus;
+  /** @nullable */
+  employeeDepartmentId?: number | null;
+  /** @nullable */
+  employeeDepartmentName?: string | null;
+  /** @nullable */
+  employeeAvatarUrl?: string | null;
 }

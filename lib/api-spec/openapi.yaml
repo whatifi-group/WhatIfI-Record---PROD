@@ -1122,6 +1122,64 @@ paths:
         "400":
           description: Invalid parameters or cannot copy from self
 
+  /work-records:
+    get:
+      operationId: listWorkRecords
+      tags: [employee-sections]
+      summary: List work records across all employees in a single call
+      description: |
+        Aggregation endpoint that returns work records joined with employee
+        data so the caller avoids fanning out one request per employee.
+        All parameters are optional — omitting them returns all records.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Inclusive lower bound on shiftDate (YYYY-MM-DD)
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Inclusive upper bound on shiftDate (YYYY-MM-DD)
+        - name: shiftType
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter to a specific shift type value
+        - name: departmentId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Filter to a specific department
+        - name: employeeStatus
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EmployeeStatus"
+          description: Filter to employees with this status (omit for all statuses)
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Full-name or email substring search across employees
+      responses:
+        "200":
+          description: Flat list of work records with embedded employee context
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkRecordRow"
+
   /employees/{id}/work-records:
     get:
       operationId: listEmployeeWorkRecords
@@ -3003,6 +3061,54 @@ components:
           description: Shift types skipped because the target employee already has a rate for them
           items:
             type: string
+
+    WorkRecordRow:
+      type: object
+      required:
+        - id
+        - employeeId
+        - shiftDate
+        - shiftType
+        - createdAt
+        - employeeFirstName
+        - employeeLastName
+        - employeeEmail
+        - employeeStatus
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        shiftDate:
+          type: string
+          format: date
+        startTime:
+          type: ["string", "null"]
+        endTime:
+          type: ["string", "null"]
+        hoursWorked:
+          type: ["number", "null"]
+        shiftType:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        employeeFirstName:
+          type: string
+        employeeLastName:
+          type: string
+        employeeEmail:
+          type: string
+        employeeStatus:
+          $ref: "#/components/schemas/EmployeeStatus"
+        employeeDepartmentId:
+          type: ["integer", "null"]
+        employeeDepartmentName:
+          type: ["string", "null"]
+        employeeAvatarUrl:
+          type: ["string", "null"]
 
     EmployeeWorkRecord:
       type: object

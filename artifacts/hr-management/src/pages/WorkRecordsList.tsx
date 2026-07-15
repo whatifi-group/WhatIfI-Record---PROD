@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
-import {
-  useListEmployees,
-  useListDepartments,
-  useListLovItems,
-  getListEmployeeWorkRecordsQueryOptions,
-} from "@workspace/api-client-react";
-import type { Employee, EmployeeWorkRecord } from "@workspace/api-client-react";
+import { useListWorkRecords, useListDepartments, useListLovItems } from "@workspace/api-client-react";
+import type { WorkRecordRow } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
-import { format, isWithinInterval, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { escapeCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
 
 const shiftTypeColor: Record<string, string> = {
@@ -30,11 +24,6 @@ const shiftTypeColor: Record<string, string> = {
   other: "bg-muted text-muted-foreground border-border",
 };
 
-interface FlatRow {
-  record: EmployeeWorkRecord;
-  employee: Employee;
-}
-
 export default function WorkRecordsList() {
   const today = new Date().toISOString().split("T")[0];
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
@@ -46,88 +35,54 @@ export default function WorkRecordsList() {
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [includeFormer, setIncludeFormer] = useState(false);
 
-  // Omitting status returns all employees; passing "active" restricts to active only
-  const { data: employees, isLoading: loadingEmployees } = useListEmployees(
-    includeFormer ? {} : { status: "active" as any }
-  );
   const { data: departments } = useListDepartments();
   const { data: shiftTypes } = useListLovItems("shift_type");
 
-  // Fan out: fetch work records for every active employee in parallel
-  const workRecordQueries = useQueries({
-    queries: (employees ?? []).map((emp) =>
-      getListEmployeeWorkRecordsQueryOptions(emp.id)
-    ),
+  // Single aggregated request — server applies date-range, shift-type,
+  // department, and employee-status filters so the browser never fans out
+  // one request per employee.
+  const { data: rows = [], isLoading } = useListWorkRecords({
+    from: dateFrom || undefined,
+    to: dateTo || undefined,
+    shiftType: shiftTypeFilter !== "all" ? shiftTypeFilter : undefined,
+    departmentId: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
+    employeeStatus: !includeFormer ? "active" : undefined,
   });
 
-  const isLoadingRecords = workRecordQueries.some((q) => q.isLoading);
-
-  // Flatten all records with employee context
-  const allRows: FlatRow[] = useMemo(() => {
-    if (!employees) return [];
-    const rows: FlatRow[] = [];
-    employees.forEach((emp, idx) => {
-      const records = workRecordQueries[idx]?.data ?? [];
-      records.forEach((record) => {
-        rows.push({ record, employee: emp });
-      });
-    });
-    return rows;
-  }, [employees, workRecordQueries]);
-
-  // Apply filters
-  const filteredRows = useMemo(() => {
+  // Client-side text search (fast in-memory, no debounce needed)
+  const filteredRows = useMemo<WorkRecordRow[]>(() => {
     const q = searchQuery.trim().toLowerCase();
-    return allRows.filter(({ record, employee }) => {
-      // Text search: employee full name or email
-      if (q) {
-        const fullName = `${employee.firstName} ${employee.lastName}`.toLowerCase();
-        const email = employee.email.toLowerCase();
-        if (!fullName.includes(q) && !email.includes(q)) return false;
-      }
-
-      // Date range
-      if (dateFrom || dateTo) {
-        const date = parseISO(record.shiftDate);
-        const from = dateFrom ? parseISO(dateFrom) : new Date(0);
-        const to = dateTo ? parseISO(dateTo) : new Date(8640000000000000);
-        if (!isWithinInterval(date, { start: from, end: to })) return false;
-      }
-
-      // Shift type
-      if (shiftTypeFilter !== "all" && record.shiftType !== shiftTypeFilter) return false;
-
-      // Department
-      if (departmentFilter !== "all" && String(employee.departmentId ?? "") !== departmentFilter) return false;
-
-      return true;
+    if (!q) return rows;
+    return rows.filter((row) => {
+      const fullName = `${row.employeeFirstName} ${row.employeeLastName}`.toLowerCase();
+      const email = row.employeeEmail.toLowerCase();
+      return fullName.includes(q) || email.includes(q);
     });
-  }, [allRows, searchQuery, dateFrom, dateTo, shiftTypeFilter, departmentFilter]);
+  }, [rows, searchQuery]);
 
   // Sort by date descending, then employee name
   const sortedRows = useMemo(() => {
     return [...filteredRows].sort((a, b) => {
-      const dateDiff = new Date(b.record.shiftDate).getTime() - new Date(a.record.shiftDate).getTime();
+      const dateDiff = new Date(b.shiftDate).getTime() - new Date(a.shiftDate).getTime();
       if (dateDiff !== 0) return dateDiff;
-      const nameA = `${a.employee.firstName} ${a.employee.lastName}`;
-      const nameB = `${b.employee.firstName} ${b.employee.lastName}`;
+      const nameA = `${a.employeeFirstName} ${a.employeeLastName}`;
+      const nameB = `${b.employeeFirstName} ${b.employeeLastName}`;
       return nameA.localeCompare(nameB);
     });
   }, [filteredRows]);
 
   // Hours per employee
   const hoursByEmployee = useMemo(() => {
-    const map: Record<number, { name: string; hours: number; departmentName: string | null; isFormer: boolean }> = {};
-    filteredRows.forEach(({ record, employee }) => {
-      if (!map[employee.id]) {
-        map[employee.id] = {
-          name: `${employee.firstName} ${employee.lastName}`,
+    const map: Record<number, { name: string; hours: number; isFormer: boolean }> = {};
+    filteredRows.forEach((row) => {
+      if (!map[row.employeeId]) {
+        map[row.employeeId] = {
+          name: `${row.employeeFirstName} ${row.employeeLastName}`,
           hours: 0,
-          departmentName: employee.departmentName,
-          isFormer: employee.status !== "active",
+          isFormer: row.employeeStatus !== "active",
         };
       }
-      map[employee.id].hours += record.hoursWorked ?? 0;
+      map[row.employeeId].hours += row.hoursWorked ?? 0;
     });
     return Object.entries(map)
       .map(([id, v]) => ({ employeeId: Number(id), ...v }))
@@ -137,32 +92,30 @@ export default function WorkRecordsList() {
   // Hours per department
   const hoursByDept = useMemo(() => {
     const map: Record<string, number> = {};
-    filteredRows.forEach(({ record, employee }) => {
-      const key = employee.departmentName ?? "No Department";
-      map[key] = (map[key] ?? 0) + (record.hoursWorked ?? 0);
+    filteredRows.forEach((row) => {
+      const key = row.employeeDepartmentName ?? "No Department";
+      map[key] = (map[key] ?? 0) + (row.hoursWorked ?? 0);
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [filteredRows]);
 
-  const totalHours = filteredRows.reduce((sum, { record }) => sum + (record.hoursWorked ?? 0), 0);
-
-  const isLoading = loadingEmployees || isLoadingRecords;
+  const totalHours = filteredRows.reduce((sum, row) => sum + (row.hoursWorked ?? 0), 0);
 
   function exportCsv() {
     const headers = ["Employee Name", "Department", "Date", "Shift Type", "Start", "End", "Hours", "Notes"];
 
-    const rows = sortedRows.map(({ record, employee }) => [
-      escapeCsv(`${employee.firstName} ${employee.lastName}`),
-      escapeCsv(employee.departmentName ?? ""),
-      escapeCsv(record.shiftDate),
-      escapeCsv(shiftTypes?.find((t) => t.value === record.shiftType)?.label ?? record.shiftType),
-      escapeCsv(record.startTime ?? ""),
-      escapeCsv(record.endTime ?? ""),
-      escapeCsv(record.hoursWorked ?? ""),
-      escapeCsv(record.notes ?? ""),
+    const csvRows = sortedRows.map((row) => [
+      escapeCsv(`${row.employeeFirstName} ${row.employeeLastName}`),
+      escapeCsv(row.employeeDepartmentName ?? ""),
+      escapeCsv(row.shiftDate),
+      escapeCsv(shiftTypes?.find((t) => t.value === row.shiftType)?.label ?? row.shiftType),
+      escapeCsv(row.startTime ?? ""),
+      escapeCsv(row.endTime ?? ""),
+      escapeCsv(row.hoursWorked ?? ""),
+      escapeCsv(row.notes ?? ""),
     ]);
 
-    const csv = [headers.map(escapeCsv).join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csv = [headers.map(escapeCsv).join(","), ...csvRows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -359,15 +312,15 @@ export default function WorkRecordsList() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedRows.map(({ record, employee }) => (
+                  {sortedRows.map((row) => (
                     <TableRow
-                      key={`${employee.id}-${record.id}`}
-                      className={`border-border/30 ${employee.status !== "active" ? "opacity-75" : ""}`}
+                      key={`${row.employeeId}-${row.id}`}
+                      className={`border-border/30 ${row.employeeStatus !== "active" ? "opacity-75" : ""}`}
                     >
                       <TableCell className="font-medium text-sm whitespace-nowrap">
                         <span className="flex items-center gap-1.5 flex-wrap">
-                          {employee.firstName} {employee.lastName}
-                          {employee.status !== "active" && (
+                          {row.employeeFirstName} {row.employeeLastName}
+                          {row.employeeStatus !== "active" && (
                             <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-normal text-muted-foreground border-muted-foreground/40 leading-none">
                               Former
                             </Badge>
@@ -375,29 +328,29 @@ export default function WorkRecordsList() {
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {employee.departmentName ?? <span className="italic">—</span>}
+                        {row.employeeDepartmentName ?? <span className="italic">—</span>}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {format(parseISO(record.shiftDate), "MMM d, yyyy")}
+                        {format(parseISO(row.shiftDate), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={`text-xs ${shiftTypeColor[record.shiftType] ?? shiftTypeColor.other}`}
+                          className={`text-xs ${shiftTypeColor[row.shiftType] ?? shiftTypeColor.other}`}
                         >
-                          {shiftTypes?.find((t) => t.value === record.shiftType)?.label ?? record.shiftType}
+                          {shiftTypes?.find((t) => t.value === row.shiftType)?.label ?? row.shiftType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{record.startTime ?? "—"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{record.endTime ?? "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{row.startTime ?? "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{row.endTime ?? "—"}</TableCell>
                       <TableCell className="text-sm font-medium text-right">
-                        {record.hoursWorked != null ? record.hoursWorked : "—"}
+                        {row.hoursWorked != null ? row.hoursWorked : "—"}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[180px] truncate">
-                        {record.notes ?? "—"}
+                        {row.notes ?? "—"}
                       </TableCell>
                       <TableCell>
-                        <Link href={`/employees/${employee.id}?tab=work-record`}>
+                        <Link href={`/employees/${row.employeeId}?tab=work-record`}>
                           <Button variant="ghost" size="icon" className="h-7 w-7" title="Open employee profile">
                             <ExternalLink className="h-3 w-3" />
                           </Button>

@@ -178,7 +178,9 @@ export default function PastEmployeesList() {
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                                {employee.firstName} {employee.lastName}
+                                {(employee.firstName || employee.lastName)
+                                  ? `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim()
+                                  : "(No name on record)"}
                               </span>
                               <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
                             </div>

@@ -172,6 +172,48 @@ describe("PastEmployeesList — empty/null name handling", () => {
     expect(() => renderPage()).not.toThrow();
   });
 
+  it("shows '(No name on record)' fallback when both firstName and lastName are empty", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "", lastName: "" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    expect(screen.getByText("(No name on record)")).toBeInTheDocument();
+  });
+
+  it("shows '(No name on record)' fallback when both firstName and lastName are null", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: null, lastName: null })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    expect(screen.getByText("(No name on record)")).toBeInTheDocument();
+  });
+
+  it("does NOT show the fallback when only firstName is present", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "Jane", lastName: "" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    expect(screen.queryByText("(No name on record)")).not.toBeInTheDocument();
+    expect(screen.getByText("Jane")).toBeInTheDocument();
+  });
+
+  it("does NOT show the fallback when only lastName is present", () => {
+    vi.mocked(useListEmployees).mockReturnValue({
+      data: [makeLeaver({ firstName: "", lastName: "Doe" })],
+      isLoading: false,
+    } as ReturnType<typeof useListEmployees>);
+
+    renderPage();
+    expect(screen.queryByText("(No name on record)")).not.toBeInTheDocument();
+    expect(screen.getByText("Doe")).toBeInTheDocument();
+  });
+
   it("renders without crashing when firstName is null", () => {
     vi.mocked(useListEmployees).mockReturnValue({
       data: [makeLeaver({ firstName: null, lastName: "Doe" })],

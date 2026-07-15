@@ -285,3 +285,200 @@ describe("PATCH /api/employees/:id — re-activating from leaver opens a service
     expect(user.status).toBe("active");
   });
 });
+
+// ── Two back-to-back leaver/re-activation cycles ──────────────────────────────
+
+describe("PATCH /api/employees/:id — two complete leaver/re-activation cycles", () => {
+  let empCId: number;
+  let empCUserId: number;
+
+  beforeAll(async () => {
+    const [empC] = await db
+      .insert(employeesTable)
+      .values({
+        firstName: "Cycle",
+        lastName: "TestC",
+        email: `cycle-test-c-${Date.now()}@example-test.invalid`,
+        jobTitle: "Tester",
+        employmentType: "full_time",
+        startDate: "2020-01-01",
+        status: "active",
+      })
+      .returning({ id: employeesTable.id });
+    empCId = empC.id;
+
+    const [empCUser] = await db
+      .insert(usersTable)
+      .values({
+        name: "Cycle TestC",
+        email: `cycle-user-c-${Date.now()}@example-test.invalid`,
+        passwordHash: "not-a-real-hash",
+        roleId: editorRoleId,
+        permissions: [],
+        employeeId: empCId,
+        status: "active",
+      })
+      .returning({ id: usersTable.id });
+    empCUserId = empCUser.id;
+
+    // Initial open service period
+    await db
+      .insert(employeeServicePeriodsTable)
+      .values({ employeeId: empCId, startDate: "2020-01-01", endDate: null });
+  });
+
+  afterAll(async () => {
+    await cleanupEmployee(empCId); // cascades service periods + linked user
+  });
+
+  /** Returns all service periods for empC ordered by startDate. */
+  async function getPeriods() {
+    return db
+      .select()
+      .from(employeeServicePeriodsTable)
+      .where(eq(employeeServicePeriodsTable.employeeId, empCId))
+      .orderBy(employeeServicePeriodsTable.startDate);
+  }
+
+  /** Asserts no two periods have overlapping date ranges. */
+  function assertNoOverlaps(
+    periods: Array<{ startDate: string; endDate: string | null }>,
+  ) {
+    for (let i = 0; i < periods.length - 1; i++) {
+      const a = periods[i];
+      const b = periods[i + 1];
+      // a must be closed and its endDate must be before b's startDate
+      expect(a.endDate).not.toBeNull();
+      expect(a.endDate! <= b.startDate).toBe(true);
+    }
+  }
+
+  // ── Cycle 1: leaver ────────────────────────────────────────────────────────
+
+  it("cycle 1 — marking as leaver closes the open period and leaves 0 open periods", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const api = buildApp(hrRouter, editorUserId);
+
+    const res = await api
+      .patch(`/api/employees/${empCId}`)
+      .send({ status: "leaver", leaverReason: "resignation" });
+    expect(res.status).toBe(200);
+
+    const periods = await getPeriods();
+    const open = periods.filter((p) => p.endDate === null);
+    const closed = periods.filter((p) => p.endDate !== null);
+
+    expect(open).toHaveLength(0);
+    expect(closed).toHaveLength(1);
+    expect(closed[0].endDate).toBe(today);
+    assertNoOverlaps(periods);
+  });
+
+  it("cycle 1 — leaver suspends the linked user account", async () => {
+    const [user] = await db
+      .select({ status: usersTable.status })
+      .from(usersTable)
+      .where(eq(usersTable.id, empCUserId));
+    expect(user.status).toBe("suspended");
+  });
+
+  // ── Cycle 1: re-activation ─────────────────────────────────────────────────
+
+  it("cycle 1 — re-activating opens a new period; result is 1 closed + 1 open, no overlap", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const api = buildApp(hrRouter, editorUserId);
+
+    const res = await api
+      .patch(`/api/employees/${empCId}`)
+      .send({ status: "active" });
+    expect(res.status).toBe(200);
+
+    const periods = await getPeriods();
+    const open = periods.filter((p) => p.endDate === null);
+    const closed = periods.filter((p) => p.endDate !== null);
+
+    expect(closed).toHaveLength(1);
+    expect(open).toHaveLength(1);
+    expect(open[0].startDate).toBe(today);
+    assertNoOverlaps(periods);
+  });
+
+  it("cycle 1 — re-activation re-enables the linked user account", async () => {
+    const [user] = await db
+      .select({ status: usersTable.status })
+      .from(usersTable)
+      .where(eq(usersTable.id, empCUserId));
+    expect(user.status).toBe("active");
+  });
+
+  // ── Cycle 2: leaver ────────────────────────────────────────────────────────
+
+  it("cycle 2 — marking as leaver again closes the second period; result is 2 closed, 0 open", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const api = buildApp(hrRouter, editorUserId);
+
+    const res = await api
+      .patch(`/api/employees/${empCId}`)
+      .send({ status: "leaver", leaverReason: "contract_end" });
+    expect(res.status).toBe(200);
+
+    const periods = await getPeriods();
+    const open = periods.filter((p) => p.endDate === null);
+    const closed = periods.filter((p) => p.endDate !== null);
+
+    expect(open).toHaveLength(0);
+    expect(closed).toHaveLength(2);
+    // Both closed periods must not overlap each other
+    assertNoOverlaps(periods);
+    // The most recently closed period ends today
+    expect(closed[1].endDate).toBe(today);
+  });
+
+  it("cycle 2 — second leaver transition suspends the user account again", async () => {
+    const [user] = await db
+      .select({ status: usersTable.status })
+      .from(usersTable)
+      .where(eq(usersTable.id, empCUserId));
+    expect(user.status).toBe("suspended");
+  });
+
+  // ── Cycle 2: re-activation ─────────────────────────────────────────────────
+
+  it("cycle 2 — second re-activation opens a third period; result is 2 closed + 1 open, no overlap", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const api = buildApp(hrRouter, editorUserId);
+
+    const res = await api
+      .patch(`/api/employees/${empCId}`)
+      .send({ status: "active" });
+    expect(res.status).toBe(200);
+
+    const periods = await getPeriods();
+    const open = periods.filter((p) => p.endDate === null);
+    const closed = periods.filter((p) => p.endDate !== null);
+
+    expect(closed).toHaveLength(2);
+    expect(open).toHaveLength(1);
+    expect(open[0].startDate).toBe(today);
+    // All three periods must not overlap
+    assertNoOverlaps(periods);
+  });
+
+  it("cycle 2 — second re-activation re-enables the user account", async () => {
+    const [user] = await db
+      .select({ status: usersTable.status })
+      .from(usersTable)
+      .where(eq(usersTable.id, empCUserId));
+    expect(user.status).toBe("active");
+  });
+
+  // ── Final state sanity check ───────────────────────────────────────────────
+
+  it("final state — exactly 3 service periods total, exactly 1 open, no phantom open periods", async () => {
+    const periods = await getPeriods();
+    expect(periods).toHaveLength(3);
+    const open = periods.filter((p) => p.endDate === null);
+    expect(open).toHaveLength(1);
+    assertNoOverlaps(periods);
+  });
+});

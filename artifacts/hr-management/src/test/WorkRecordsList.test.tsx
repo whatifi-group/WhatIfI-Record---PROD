@@ -232,6 +232,89 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
   });
 });
 
+// ─── Hours sidebar — overflow cap ────────────────────────────────────────────
+
+describe("WorkRecordsList — hours sidebar overflow cap", () => {
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.clearAllMocks();
+  });
+
+  /** Build N rows, each from a distinct employee with 1 hour worked. */
+  function makeRowsForNEmployees(n: number) {
+    return Array.from({ length: n }, (_, i) =>
+      makeRow({
+        id: 1000 + i,
+        employeeId: 100 + i,
+        employeeFirstName: `Emp${i + 1}`,
+        employeeLastName: "Test",
+        hoursWorked: 1,
+        employeeStatus: "active",
+      }),
+    );
+  }
+
+  it("shows the '+1 more' overflow label when there are exactly 11 employees", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: makeRowsForNEmployees(11), total: 11, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    // 11 - 10 = 1 hidden
+    expect(screen.getByText("+1 more")).toBeInTheDocument();
+  });
+
+  it("shows the '+N more' label when there are more than 10 employees", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: makeRowsForNEmployees(13), total: 13, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    // 13 employees - 10 shown = 3 more
+    expect(screen.getByText("+3 more")).toBeInTheDocument();
+  });
+
+  it("'+N more' count is correct for various overflow sizes", () => {
+    const n = 17;
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: makeRowsForNEmployees(n), total: n, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.getByText(`+${n - 10} more`)).toBeInTheDocument();
+  });
+
+  it("does NOT show the '+N more' label when there are exactly 10 employees", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: makeRowsForNEmployees(10), total: 10, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/\+\d+ more/)).not.toBeInTheDocument();
+  });
+
+  it("does NOT show the '+N more' label when there are fewer than 10 employees", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: makeRowsForNEmployees(5), total: 5, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/\+\d+ more/)).not.toBeInTheDocument();
+  });
+});
+
 // ─── Pagination controls ──────────────────────────────────────────────────────
 
 describe("WorkRecordsList — pagination controls", () => {

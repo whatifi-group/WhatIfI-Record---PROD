@@ -812,6 +812,13 @@ export interface ExpiringQualification {
   daysUntilExpiry: number;
 }
 
+export interface UploadPolicy {
+  /** Maximum permitted upload size in bytes. */
+  maxFileSizeBytes: number;
+  /** MIME types that the server will accept. */
+  allowedContentTypes: string[];
+}
+
 export interface UploadUrlRequest {
   /**
      * Original file name.

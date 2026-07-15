@@ -10,6 +10,7 @@ import {
   useCreateQualificationCertificate,
   useDeleteQualificationCertificate,
   useListQualificationTypes,
+  useGetUploadPolicy,
   getListEmployeeQualificationsQueryKey,
   getListQualificationRevalidationsQueryKey,
   getListQualificationCertificatesQueryKey,
@@ -194,6 +195,9 @@ function CertificatesList({
   const [addOpen, setAddOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch server-side upload limits so client-side pre-flight stays in sync.
+  const { data: uploadPolicy } = useGetUploadPolicy();
+
   const { uploadFile, isUploading, progress } = useUpload({
     onError: (error) =>
       toast({
@@ -210,6 +214,42 @@ function CertificatesList({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // ── Client-side pre-flight validation ─────────────────────────────────
+    // Validate against server-sourced limits before sending any bytes.
+    // Fall back to safe defaults when the policy hasn't loaded yet.
+    const maxBytes = uploadPolicy?.maxFileSizeBytes ?? 20 * 1024 * 1024;
+    const allowedTypes = uploadPolicy?.allowedContentTypes ?? [
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/heic",
+    ];
+
+    if (file.size > maxBytes) {
+      const limitMB = (maxBytes / 1024 / 1024).toFixed(0);
+      const fileMB = (file.size / 1024 / 1024).toFixed(1);
+      toast({
+        title: `File too large (${fileMB} MB)`,
+        description: `Maximum allowed size is ${limitMB} MB.`,
+        variant: "destructive",
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    if (file.type && !allowedTypes.includes(file.type)) {
+      toast({
+        title: "File type not allowed",
+        description: `"${file.type}" is not permitted. Accepted: PDF, PNG, JPEG, GIF, WEBP, HEIC.`,
+        variant: "destructive",
+      });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    // ── End pre-flight ─────────────────────────────────────────────────────
 
     const result = await uploadFile(file);
     if (!result) return; // error already toasted by onError

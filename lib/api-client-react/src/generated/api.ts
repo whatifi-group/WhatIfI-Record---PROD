@@ -83,6 +83,7 @@ import type {
   SearchParams,
   SearchResponse,
   SysadminSummary,
+  UploadPolicy,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
@@ -117,6 +118,85 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetUploadPolicyUrl = () => {
+
+
+
+
+  return `/api/storage/upload-policy`
+}
+
+/**
+ * Returns `maxFileSizeBytes` and `allowedContentTypes` so the client can
+ * validate files before uploading. No authentication required.
+ * @summary Retrieve the server's active upload limits
+ */
+export const getUploadPolicy = async ( options?: RequestInit): Promise<UploadPolicy> => {
+
+  return customFetch<UploadPolicy>(getGetUploadPolicyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUploadPolicyQueryKey = () => {
+    return [
+    `/api/storage/upload-policy`
+    ] as const;
+    }
+
+
+export const getGetUploadPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getUploadPolicy>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUploadPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUploadPolicyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUploadPolicy>>> = ({ signal }) => getUploadPolicy({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUploadPolicy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUploadPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getUploadPolicy>>>
+export type GetUploadPolicyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Retrieve the server's active upload limits
+ */
+
+export function useGetUploadPolicy<TData = Awaited<ReturnType<typeof getUploadPolicy>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUploadPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUploadPolicyQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getRequestUploadUrlUrl = () => {
 

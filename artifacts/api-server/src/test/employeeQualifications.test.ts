@@ -158,6 +158,97 @@ describe("Employee Qualifications", () => {
       );
       expect(res.status).toBe(404);
     });
+
+    // ── GCS cleanup on qualification delete ───────────────────────────────
+
+    describe("GCS cleanup when a qualification with certificates is deleted", () => {
+      beforeEach(() => {
+        vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+          size: 1024 * 50,
+          contentType: "application/pdf",
+        });
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it("deletes attached /objects/ GCS files when the qualification is deleted", async () => {
+        const qualRes = await api
+          .post(`/api/employees/${empId}/qualifications`)
+          .send({ qualificationTypeId: qtId, dateAchieved: "2024-01-01" });
+        const qualId = qualRes.body.id as number;
+
+        // Attach a certificate stored in object storage.
+        await api
+          .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+          .send({
+            fileName: "cert.pdf",
+            fileUrl: "/objects/uploads/qual-delete-uuid",
+            mimeType: "application/pdf",
+          });
+
+        // Set up storage mock to capture the delete call.
+        const mockDelete = vi.fn().mockResolvedValue(undefined);
+        const getFileSpy = vi
+          .spyOn(objectStorageService, "getObjectEntityFile")
+          .mockResolvedValue({ delete: mockDelete } as never);
+
+        const del = await api.delete(
+          `/api/employees/${empId}/qualifications/${qualId}`,
+        );
+        expect(del.status).toBe(204);
+        expect(getFileSpy).toHaveBeenCalledWith("/objects/uploads/qual-delete-uuid");
+        expect(mockDelete).toHaveBeenCalledTimes(1);
+      });
+
+      it("still returns 204 when the GCS object is already gone", async () => {
+        const qualRes = await api
+          .post(`/api/employees/${empId}/qualifications`)
+          .send({ qualificationTypeId: qtId, dateAchieved: "2024-02-01" });
+        const qualId = qualRes.body.id as number;
+
+        await api
+          .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+          .send({
+            fileName: "gone.pdf",
+            fileUrl: "/objects/uploads/already-gone-qual-uuid",
+            mimeType: "application/pdf",
+          });
+
+        vi.spyOn(objectStorageService, "getObjectEntityFile").mockRejectedValue(
+          new ObjectNotFoundError(),
+        );
+
+        const del = await api.delete(
+          `/api/employees/${empId}/qualifications/${qualId}`,
+        );
+        expect(del.status).toBe(204);
+      });
+
+      it("skips GCS deletion for legacy https:// certificate URLs", async () => {
+        const qualRes = await api
+          .post(`/api/employees/${empId}/qualifications`)
+          .send({ qualificationTypeId: qtId, dateAchieved: "2024-03-01" });
+        const qualId = qualRes.body.id as number;
+
+        await api
+          .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+          .send({
+            fileName: "legacy.pdf",
+            fileUrl: "https://example.com/files/legacy.pdf",
+            mimeType: "application/pdf",
+          });
+
+        const getFileSpy = vi.spyOn(objectStorageService, "getObjectEntityFile");
+
+        const del = await api.delete(
+          `/api/employees/${empId}/qualifications/${qualId}`,
+        );
+        expect(del.status).toBe(204);
+        expect(getFileSpy).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // ── Certificate POST — object metadata verification ───────────────────────

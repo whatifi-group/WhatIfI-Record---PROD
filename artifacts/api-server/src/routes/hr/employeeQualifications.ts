@@ -281,6 +281,13 @@ router.delete(
       res.status(400).json({ error: params.error.message });
       return;
     }
+
+    // Fetch attached certificates before deleting so we can clean up GCS objects.
+    const certs = await db
+      .select({ id: qualificationCertificatesTable.id, fileUrl: qualificationCertificatesTable.fileUrl })
+      .from(qualificationCertificatesTable)
+      .where(eq(qualificationCertificatesTable.qualificationId, params.data.qualId));
+
     const [deleted] = await db
       .delete(employeeQualificationsTable)
       .where(
@@ -294,6 +301,23 @@ router.delete(
       res.status(404).json({ error: "Qualification not found" });
       return;
     }
+
+    // Best-effort GCS cleanup for every certificate whose fileUrl is an internal
+    // object path. Errors are swallowed so the main delete still succeeds even
+    // when storage is temporarily unavailable.
+    for (const cert of certs) {
+      if (cert.fileUrl?.startsWith("/objects/")) {
+        try {
+          const file = await objectStorageService.getObjectEntityFile(cert.fileUrl);
+          await file.delete();
+        } catch (err) {
+          if (!(err instanceof ObjectNotFoundError)) {
+            console.error("Failed to delete certificate object during qualification cleanup:", err);
+          }
+        }
+      }
+    }
+
     res.sendStatus(204);
   },
 );

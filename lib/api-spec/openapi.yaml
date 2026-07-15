@@ -30,6 +30,22 @@ tags:
 paths:
   # ── Storage ───────────────────────────────────────────────────────────────
 
+  /storage/upload-policy:
+    get:
+      tags: [Storage]
+      operationId: getUploadPolicy
+      summary: Retrieve the server's active upload limits
+      description: |
+        Returns `maxFileSizeBytes` and `allowedContentTypes` so the client can
+        validate files before uploading. No authentication required.
+      responses:
+        '200':
+          description: Current upload policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadPolicy'
+
   /storage/uploads/request-url:
     post:
       tags: [Storage]
@@ -3222,6 +3238,18 @@ components:
         daysUntilExpiry:
           type: integer
           description: Negative values mean the qualification has already expired
+    UploadPolicy:
+      type: object
+      required: [maxFileSizeBytes, allowedContentTypes]
+      properties:
+        maxFileSizeBytes:
+          type: integer
+          description: Maximum permitted upload size in bytes.
+        allowedContentTypes:
+          type: array
+          items:
+            type: string
+          description: MIME types that the server will accept.
     UploadUrlRequest:
       type: object
       required: [name, size, contentType]

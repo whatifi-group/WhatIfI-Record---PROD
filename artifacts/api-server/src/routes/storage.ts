@@ -168,4 +168,18 @@ router.get(
   },
 );
 
+/**
+ * GET /storage/upload-policy
+ *
+ * Returns the server's active upload limits so the client can run pre-flight
+ * validation before sending any bytes. No authentication required — the limits
+ * are not sensitive information.
+ */
+router.get("/storage/upload-policy", (_req: Request, res: Response) => {
+  res.json({
+    maxFileSizeBytes: MAX_FILE_SIZE_BYTES,
+    allowedContentTypes: Array.from(ALLOWED_CONTENT_TYPES),
+  });
+});
+
 export default router;

@@ -9,6 +9,17 @@ import * as zod from 'zod';
 
 
 /**
+ * Returns `maxFileSizeBytes` and `allowedContentTypes` so the client can
+ * validate files before uploading. No authentication required.
+ * @summary Retrieve the server's active upload limits
+ */
+export const GetUploadPolicyResponse = zod.object({
+  "maxFileSizeBytes": zod.number().describe('Maximum permitted upload size in bytes.'),
+  "allowedContentTypes": zod.array(zod.string()).describe('MIME types that the server will accept.')
+})
+
+
+/**
  * Returns a presigned GCS URL for direct upload. The client sends JSON
  * metadata here, then uploads the file directly to the returned URL.
  * @summary Request a presigned URL for file upload

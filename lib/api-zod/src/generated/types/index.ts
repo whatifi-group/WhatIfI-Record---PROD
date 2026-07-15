@@ -80,6 +80,7 @@ export * from './searchResponse';
 export * from './searchResult';
 export * from './searchResultType';
 export * from './sysadminSummary';
+export * from './uploadPolicy';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';
 export * from './user';

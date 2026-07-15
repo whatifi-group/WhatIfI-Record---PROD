@@ -146,3 +146,35 @@ describe("POST /storage/uploads/request-url — upload validation", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+// ── GET /storage/upload-policy ────────────────────────────────────────────────
+
+describe("GET /storage/upload-policy", () => {
+  const POLICY_URL = "/api/storage/upload-policy";
+
+  it("returns 200 with maxFileSizeBytes and allowedContentTypes", async () => {
+    const unauthApi = buildApp(router); // no auth required
+    const res = await unauthApi.get(POLICY_URL);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("maxFileSizeBytes");
+    expect(res.body).toHaveProperty("allowedContentTypes");
+    expect(typeof res.body.maxFileSizeBytes).toBe("number");
+    expect(Array.isArray(res.body.allowedContentTypes)).toBe(true);
+  });
+
+  it("includes application/pdf in allowedContentTypes", async () => {
+    const res = await api.get(POLICY_URL);
+    expect(res.body.allowedContentTypes).toContain("application/pdf");
+  });
+
+  it("returns maxFileSizeBytes matching the server limit (20 MB default)", async () => {
+    const res = await api.get(POLICY_URL);
+    expect(res.body.maxFileSizeBytes).toBe(20 * 1024 * 1024);
+  });
+
+  it("is accessible without authentication", async () => {
+    const unauthApi = buildApp(router);
+    const res = await unauthApi.get(POLICY_URL);
+    expect(res.status).toBe(200);
+  });
+});

@@ -184,6 +184,54 @@ describe("GET /api/employees/:id — unauthenticated request (no session)", () =
   });
 });
 
+// ── POST /employees — salary hidden in 201 response without view_payroll ──────
+describe("POST /api/employees — salary hidden in 201 response without view_payroll", () => {
+  // Track employees created by these tests so afterAll can clean them up
+  const createdIds: number[] = [];
+
+  afterAll(async () => {
+    for (const id of createdIds) await cleanupEmployee(id);
+  });
+
+  it("edit_employees user (no view_payroll) creates an employee and sees null salary in the 201 response", async () => {
+    const api = buildApp(router, hrManagerUserId);
+    const res = await api.post("/api/employees").send({
+      firstName: "PostSalary",
+      lastName: "HiddenTest",
+      email: `post-salary-hidden-${Date.now()}@example-test.invalid`,
+      jobTitle: "Tester",
+      employmentType: "full_time",
+      status: "active",
+      startDate: "2024-01-01",
+      salary: 90000,
+      userRole: hrManagerRoleId,
+      temporaryPassword: "TestPass123!",
+    });
+    expect(res.status).toBe(201);
+    if (res.body?.id) createdIds.push(res.body.id);
+    expect(res.body.salary).toBeNull();
+  });
+
+  it("view_payroll user creates an employee and sees the salary value in the 201 response", async () => {
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post("/api/employees").send({
+      firstName: "PostSalary",
+      lastName: "VisibleTest",
+      email: `post-salary-visible-${Date.now()}@example-test.invalid`,
+      jobTitle: "Tester",
+      employmentType: "full_time",
+      status: "active",
+      startDate: "2024-01-01",
+      salary: 80000,
+      userRole: hrManagerRoleId,
+      temporaryPassword: "TestPass123!",
+    });
+    expect(res.status).toBe(201);
+    if (res.body?.id) createdIds.push(res.body.id);
+    expect(res.body.salary).toBe(80000);
+  });
+});
+
 // ── PATCH /employees/:id — salary hidden in response without view_payroll ─────
 describe("PATCH /api/employees/:id — salary hidden in response without view_payroll", () => {
   it("edit_employees user can update employee but sees null salary in response", async () => {

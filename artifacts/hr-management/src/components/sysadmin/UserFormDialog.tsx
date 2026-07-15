@@ -272,7 +272,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             />
 
             <div className="space-y-3 pt-2">
-              <FormLabel>Individual Permission Overrides (Optional)</FormLabel>
+              <p className="text-sm font-medium leading-none">Individual Permission Overrides (Optional)</p>
               <div className="text-xs text-muted-foreground mb-3">
                 Permissions granted here combine with the user's role. Typically leave blank and rely on roles.
               </div>

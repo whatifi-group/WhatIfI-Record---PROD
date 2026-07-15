@@ -166,7 +166,7 @@ export function RoleFormDialog({ open, onOpenChange, role }: RoleFormDialogProps
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <FormLabel>Capabilities</FormLabel>
+                <p className="text-sm font-medium leading-none">Capabilities</p>
                 <span className="text-xs text-muted-foreground">{form.watch("permissions").length} selected</span>
               </div>
               <div className="bg-muted/10 p-4 rounded-lg border border-border/50">

@@ -675,7 +675,9 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
                 }
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a qualification type…" />
+                  <SelectValue placeholder="Select a qualification type…">
+                    {selectedType ? selectedType.name : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {activeTypes.length === 0 ? (
@@ -685,7 +687,7 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
                   ) : (
                     activeTypes.map((t) => (
                       <SelectItem key={t.id} value={t.id.toString()}>
-                        {t.name}
+                        {t.awardingBody ? `${t.name} (${t.awardingBody})` : t.name}
                       </SelectItem>
                     ))
                   )}

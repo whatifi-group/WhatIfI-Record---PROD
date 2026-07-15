@@ -46,11 +46,13 @@ import type {
   EmployeeWorkRecord,
   EmployeeWorkRecordInput,
   EmployeeWorkRecordUpdate,
+  ExpiringQualification,
   HealthStatus,
   LeaveRequest,
   LeaveRequestInput,
   LeaveRequestUpdate,
   ListEmployeesParams,
+  ListExpiringQualificationsParams,
   ListLeaveRequestsParams,
   ListUsersParams,
   LoginInput,
@@ -3084,6 +3086,90 @@ export const useDeleteQualificationCertificate = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteQualificationCertificateMutationOptions(options));
     }
+
+export const getListExpiringQualificationsUrl = (params?: ListExpiringQualificationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/qualifications/expiring?${stringifiedParams}` : `/api/qualifications/expiring`
+}
+
+/**
+ * @summary List expiring or expired qualification records across all employees
+ */
+export const listExpiringQualifications = async (params?: ListExpiringQualificationsParams, options?: RequestInit): Promise<ExpiringQualification[]> => {
+
+  return customFetch<ExpiringQualification[]>(getListExpiringQualificationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListExpiringQualificationsQueryKey = (params?: ListExpiringQualificationsParams,) => {
+    return [
+    `/api/qualifications/expiring`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListExpiringQualificationsQueryOptions = <TData = Awaited<ReturnType<typeof listExpiringQualifications>>, TError = ErrorType<unknown>>(params?: ListExpiringQualificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExpiringQualifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExpiringQualificationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExpiringQualifications>>> = ({ signal }) => listExpiringQualifications(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listExpiringQualifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListExpiringQualificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listExpiringQualifications>>>
+export type ListExpiringQualificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List expiring or expired qualification records across all employees
+ */
+
+export function useListExpiringQualifications<TData = Awaited<ReturnType<typeof listExpiringQualifications>>, TError = ErrorType<unknown>>(
+ params?: ListExpiringQualificationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExpiringQualifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListExpiringQualificationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListEmployeeWorkRecordsUrl = (id: number,) => {
 

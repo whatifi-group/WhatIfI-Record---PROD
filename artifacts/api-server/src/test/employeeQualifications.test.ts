@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import router from "../routes/hr/employeeQualifications";
-import { buildApp, cleanupEmployee, createTestEmployee } from "./helpers";
+import {
+  buildApp,
+  cleanupEmployee,
+  cleanupQualType,
+  createTestEmployee,
+  createTestQualification,
+  createTestQualType,
+} from "./helpers";
 
 const api = buildApp(router);
 
@@ -139,6 +146,96 @@ describe("Employee Qualifications", () => {
         `/api/employees/${empId}/qualifications/999999`,
       );
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ── GET /qualifications/expiring ──────────────────────────────────────────
+
+  describe("GET /api/qualifications/expiring", () => {
+    let empId2: number;
+    let qtId: number;
+
+    // Use a separate employee so cleanup order is deterministic:
+    // delete employee (cascades qual records) then delete qual type (no FK left).
+    beforeEach(async () => {
+      empId2 = await createTestEmployee();
+      qtId = await createTestQualType();
+    });
+
+    afterEach(async () => {
+      await cleanupEmployee(empId2);
+      await cleanupQualType(qtId);
+    });
+
+    it("withinDays=0 returns only expired records and excludes future expiries", async () => {
+      const past = new Date();
+      past.setDate(past.getDate() - 5);
+      const expiredId = await createTestQualification(
+        empId2,
+        qtId,
+        past.toISOString().split("T")[0],
+      );
+
+      const future = new Date();
+      future.setDate(future.getDate() + 20);
+      const futureId = await createTestQualification(
+        empId2,
+        qtId,
+        future.toISOString().split("T")[0],
+      );
+
+      const res = await api.get("/api/qualifications/expiring?withinDays=0");
+      expect(res.status).toBe(200);
+      const ids: number[] = res.body.map((r: { id: number }) => r.id);
+      expect(ids).toContain(expiredId);
+      expect(ids).not.toContain(futureId);
+    });
+
+    it("withinDays=30 includes records expiring within 30 days but excludes later ones", async () => {
+      const soon = new Date();
+      soon.setDate(soon.getDate() + 20);
+      const soonId = await createTestQualification(
+        empId2,
+        qtId,
+        soon.toISOString().split("T")[0],
+      );
+
+      const later = new Date();
+      later.setDate(later.getDate() + 60);
+      const laterId = await createTestQualification(
+        empId2,
+        qtId,
+        later.toISOString().split("T")[0],
+      );
+
+      const res = await api.get("/api/qualifications/expiring?withinDays=30");
+      expect(res.status).toBe(200);
+      const ids: number[] = res.body.map((r: { id: number }) => r.id);
+      expect(ids).toContain(soonId);
+      expect(ids).not.toContain(laterId);
+    });
+
+    it("excludes qualifications that have no expiry date", async () => {
+      const noExpiryId = await createTestQualification(empId2, qtId, null);
+
+      const res = await api.get("/api/qualifications/expiring?withinDays=90");
+      expect(res.status).toBe(200);
+      const ids: number[] = res.body.map((r: { id: number }) => r.id);
+      expect(ids).not.toContain(noExpiryId);
+    });
+
+    it("response includes employee name and daysUntilExpiry fields", async () => {
+      const past = new Date();
+      past.setDate(past.getDate() - 3);
+      await createTestQualification(empId2, qtId, past.toISOString().split("T")[0]);
+
+      const res = await api.get("/api/qualifications/expiring?withinDays=0");
+      expect(res.status).toBe(200);
+      const record = res.body.find((r: { employeeId: number }) => r.employeeId === empId2);
+      expect(record).toBeDefined();
+      expect(record.employeeFirstName).toBe("Test");
+      expect(record.employeeLastName).toBe("Employee");
+      expect(record.daysUntilExpiry).toBeLessThan(0); // expired → negative
     });
   });
 });

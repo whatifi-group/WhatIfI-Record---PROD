@@ -867,6 +867,31 @@ export const DeleteQualificationCertificateResponse = zod.void()
 
 
 /**
+ * @summary List expiring or expired qualification records across all employees
+ */
+export const listExpiringQualificationsQueryWithinDaysDefault = 30;
+
+export const ListExpiringQualificationsQueryParams = zod.object({
+  "withinDays": zod.coerce.number().default(listExpiringQualificationsQueryWithinDaysDefault).describe('Return qualifications expiring within this many days (including already expired). Use 0 to return only already-expired records. Defaults to 30.\n')
+})
+
+export const ListExpiringQualificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeFirstName": zod.string(),
+  "employeeLastName": zod.string(),
+  "qualificationTypeId": zod.number(),
+  "qualificationTypeName": zod.string().nullable(),
+  "awardingBody": zod.string().nullable(),
+  "dateAchieved": zod.coerce.date(),
+  "expiryDate": zod.coerce.date(),
+  "notes": zod.string().nullable(),
+  "daysUntilExpiry": zod.number().describe('Negative values mean the qualification has already expired')
+})
+export const ListExpiringQualificationsResponse = zod.array(ListExpiringQualificationsResponseItem)
+
+
+/**
  * @summary List work records (shifts/timesheets) for an employee
  */
 export const ListEmployeeWorkRecordsParams = zod.object({

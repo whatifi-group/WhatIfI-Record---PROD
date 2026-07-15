@@ -910,6 +910,31 @@ paths:
         "404":
           description: Not found
 
+  /qualifications/expiring:
+    get:
+      operationId: listExpiringQualifications
+      tags: [employee-sections]
+      summary: List expiring or expired qualification records across all employees
+      parameters:
+        - name: withinDays
+          in: query
+          required: false
+          description: >
+            Return qualifications expiring within this many days (including already expired).
+            Use 0 to return only already-expired records. Defaults to 30.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: List of expiring/expired qualification records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpiringQualification"
+
   /employees/{id}/work-records:
     get:
       operationId: listEmployeeWorkRecords
@@ -2477,3 +2502,44 @@ components:
           type: string
         notes:
           type: ["string", "null"]
+
+    ExpiringQualification:
+      type: object
+      required:
+        - id
+        - employeeId
+        - employeeFirstName
+        - employeeLastName
+        - qualificationTypeId
+        - qualificationTypeName
+        - awardingBody
+        - dateAchieved
+        - expiryDate
+        - notes
+        - daysUntilExpiry
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeFirstName:
+          type: string
+        employeeLastName:
+          type: string
+        qualificationTypeId:
+          type: integer
+        qualificationTypeName:
+          type: ["string", "null"]
+        awardingBody:
+          type: ["string", "null"]
+        dateAchieved:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+        notes:
+          type: ["string", "null"]
+        daysUntilExpiry:
+          type: integer
+          description: Negative values mean the qualification has already expired

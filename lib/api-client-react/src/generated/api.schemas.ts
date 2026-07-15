@@ -619,10 +619,35 @@ export interface EmployeeWorkRecordUpdate {
   notes?: string | null;
 }
 
+export interface ExpiringQualification {
+  id: number;
+  employeeId: number;
+  employeeFirstName: string;
+  employeeLastName: string;
+  qualificationTypeId: number;
+  /** @nullable */
+  qualificationTypeName: string | null;
+  /** @nullable */
+  awardingBody: string | null;
+  dateAchieved: string;
+  expiryDate: string;
+  /** @nullable */
+  notes: string | null;
+  /** Negative values mean the qualification has already expired */
+  daysUntilExpiry: number;
+}
+
 export type ListEmployeesParams = {
 search?: string;
 departmentId?: number;
 status?: EmployeeStatus;
+};
+
+export type ListExpiringQualificationsParams = {
+/**
+ * Return qualifications expiring within this many days (including already expired). Use 0 to return only already-expired records. Defaults to 30.
+ */
+withinDays?: number;
 };
 
 export type ListLeaveRequestsParams = {

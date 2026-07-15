@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, lte, lt, isNotNull, sql } from "drizzle-orm";
 import {
   db,
   employeeQualificationsTable,
   qualificationTypesTable,
   qualificationRevalidationsTable,
   qualificationCertificatesTable,
+  employeesTable,
 } from "@workspace/db";
 import { z } from "zod";
 
@@ -58,6 +59,50 @@ function calcExpiryDate(
     d.setUTCFullYear(d.getUTCFullYear() + validityValue);
   return d.toISOString().split("T")[0];
 }
+
+// GET /qualifications/expiring?withinDays=30
+// Returns all qualification records with an expiry date that is expired or expiring soon.
+// withinDays=0  → only already expired (expiryDate < today)
+// withinDays=N  → expired OR expiring within N days (expiryDate <= today + N days)
+router.get("/qualifications/expiring", async (req, res): Promise<void> => {
+  const rawDays = parseInt(String(req.query.withinDays ?? ""), 10);
+  const withinDays = Math.max(0, isNaN(rawDays) ? 30 : rawDays);
+  const today = new Date().toISOString().split("T")[0];
+
+  // Compute cutoff date string: today + withinDays days
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() + withinDays);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  const dateCondition =
+    withinDays === 0
+      ? lt(employeeQualificationsTable.expiryDate, today)
+      : lte(employeeQualificationsTable.expiryDate, cutoffStr);
+
+  const rows = await db
+    .select({
+      id: employeeQualificationsTable.id,
+      employeeId: employeeQualificationsTable.employeeId,
+      employeeFirstName: employeesTable.firstName,
+      employeeLastName: employeesTable.lastName,
+      qualificationTypeId: employeeQualificationsTable.qualificationTypeId,
+      qualificationTypeName: qualificationTypesTable.name,
+      awardingBody: qualificationTypesTable.awardingBody,
+      dateAchieved: employeeQualificationsTable.dateAchieved,
+      expiryDate: employeeQualificationsTable.expiryDate,
+      notes: employeeQualificationsTable.notes,
+      daysUntilExpiry: sql<number>`
+        (${employeeQualificationsTable.expiryDate}::date - CURRENT_DATE)::integer
+      `,
+    })
+    .from(employeeQualificationsTable)
+    .innerJoin(employeesTable, eq(employeeQualificationsTable.employeeId, employeesTable.id))
+    .leftJoin(qualificationTypesTable, eq(employeeQualificationsTable.qualificationTypeId, qualificationTypesTable.id))
+    .where(and(isNotNull(employeeQualificationsTable.expiryDate), dateCondition))
+    .orderBy(asc(employeeQualificationsTable.expiryDate));
+
+  res.json(rows);
+});
 
 // GET /employees/:id/qualifications
 router.get(

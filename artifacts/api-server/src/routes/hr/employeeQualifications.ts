@@ -576,14 +576,38 @@ router.post(
           )
         : null;
 
+    // Apply the same auto-verify rule as qualification creation:
+    // HR Admins and SysAdmins don't need to re-verify their own revalidations.
+    const userId = req.session?.userId;
+    let autoVerify = false;
+    if (userId) {
+      const perms = req.effectivePermissions ?? (await getEffectivePermissions(userId));
+      autoVerify = perms.has("hr:access") || perms.has("sysadmin");
+    }
+
+    const now = new Date();
     const [updated] = await db
       .update(employeeQualificationsTable)
       .set({
         dateAchieved: parsed.data.dateAchieved,
         expiryDate,
+        verificationStatus: autoVerify ? "verified" : "pending",
+        verifiedBy: autoVerify && userId ? userId : null,
+        verifiedAt: autoVerify ? now : null,
+        verificationNotes: null,
       })
       .where(eq(employeeQualificationsTable.id, params.data.qualId))
       .returning();
+
+    let verifiedByName: string | null = null;
+    if (autoVerify && userId) {
+      const [verifier] = await db
+        .select({ name: usersTable.name })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      verifiedByName = verifier?.name ?? null;
+    }
 
     await syncOnboardingSubmission(params.data.id).catch((err) => {
       console.error("onboarding sync failed after qualification revalidation:", err);
@@ -593,6 +617,7 @@ router.post(
       ...updated,
       qualificationTypeName: qualType?.name ?? null,
       awardingBody: qualType?.awardingBody ?? null,
+      verifiedByName,
     });
   },
 );

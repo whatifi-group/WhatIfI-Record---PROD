@@ -125,7 +125,7 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
   res.json(GetEmployeeResponse.parse(row));
 });
 
-router.patch("/employees/:id", async (req, res): Promise<void> => {
+router.patch("/employees/:id", requirePermission("edit_employees"), async (req, res): Promise<void> => {
   const params = UpdateEmployeeParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

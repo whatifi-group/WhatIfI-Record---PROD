@@ -16,7 +16,7 @@ export function requirePermission(permission: string | string[]) {
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
-    const userId = req.session.userId;
+    const userId = req.session?.userId;
     if (!userId) {
       res.status(401).json({ error: "Not authenticated" });
       return;

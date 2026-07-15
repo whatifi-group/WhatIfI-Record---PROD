@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
 import { format, isWithinInterval, parseISO } from "date-fns";
+import { escapeCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
 
 const shiftTypeColor: Record<string, string> = {
   regular: "bg-secondary/20 text-secondary-foreground border-secondary/30",
@@ -150,14 +151,6 @@ export default function WorkRecordsList() {
   function exportCsv() {
     const headers = ["Employee Name", "Department", "Date", "Shift Type", "Start", "End", "Hours", "Notes"];
 
-    function escapeCsv(value: string | number | null | undefined): string {
-      const str = value == null ? "" : String(value);
-      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-        return `"${str.replace(/"/g, '""')}"`;
-      }
-      return str;
-    }
-
     const rows = sortedRows.map(({ record, employee }) => [
       escapeCsv(`${employee.firstName} ${employee.lastName}`),
       escapeCsv(employee.departmentName ?? ""),
@@ -173,10 +166,8 @@ export default function WorkRecordsList() {
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    const fromPart = dateFrom || "all";
-    const toPart = dateTo || "all";
     a.href = url;
-    a.download = `work-records-${fromPart}-to-${toPart}.csv`;
+    a.download = workRecordsCsvFilename(dateFrom, dateTo);
     a.click();
     URL.revokeObjectURL(url);
   }

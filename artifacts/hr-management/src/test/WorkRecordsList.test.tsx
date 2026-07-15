@@ -192,3 +192,142 @@ describe("WorkRecordsList — former-employee toggle", () => {
     expect(profileLink).not.toBeNull();
   });
 });
+
+// ─── CSV utility unit tests ───────────────────────────────────────────────────
+// These tests exercise the pure escapeCsv / workRecordsCsvFilename helpers
+// extracted to src/lib/csvUtils.ts.  Testing them directly is faster and more
+// reliable than triggering a full component render + Blob mock.
+
+import { escapeCsv, buildCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
+
+describe("escapeCsv", () => {
+  it("returns an empty string for null", () => {
+    expect(escapeCsv(null)).toBe("");
+  });
+
+  it("returns an empty string for undefined", () => {
+    expect(escapeCsv(undefined)).toBe("");
+  });
+
+  it("passes through a plain string unchanged", () => {
+    expect(escapeCsv("simple note")).toBe("simple note");
+  });
+
+  it("passes through a numeric value as a string", () => {
+    expect(escapeCsv(8.5)).toBe("8.5");
+  });
+
+  it("wraps a string containing a comma in double quotes", () => {
+    expect(escapeCsv("morning shift, early start")).toBe(
+      '"morning shift, early start"',
+    );
+  });
+
+  it("wraps a string containing a double-quote and escapes it by doubling", () => {
+    expect(escapeCsv('He said "hello"')).toBe('"He said ""hello"""');
+  });
+
+  it("wraps a string containing a newline in double quotes", () => {
+    expect(escapeCsv("line one\nline two")).toBe('"line one\nline two"');
+  });
+
+  it("handles a note combining a comma and a double-quote", () => {
+    expect(escapeCsv('note: "hello, world"')).toBe('"note: ""hello, world"""');
+  });
+
+  it("handles a value that is only a double-quote character", () => {
+    expect(escapeCsv('"')).toBe('""""');
+  });
+
+  it("handles a value with multiple embedded double-quotes", () => {
+    // 'say "hi" and "bye"' → '"say ""hi"" and ""bye"""'
+    expect(escapeCsv('say "hi" and "bye"')).toBe('"say ""hi"" and ""bye"""');
+  });
+});
+
+describe("buildCsv", () => {
+  it("produces a header row followed by data rows separated by newlines", () => {
+    const csv = buildCsv(
+      ["Name", "Hours", "Notes"],
+      [["Alice Smith", 8, "no issues"]],
+    );
+    expect(csv).toBe("Name,Hours,Notes\nAlice Smith,8,no issues");
+  });
+
+  it("escapes header cells that contain commas", () => {
+    const csv = buildCsv(['"Quoted,Header"', "Plain"], []);
+    // Header cell contains both a quote and a comma → double-escaped + quoted
+    expect(csv).toContain('"');
+  });
+
+  it("correctly escapes a notes cell with a comma in the data row", () => {
+    const csv = buildCsv(
+      ["Name", "Notes"],
+      [["Alice", "early shift, urgent"]],
+    );
+    const dataRow = csv.split("\n")[1];
+    expect(dataRow).toBe('Alice,"early shift, urgent"');
+  });
+
+  it("correctly escapes a notes cell with a double-quote in the data row", () => {
+    const csv = buildCsv(
+      ["Name", "Notes"],
+      [["Bob", 'He said "hello"']],
+    );
+    const dataRow = csv.split("\n")[1];
+    expect(dataRow).toBe('Bob,"He said ""hello"""');
+  });
+
+  it("correctly escapes a notes cell with a newline in the data row", () => {
+    const csv = buildCsv(
+      ["Name", "Notes"],
+      [["Carol", "line one\nline two"]],
+    );
+    // The embedded newline is inside the quoted field, so splitting on "\n"
+    // would break the field apart.  Check the full CSV string instead.
+    expect(csv).toBe('Name,Notes\nCarol,"line one\nline two"');
+  });
+
+  it("outputs an empty last field when the notes value is null", () => {
+    const csv = buildCsv(["Name", "Notes"], [["Dave", null]]);
+    const dataRow = csv.split("\n")[1];
+    expect(dataRow).toBe("Dave,");
+  });
+
+  it("produces only the header row when there are no data rows", () => {
+    const csv = buildCsv(["Name", "Notes"], []);
+    expect(csv).toBe("Name,Notes");
+  });
+});
+
+describe("workRecordsCsvFilename", () => {
+  it("includes both dates when both are provided", () => {
+    expect(workRecordsCsvFilename("2026-01-01", "2026-03-31")).toBe(
+      "work-records-2026-01-01-to-2026-03-31.csv",
+    );
+  });
+
+  it("uses 'all' for the from-date when it is an empty string", () => {
+    expect(workRecordsCsvFilename("", "2026-03-31")).toBe(
+      "work-records-all-to-2026-03-31.csv",
+    );
+  });
+
+  it("uses 'all' for the to-date when it is an empty string", () => {
+    expect(workRecordsCsvFilename("2026-01-01", "")).toBe(
+      "work-records-2026-01-01-to-all.csv",
+    );
+  });
+
+  it("uses 'all' for both parts when both are empty", () => {
+    expect(workRecordsCsvFilename("", "")).toBe(
+      "work-records-all-to-all.csv",
+    );
+  });
+
+  it("uses 'all' for the from-date when it is undefined", () => {
+    expect(workRecordsCsvFilename(undefined, "2026-12-31")).toBe(
+      "work-records-all-to-2026-12-31.csv",
+    );
+  });
+});

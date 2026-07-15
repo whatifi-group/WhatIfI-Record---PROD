@@ -96,8 +96,11 @@ router.get("/employees", async (req, res): Promise<void> => {
   ).orderBy(employeesTable.lastName, employeesTable.firstName);
 
   // Salary is payroll-sensitive — only expose it to users with view_payroll or sysadmin.
+  // req.effectivePermissions is pre-loaded by requireAuth; fall back for safety.
   const userId = req.session?.userId;
-  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  const perms =
+    req.effectivePermissions ??
+    (userId ? await getEffectivePermissions(userId) : new Set<string>());
   const showSalary = canViewPayroll(perms);
 
   res.json(ListEmployeesResponse.parse(rows.map((r) => redactSalary(r, showSalary))));
@@ -182,7 +185,9 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
   }
 
   const userId = req.session?.userId;
-  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  const perms =
+    req.effectivePermissions ??
+    (userId ? await getEffectivePermissions(userId) : new Set<string>());
   res.json(GetEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
 });
 
@@ -248,7 +253,9 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   );
 
   const userId = req.session?.userId;
-  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  const perms =
+    req.effectivePermissions ??
+    (userId ? await getEffectivePermissions(userId) : new Set<string>());
   res.json(UpdateEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
 });
 

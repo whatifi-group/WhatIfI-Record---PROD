@@ -53,7 +53,11 @@ export function requirePermission(permission: string | string[]) {
       return;
     }
 
-    const effective = await getEffectivePermissions(userId);
+    // Use the per-request cache set by requireAuth; fall back to a fresh DB
+    // call only when the cache is absent (e.g. in unit tests that mount the
+    // router without the full middleware stack).
+    const effective =
+      req.effectivePermissions ?? (await getEffectivePermissions(userId));
 
     if (!required.some((p) => effective.has(p))) {
       res.status(403).json({ error: "Forbidden" });

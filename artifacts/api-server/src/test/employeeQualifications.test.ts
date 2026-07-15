@@ -160,9 +160,132 @@ describe("Employee Qualifications", () => {
     });
   });
 
+  // ── Certificate POST — object metadata verification ───────────────────────
+
+  describe("POST /api/employees/:id/qualifications/:qualId/certificates", () => {
+    let qualId: number;
+
+    beforeEach(async () => {
+      const qualRes = await api
+        .post(`/api/employees/${empId}/qualifications`)
+        .send({ qualificationTypeId: qtId, dateAchieved: "2023-06-01" });
+      qualId = qualRes.body.id as number;
+
+      // Default: object exists with compliant metadata (100 KB PDF).
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+        size: 1024 * 100,
+        contentType: "application/pdf",
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("creates a certificate and returns 201 for a valid /objects/ path", async () => {
+      const res = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "cert.pdf", fileUrl: "/objects/uploads/uuid-ok", mimeType: "application/pdf" });
+      expect(res.status).toBe(201);
+      expect(res.body.id).toBeTypeOf("number");
+    });
+
+    it("skips metadata check and creates 201 for a legacy https:// URL", async () => {
+      const metaSpy = vi.spyOn(objectStorageService, "getObjectEntityMetadata");
+      const res = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "legacy.pdf", fileUrl: "https://example.com/cert.pdf" });
+      expect(res.status).toBe(201);
+      expect(metaSpy).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when the object exceeds 20 MB even though the presigned-URL request claimed a smaller size", async () => {
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+        size: 25 * 1024 * 1024, // 25 MB — bypassed the request-time check
+        contentType: "application/pdf",
+      });
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(objectStorageService, "getObjectEntityFile").mockResolvedValue(
+        { delete: mockDelete } as never,
+      );
+
+      const res = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "huge.pdf", fileUrl: "/objects/uploads/oversized-uuid" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/20 MB/);
+      expect(mockDelete).toHaveBeenCalledTimes(1); // non-compliant object cleaned up
+    });
+
+    it("returns 400 when the actual content-type is disallowed even though application/pdf was declared at request time", async () => {
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+        size: 512,
+        contentType: "video/mp4", // bypassed the request-time check
+      });
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(objectStorageService, "getObjectEntityFile").mockResolvedValue(
+        { delete: mockDelete } as never,
+      );
+
+      const res = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "trick.pdf", fileUrl: "/objects/uploads/wrong-type-uuid" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/video\/mp4/);
+      expect(res.body.error).toMatch(/not allowed/);
+      expect(mockDelete).toHaveBeenCalledTimes(1); // non-compliant object cleaned up
+    });
+
+    it("returns 400 when the object does not exist in storage", async () => {
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockRejectedValue(
+        new ObjectNotFoundError(),
+      );
+
+      const res = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "ghost.pdf", fileUrl: "/objects/uploads/nonexistent-uuid" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/could not be found/);
+    });
+
+    it("does not persist a certificate record when metadata validation fails", async () => {
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+        size: 30 * 1024 * 1024,
+        contentType: "application/pdf",
+      });
+      vi.spyOn(objectStorageService, "getObjectEntityFile").mockResolvedValue(
+        { delete: vi.fn().mockResolvedValue(undefined) } as never,
+      );
+
+      await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({ fileName: "oversized.pdf", fileUrl: "/objects/uploads/oversized2-uuid" });
+
+      const list = await api.get(
+        `/api/employees/${empId}/qualifications/${qualId}/certificates`,
+      );
+      expect(list.body).toHaveLength(0);
+    });
+  });
+
   // ── Certificate DELETE — storage cleanup ─────────────────────────────────
 
   describe("DELETE /api/employees/:id/qualifications/:qualId/certificates/:certId", () => {
+    // Stub metadata check so certificate POST succeeds without hitting GCS.
+    beforeEach(() => {
+      vi.spyOn(objectStorageService, "getObjectEntityMetadata").mockResolvedValue({
+        size: 1024 * 50,
+        contentType: "application/pdf",
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it("deletes the GCS object when fileUrl is an /objects/ path", async () => {
       const qualRes = await api
         .post(`/api/employees/${empId}/qualifications`)

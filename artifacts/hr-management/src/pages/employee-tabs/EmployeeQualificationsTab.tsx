@@ -195,7 +195,11 @@ function CertificatesList({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { uploadFile, isUploading, progress } = useUpload({
-    onError: () => toast({ title: "Upload failed", variant: "destructive" }),
+    onError: (error) =>
+      toast({
+        title: error.message || "Upload failed",
+        variant: "destructive",
+      }),
   });
 
   const invalidate = () =>

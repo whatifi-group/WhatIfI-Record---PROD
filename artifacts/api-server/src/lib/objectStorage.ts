@@ -159,6 +159,24 @@ export class ObjectStorageService {
     return objectFile;
   }
 
+  /**
+   * Fetch the GCS metadata for an object entity and return its actual size
+   * and content-type as reported by the storage backend.
+   *
+   * Throws `ObjectNotFoundError` if the object does not exist.
+   */
+  async getObjectEntityMetadata(
+    objectPath: string,
+  ): Promise<{ size: number; contentType: string }> {
+    const file = await this.getObjectEntityFile(objectPath);
+    const [metadata] = await file.getMetadata();
+    return {
+      size: Number(metadata.size ?? 0),
+      contentType:
+        (metadata.contentType as string) || "application/octet-stream",
+    };
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath.startsWith('https://storage.googleapis.com/')) {
       return rawPath;

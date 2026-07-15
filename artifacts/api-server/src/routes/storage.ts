@@ -10,9 +10,13 @@ import {
   ObjectStorageService,
 } from "../lib/objectStorage";
 import { getEffectivePermissions } from "../middlewares/requirePermission";
+import {
+  MAX_FILE_SIZE_BYTES,
+  ALLOWED_CONTENT_TYPES,
+} from "../lib/uploadPolicy";
 
 const router: IRouter = Router();
-const objectStorageService = new ObjectStorageService();
+export const objectStorageService = new ObjectStorageService();
 
 /**
  * POST /storage/uploads/request-url
@@ -36,9 +40,23 @@ router.post(
       return;
     }
 
-    try {
-      const { name, size, contentType } = parsed.data;
+    const { name, size, contentType } = parsed.data;
 
+    if (size > MAX_FILE_SIZE_BYTES) {
+      res.status(400).json({
+        error: `File size exceeds the 20 MB limit (received ${(size / 1024 / 1024).toFixed(1)} MB).`,
+      });
+      return;
+    }
+
+    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+      res.status(400).json({
+        error: `File type "${contentType}" is not allowed. Accepted types: PDF, PNG, JPEG, GIF, WEBP, HEIC.`,
+      });
+      return;
+    }
+
+    try {
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       const objectPath =
         objectStorageService.normalizeObjectEntityPath(uploadURL);

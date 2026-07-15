@@ -10,6 +10,7 @@ import {
 } from "@workspace/db";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
+import { MAX_FILE_SIZE_BYTES, ALLOWED_CONTENT_TYPES } from "../../lib/uploadPolicy";
 
 export const objectStorageService = new ObjectStorageService();
 
@@ -450,6 +451,55 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+
+    // For internally-stored objects verify the actual GCS metadata — size and
+    // content-type — before persisting the record.  This prevents a client that
+    // lied about those fields to obtain a presigned URL from bypassing the
+    // upload policy.
+    if (parsed.data.fileUrl.startsWith("/objects/")) {
+      let objectMeta: { size: number; contentType: string };
+      try {
+        objectMeta = await objectStorageService.getObjectEntityMetadata(
+          parsed.data.fileUrl,
+        );
+      } catch (err) {
+        if (err instanceof ObjectNotFoundError) {
+          res.status(400).json({ error: "The uploaded file could not be found in storage." });
+        } else {
+          console.error("Failed to read object metadata for certificate", err);
+          res.status(500).json({ error: "Failed to verify uploaded file." });
+        }
+        return;
+      }
+
+      if (objectMeta.size > MAX_FILE_SIZE_BYTES) {
+        // Delete the non-compliant object so it doesn't linger in storage.
+        try {
+          const file = await objectStorageService.getObjectEntityFile(parsed.data.fileUrl);
+          await file.delete();
+        } catch {
+          // Best-effort cleanup — don't mask the real error.
+        }
+        res.status(400).json({
+          error: `Uploaded file exceeds the 20 MB limit (${(objectMeta.size / 1024 / 1024).toFixed(1)} MB).`,
+        });
+        return;
+      }
+
+      if (!ALLOWED_CONTENT_TYPES.has(objectMeta.contentType)) {
+        try {
+          const file = await objectStorageService.getObjectEntityFile(parsed.data.fileUrl);
+          await file.delete();
+        } catch {
+          // Best-effort cleanup.
+        }
+        res.status(400).json({
+          error: `File type "${objectMeta.contentType}" is not allowed. Accepted types: PDF, PNG, JPEG, GIF, WEBP, HEIC.`,
+        });
+        return;
+      }
+    }
+
     const [created] = await db
       .insert(qualificationCertificatesTable)
       .values({

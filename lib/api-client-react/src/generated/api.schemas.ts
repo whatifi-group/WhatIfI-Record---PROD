@@ -124,6 +124,12 @@ export interface Employee {
      */
   leaverDate: string | null;
   createdAt: string;
+  /**
+   * True when the employee has at least one disclosure with conviction details
+   * that has not yet been signed off. Only populated for users with
+   * view_disclosures or sysadmin permission; false otherwise.
+   */
+  pendingDisclosureReview?: boolean;
 }
 
 export interface EmployeeInput {

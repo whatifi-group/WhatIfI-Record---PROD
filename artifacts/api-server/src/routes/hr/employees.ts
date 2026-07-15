@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, isNull, lte, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeePayRatesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { db, departmentsTable, employeeDisclosuresTable, employeeDisclosureReviewsTable, employeePayRatesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import {
   requirePermission,
   invalidatePermissionsCache,
+  getEffectivePermissions,
 } from "../../middlewares/requirePermission";
 import { hashPassword } from "../../lib/password";
 import { syncOnboardingSubmission } from "../../lib/onboardingSync";
@@ -86,7 +87,43 @@ router.get("/employees", async (req, res): Promise<void> => {
     : base
   ).orderBy(employeesTable.lastName, employeesTable.firstName);
 
-  res.json(ListEmployeesResponse.parse(rows));
+  // Compute pending disclosure review flags — only for users with view_disclosures or sysadmin
+  const userId = req.session?.userId;
+  let pendingMap = new Map<number, boolean>();
+  if (userId) {
+    try {
+      const perms = req.effectivePermissions ?? await getEffectivePermissions(userId);
+      if (perms.has("view_disclosures") || perms.has("sysadmin")) {
+        const pending = await db
+          .selectDistinct({ employeeId: employeeDisclosuresTable.employeeId })
+          .from(employeeDisclosuresTable)
+          .leftJoin(
+            employeeDisclosureReviewsTable,
+            eq(employeeDisclosureReviewsTable.disclosureId, employeeDisclosuresTable.id),
+          )
+          .where(
+            and(
+              isNotNull(employeeDisclosuresTable.convictionDetails),
+              or(
+                isNull(employeeDisclosureReviewsTable.id),
+                isNull(employeeDisclosureReviewsTable.signedOffAt),
+              ),
+            ),
+          );
+        pending.forEach((p) => pendingMap.set(p.employeeId, true));
+      }
+    } catch (err) {
+      console.error("pendingDisclosureReview query failed:", err);
+      // non-fatal — badge silently omitted rather than breaking the employee list
+    }
+  }
+
+  const responseRows = rows.map((row) => ({
+    ...row,
+    pendingDisclosureReview: pendingMap.get(row.id) ?? false,
+  }));
+
+  res.json(ListEmployeesResponse.parse(responseRows));
 });
 
 router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {

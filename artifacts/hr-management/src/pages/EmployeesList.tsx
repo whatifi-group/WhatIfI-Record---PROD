@@ -19,8 +19,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Search, Plus, Loader2, Users } from "lucide-react";
+import { Search, Plus, Loader2, Users, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 
 const employeeSchema = z.object({
@@ -48,6 +49,9 @@ export default function EmployeesList() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const { hasPermission } = useAuth();
+  const canViewDisclosures = hasPermission("view_disclosures") || hasPermission("sysadmin");
 
   const { data: employees, isLoading } = useListEmployees();
   const { data: departments } = useListDepartments();
@@ -340,7 +344,23 @@ export default function EmployeesList() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                      {format(new Date(employee.startDate), "MMM d, yyyy")}
+                      <div className="flex items-center gap-3">
+                        {format(new Date(employee.startDate), "MMM d, yyyy")}
+                        {canViewDisclosures && employee.pendingDisclosureReview && (
+                          <button
+                            type="button"
+                            title="Pending disclosure review — click to view"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/employees/${employee.id}?tab=disclosures`);
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors shrink-0"
+                          >
+                            <ShieldAlert className="w-3 h-3" />
+                            Review needed
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -247,7 +247,8 @@ export const ListEmployeesResponseItem = zod.object({
   "avatarUrl": zod.string().nullable(),
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.')
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 

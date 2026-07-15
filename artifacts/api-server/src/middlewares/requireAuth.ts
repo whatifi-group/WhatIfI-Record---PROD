@@ -3,7 +3,12 @@ import { getEffectivePermissions } from "./requirePermission";
 
 // Routes that don't require authentication.
 // These are matched against req.path which is relative to the /api mount point.
-const PUBLIC_PATHS = new Set(["/auth/login", "/healthz"]);
+const PUBLIC_PATHS = new Set([
+  "/auth/login",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/healthz",
+]);
 
 /**
  * Authentication guard + per-request permission cache.

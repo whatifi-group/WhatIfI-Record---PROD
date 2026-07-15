@@ -4,26 +4,69 @@ import { EmployeeStatus } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Loader2, UserX, Search } from "lucide-react";
-import { format } from "date-fns";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Loader2, UserX, Search, X } from "lucide-react";
+import { format, parseISO, isValid } from "date-fns";
 
 export default function PastEmployeesList() {
   const [search, setSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [, setLocation] = useLocation();
 
   const { data: employees, isLoading } = useListEmployees({ status: EmployeeStatus.leaver });
 
+  const hasDateFilter = dateFrom !== "" || dateTo !== "";
+
   const filteredEmployees = useMemo(() => {
     if (!employees) return [];
-    if (search === "") return employees;
-    const q = search.toLowerCase();
-    return employees.filter(
-      (emp) =>
-        emp.firstName.toLowerCase().includes(q) ||
-        emp.lastName.toLowerCase().includes(q) ||
-        emp.email.toLowerCase().includes(q),
-    );
-  }, [employees, search]);
+
+    return employees.filter((emp) => {
+      // Text search
+      if (search !== "") {
+        const q = search.toLowerCase();
+        const nameEmailMatch =
+          emp.firstName.toLowerCase().includes(q) ||
+          emp.lastName.toLowerCase().includes(q) ||
+          (emp.email ?? "").toLowerCase().includes(q);
+        if (!nameEmailMatch) return false;
+      }
+
+      // Date range filter on leaverDate
+      if (hasDateFilter && emp.leaverDate) {
+        const leaveDate = parseISO(
+          typeof emp.leaverDate === "string"
+            ? emp.leaverDate
+            : (emp.leaverDate as Date).toISOString(),
+        );
+        if (!isValid(leaveDate)) return true;
+
+        if (dateFrom !== "") {
+          const from = parseISO(dateFrom);
+          if (isValid(from) && leaveDate < from) return false;
+        }
+        if (dateTo !== "") {
+          // Include the full "to" day
+          const to = parseISO(dateTo);
+          if (isValid(to)) {
+            to.setHours(23, 59, 59, 999);
+            if (leaveDate > to) return false;
+          }
+        }
+      } else if (hasDateFilter && !emp.leaverDate) {
+        // If a date filter is active, exclude employees with no leaving date recorded
+        return false;
+      }
+
+      return true;
+    });
+  }, [employees, search, dateFrom, dateTo, hasDateFilter]);
+
+  const clearDateFilter = () => {
+    setDateFrom("");
+    setDateTo("");
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -47,7 +90,8 @@ export default function PastEmployeesList() {
           </div>
         ) : (
           <>
-            <div className="p-4 border-b border-border/50 bg-muted/20">
+            <div className="p-4 border-b border-border/50 bg-muted/20 space-y-3">
+              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -57,6 +101,46 @@ export default function PastEmployeesList() {
                   className="pl-9 bg-background border-border/50"
                 />
               </div>
+
+              {/* Date range filter */}
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-col gap-1 min-w-[140px]">
+                  <Label htmlFor="date-from" className="text-xs text-muted-foreground">
+                    Left from
+                  </Label>
+                  <Input
+                    id="date-from"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="bg-background border-border/50 text-sm h-9"
+                  />
+                </div>
+                <div className="flex flex-col gap-1 min-w-[140px]">
+                  <Label htmlFor="date-to" className="text-xs text-muted-foreground">
+                    Left to
+                  </Label>
+                  <Input
+                    id="date-to"
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="bg-background border-border/50 text-sm h-9"
+                  />
+                </div>
+                {hasDateFilter && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearDateFilter}
+                    className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Clear dates
+                  </Button>
+                )}
+              </div>
             </div>
 
             {filteredEmployees.length === 0 ? (
@@ -65,7 +149,9 @@ export default function PastEmployeesList() {
                   <UserX className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-display font-medium text-foreground mb-1">No matches found</h3>
-                <p className="text-muted-foreground max-w-sm">No past employees match your search. Try a different name or email.</p>
+                <p className="text-muted-foreground max-w-sm">
+                  No past employees match your filters. Try adjusting your search or date range.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -74,6 +160,7 @@ export default function PastEmployeesList() {
                     <TableRow className="hover:bg-transparent border-border/50">
                       <TableHead className="w-[300px]">Employee</TableHead>
                       <TableHead className="hidden md:table-cell">Joined</TableHead>
+                      <TableHead className="hidden md:table-cell">Left</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -99,6 +186,11 @@ export default function PastEmployeesList() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                           {format(new Date(employee.startDate), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                          {employee.leaverDate
+                            ? format(new Date(employee.leaverDate as string), "MMM d, yyyy")
+                            : <span className="text-muted-foreground/50 italic">Not recorded</span>}
                         </TableCell>
                       </TableRow>
                     ))}

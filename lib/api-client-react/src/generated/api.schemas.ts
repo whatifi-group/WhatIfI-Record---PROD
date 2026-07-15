@@ -259,6 +259,8 @@ export type Permission = typeof Permission[keyof typeof Permission];
 
 export const Permission = {
   sysadmin: 'sysadmin',
+  'hr:access': 'hr:access',
+  'hr:past_employees': 'hr:past_employees',
   hr_admin: 'hr_admin',
   view_employees: 'view_employees',
   edit_employees: 'edit_employees',
@@ -268,6 +270,7 @@ export const Permission = {
   view_leave: 'view_leave',
   manage_leave: 'manage_leave',
   view_reports: 'view_reports',
+  view_payroll: 'view_payroll',
 } as const;
 
 export type UserStatus = typeof UserStatus[keyof typeof UserStatus];

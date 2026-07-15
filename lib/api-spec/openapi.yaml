@@ -2247,6 +2247,8 @@ components:
       type: string
       enum:
         - sysadmin
+        - hr:access
+        - hr:past_employees
         - hr_admin
         - view_employees
         - edit_employees
@@ -2256,6 +2258,7 @@ components:
         - view_leave
         - manage_leave
         - view_reports
+        - view_payroll
 
     UserStatus:
       type: string

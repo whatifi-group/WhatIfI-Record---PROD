@@ -1031,6 +1031,32 @@ paths:
         "404":
           description: Not found
 
+  /employees/{id}/pay-rates/copy-from/{sourceId}:
+    post:
+      operationId: copyEmployeePayRates
+      tags: [employee-sections]
+      summary: Copy pay rates from a source employee to this employee, skipping shift types that already exist
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Copy result with created rates and skipped shift types
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopyPayRatesResult"
+        "400":
+          description: Invalid parameters or cannot copy from self
+
   /employees/{id}/work-records:
     get:
       operationId: listEmployeeWorkRecords
@@ -2575,6 +2601,20 @@ components:
           enum: [hourly, daily, flat]
         notes:
           type: string
+
+    CopyPayRatesResult:
+      type: object
+      required: [copied, skipped]
+      properties:
+        copied:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeePayRate"
+        skipped:
+          type: array
+          description: Shift types skipped because the target employee already has a rate for them
+          items:
+            type: string
 
     EmployeeWorkRecord:
       type: object

@@ -12,6 +12,11 @@ const RateIdParam = z.object({
   rateId: z.coerce.number().int().positive(),
 });
 
+const CopyFromParams = z.object({
+  id: z.coerce.number().int().positive(),
+  sourceId: z.coerce.number().int().positive(),
+});
+
 const PayRateInput = z.object({
   shiftType: z.string().min(1),
   rate: z.number().min(0),
@@ -127,6 +132,64 @@ router.put(
       eq(employeePayRatesTable.id, patched.id),
     );
     res.json(updated);
+  },
+);
+
+router.post(
+  "/employees/:id/pay-rates/copy-from/:sourceId",
+  requirePermission(["view_payroll", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = CopyFromParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const { id: targetId, sourceId } = params.data;
+
+    if (targetId === sourceId) {
+      res.status(400).json({ error: "Cannot copy pay rates from the same employee" });
+      return;
+    }
+
+    // Fetch source rates
+    const sourceRates = await payRateSelection().where(
+      eq(employeePayRatesTable.employeeId, sourceId),
+    );
+
+    // Fetch shift types already on the target to detect conflicts
+    const existingRows = await db
+      .select({ shiftType: employeePayRatesTable.shiftType })
+      .from(employeePayRatesTable)
+      .where(eq(employeePayRatesTable.employeeId, targetId));
+
+    const existingShiftTypes = new Set(existingRows.map((r) => r.shiftType));
+
+    const toInsert = sourceRates.filter((r) => !existingShiftTypes.has(r.shiftType));
+    const skipped = sourceRates
+      .filter((r) => existingShiftTypes.has(r.shiftType))
+      .map((r) => r.shiftType);
+
+    const copied = [];
+    for (const rate of toInsert) {
+      const [inserted] = await db
+        .insert(employeePayRatesTable)
+        .values({
+          employeeId: targetId,
+          shiftType: rate.shiftType,
+          rate: String(rate.rate),
+          rateUnit: rate.rateUnit,
+          notes: rate.notes ?? null,
+        })
+        .returning({ id: employeePayRatesTable.id });
+
+      const [created] = await payRateSelection().where(
+        eq(employeePayRatesTable.id, inserted.id),
+      );
+      copied.push(created);
+    }
+
+    res.json({ copied, skipped });
   },
 );
 

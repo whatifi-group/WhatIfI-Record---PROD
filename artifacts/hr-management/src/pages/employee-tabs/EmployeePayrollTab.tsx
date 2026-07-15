@@ -30,8 +30,10 @@ import {
   DollarSign,
   Plus,
   Trash2,
+  Copy,
 } from "lucide-react";
 import TabErrorState from "@/components/TabErrorState";
+import CopyPayRatesDialog from "./CopyPayRatesDialog";
 
 interface Props {
   employeeId: number;
@@ -92,6 +94,7 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
   const queryClient = useQueryClient();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showCopyDialog, setShowCopyDialog] = useState(false);
   const [addForm, setAddForm] = useState<PayRateForm>(defaultPayRateForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<PayRateForm>(defaultPayRateForm);
@@ -198,9 +201,14 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
           <h4 className="text-sm font-semibold text-foreground">Pay Rates</h4>
         </div>
         {!showAddForm && (
-          <Button size="sm" variant="outline" onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Add Rate
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setShowCopyDialog(true)}>
+              <Copy className="w-4 h-4 mr-1" /> Copy from…
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowAddForm(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Add Rate
+            </Button>
+          </div>
         )}
       </div>
 
@@ -442,6 +450,12 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
           )}
         </div>
       )}
+
+      <CopyPayRatesDialog
+        open={showCopyDialog}
+        onClose={() => setShowCopyDialog(false)}
+        targetEmployeeId={employeeId}
+      />
     </div>
   );
 }

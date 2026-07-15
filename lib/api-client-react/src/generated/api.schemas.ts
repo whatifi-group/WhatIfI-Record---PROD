@@ -619,6 +619,12 @@ export interface EmployeePayRateInput {
   notes?: string;
 }
 
+export interface CopyPayRatesResult {
+  copied: EmployeePayRate[];
+  /** Shift types skipped because the target employee already has a rate for them */
+  skipped: string[];
+}
+
 export interface EmployeeWorkRecord {
   id: number;
   employeeId: number;

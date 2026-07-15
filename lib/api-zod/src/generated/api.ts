@@ -983,6 +983,28 @@ export const DeleteEmployeePayRateResponse = zod.void()
 
 
 /**
+ * @summary Copy pay rates from a source employee to this employee, skipping shift types that already exist
+ */
+export const CopyEmployeePayRatesParams = zod.object({
+  "id": zod.coerce.number(),
+  "sourceId": zod.coerce.number()
+})
+
+export const CopyEmployeePayRatesResponse = zod.object({
+  "copied": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftType": zod.string(),
+  "rate": zod.number(),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "skipped": zod.array(zod.string()).describe('Shift types skipped because the target employee already has a rate for them')
+})
+
+
+/**
  * @summary List work records (shifts/timesheets) for an employee
  */
 export const ListEmployeeWorkRecordsParams = zod.object({

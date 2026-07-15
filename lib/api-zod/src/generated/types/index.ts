@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './copyPayRatesResult';
 export * from './department';
 export * from './departmentInput';
 export * from './departmentUpdate';

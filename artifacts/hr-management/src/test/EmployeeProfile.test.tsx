@@ -82,10 +82,18 @@ describe("EmployeeProfile — action button visibility by permission", () => {
     } as ReturnType<typeof useGetEmployee>);
   });
 
-  it("edit_employees-only user: Mark as Leaver is present, Remove Employee is absent", () => {
+  function mockAuth(hasPermission: (p: string) => boolean) {
     vi.mocked(useAuth).mockReturnValue({
-      hasPermission: (p: string) => p === "edit_employees",
-    } as ReturnType<typeof useAuth>);
+      hasPermission,
+      user: null,
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+    } as unknown as ReturnType<typeof useAuth>);
+  }
+
+  it("edit_employees-only user: Mark as Leaver is present, Remove Employee is absent", () => {
+    mockAuth((p) => p === "edit_employees");
 
     render(<EmployeeProfile />, { wrapper: Wrapper });
 
@@ -99,10 +107,7 @@ describe("EmployeeProfile — action button visibility by permission", () => {
   });
 
   it("sysadmin-only user: Remove Employee is present, Mark as Leaver is absent", () => {
-    // sysadmin without edit_employees cannot trigger the leaver workflow
-    vi.mocked(useAuth).mockReturnValue({
-      hasPermission: (p: string) => p === "sysadmin",
-    } as ReturnType<typeof useAuth>);
+    mockAuth((p) => p === "sysadmin");
 
     render(<EmployeeProfile />, { wrapper: Wrapper });
 
@@ -116,10 +121,7 @@ describe("EmployeeProfile — action button visibility by permission", () => {
   });
 
   it("user with both sysadmin and edit_employees: both action buttons are present", () => {
-    vi.mocked(useAuth).mockReturnValue({
-      hasPermission: (p: string) =>
-        p === "sysadmin" || p === "edit_employees",
-    } as ReturnType<typeof useAuth>);
+    mockAuth((p) => p === "sysadmin" || p === "edit_employees");
 
     render(<EmployeeProfile />, { wrapper: Wrapper });
 
@@ -139,9 +141,7 @@ describe("EmployeeProfile — action button visibility by permission", () => {
     } as ReturnType<typeof useGetEmployee>);
 
     // edit_employees user: canEdit=true but employee.status === 'leaver' suppresses the button
-    vi.mocked(useAuth).mockReturnValue({
-      hasPermission: (p: string) => p === "edit_employees",
-    } as ReturnType<typeof useAuth>);
+    mockAuth((p) => p === "edit_employees");
 
     render(<EmployeeProfile />, { wrapper: Wrapper });
 

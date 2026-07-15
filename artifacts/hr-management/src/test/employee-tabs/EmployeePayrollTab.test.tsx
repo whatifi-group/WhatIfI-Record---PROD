@@ -8,13 +8,17 @@ vi.mock("@workspace/api-client-react", () => ({
   useGetEmployeePayroll: vi.fn(),
   useUpsertEmployeePayroll: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   getGetEmployeePayrollQueryKey: vi.fn(() => ["payroll"]),
-  // Pay-rates hooks added in the pay rates feature
+  // Pay-rates hooks
   useListEmployeePayRates: vi.fn(() => ({ data: [], isLoading: false })),
   getListEmployeePayRatesQueryKey: vi.fn(() => ["payRates"]),
   useCreateEmployeePayRate: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useUpdateEmployeePayRate: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useDeleteEmployeePayRate: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useListLovItems: vi.fn(() => ({ data: [] })),
+  // CopyPayRatesDialog hooks
+  useListEmployees: vi.fn(() => ({ data: [], isLoading: false })),
+  getListEmployeesQueryKey: vi.fn(() => ["employees"]),
+  useCopyEmployeePayRates: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
 }));
 
 vi.mock("@/hooks/use-toast", () => ({

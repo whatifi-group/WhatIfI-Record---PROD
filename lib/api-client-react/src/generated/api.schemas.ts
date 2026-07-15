@@ -741,7 +741,10 @@ export interface CopyPayRateSkip {
 }
 
 export interface CopyPayRatesResult {
+  /** All successfully processed rates (both newly inserted and overwritten). Preserved for backward compatibility. */
   copied: EmployeePayRate[];
+  /** Subset of copied that were overwritten (overwrite=true only). Empty when overwrite was not requested. */
+  updated: EmployeePayRate[];
   /** Rates that were not copied, each with a machine-readable reason code */
   skipped: CopyPayRateSkip[];
 }

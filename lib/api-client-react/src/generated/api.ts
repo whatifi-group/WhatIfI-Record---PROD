@@ -3719,22 +3719,31 @@ export const useDeleteEmployeePayRate = <TError = ErrorType<void>,
       return useMutation(getDeleteEmployeePayRateMutationOptions(options));
     }
 
+export interface CopyEmployeePayRatesParams {
+  /** When true, existing active rates on the target are overwritten with the source rate/unit (dates are preserved). */
+  overwrite?: boolean;
+  /** Effective start date (YYYY-MM-DD) for newly inserted rates. Defaults to today on the server. Has no effect on overwritten rates. */
+  effectiveDate?: string;
+}
+
 export const getCopyEmployeePayRatesUrl = (id: number,
-    sourceId: number,) => {
+    sourceId: number, params?: CopyEmployeePayRatesParams) => {
 
+  const searchParams = new URLSearchParams();
+  if (params?.overwrite) searchParams.set('overwrite', 'true');
+  if (params?.effectiveDate) searchParams.set('effectiveDate', params.effectiveDate);
+  const qs = searchParams.toString();
 
-
-
-  return `/api/employees/${id}/pay-rates/copy-from/${sourceId}`
+  return `/api/employees/${id}/pay-rates/copy-from/${sourceId}${qs ? `?${qs}` : ''}`
 }
 
 /**
  * @summary Copy pay rates from a source employee to this employee, skipping shift types that already exist
  */
 export const copyEmployeePayRates = async (id: number,
-    sourceId: number, options?: RequestInit): Promise<CopyPayRatesResult> => {
+    sourceId: number, params?: CopyEmployeePayRatesParams, options?: RequestInit): Promise<CopyPayRatesResult> => {
 
-  return customFetch<CopyPayRatesResult>(getCopyEmployeePayRatesUrl(id,sourceId),
+  return customFetch<CopyPayRatesResult>(getCopyEmployeePayRatesUrl(id,sourceId,params),
   {
     ...options,
     method: 'POST'
@@ -3748,8 +3757,8 @@ export const copyEmployeePayRates = async (id: number,
 
 
 export const getCopyEmployeePayRatesMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number;params?: CopyEmployeePayRatesParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number;params?: CopyEmployeePayRatesParams}, TContext> => {
 
 const mutationKey = ['copyEmployeePayRates'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3761,10 +3770,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof copyEmployeePayRates>>, {id: number;sourceId: number}> = (props) => {
-          const {id,sourceId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof copyEmployeePayRates>>, {id: number;sourceId: number;params?: CopyEmployeePayRatesParams}> = (props) => {
+          const {id,sourceId,params} = props ?? {};
 
-          return  copyEmployeePayRates(id,sourceId,requestOptions)
+          return  copyEmployeePayRates(id,sourceId,params,requestOptions)
         }
 
 
@@ -3782,11 +3791,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Copy pay rates from a source employee to this employee, skipping shift types that already exist
  */
 export const useCopyEmployeePayRates = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyEmployeePayRates>>, TError,{id: number;sourceId: number;params?: CopyEmployeePayRatesParams}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof copyEmployeePayRates>>,
         TError,
-        {id: number;sourceId: number},
+        {id: number;sourceId: number;params?: CopyEmployeePayRatesParams},
         TContext
       > => {
       return useMutation(getCopyEmployeePayRatesMutationOptions(options));

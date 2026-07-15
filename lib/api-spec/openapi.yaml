@@ -1128,6 +1128,19 @@ paths:
           required: true
           schema:
             type: integer
+        - name: overwrite
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: When true, existing active rates on the target are overwritten with the source rate/unit (dates are preserved)
+        - name: effectiveDate
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Effective start date for newly inserted rates (YYYY-MM-DD). Defaults to today. Has no effect on overwritten rates.
       responses:
         "200":
           description: Copy result with created rates and skipped shift types
@@ -3362,10 +3375,16 @@ components:
 
     CopyPayRatesResult:
       type: object
-      required: [copied, skipped]
+      required: [copied, updated, skipped]
       properties:
         copied:
           type: array
+          description: All successfully processed rates (both newly inserted and overwritten). Preserved for backward compatibility.
+          items:
+            $ref: "#/components/schemas/EmployeePayRate"
+        updated:
+          type: array
+          description: Subset of copied that were overwritten (overwrite=true only). Empty when overwrite was not requested.
           items:
             $ref: "#/components/schemas/EmployeePayRate"
         skipped:

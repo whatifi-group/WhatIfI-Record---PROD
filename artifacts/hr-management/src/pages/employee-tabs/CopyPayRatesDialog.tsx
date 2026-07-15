@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Copy, CheckCircle2, SkipForward, AlertTriangle } from "lucide-react";
+import { Loader2, Search, Copy, CheckCircle2, SkipForward, AlertTriangle, RefreshCw } from "lucide-react";
 
 const RATE_UNIT_LABELS: Record<string, string> = {
   hourly: "Hourly",
@@ -41,8 +43,15 @@ interface Props {
 }
 
 interface CopyResult {
-  copiedCount: number;
+  insertedCount: number;
+  updatedCount: number;
   skipped: CopyPayRateSkip[];
+}
+
+/** Returns today's date as a YYYY-MM-DD string in local time. */
+function todayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: Props) {
@@ -52,6 +61,8 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
   const [search, setSearch] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [copyResult, setCopyResult] = useState<CopyResult | null>(null);
+  const [overwrite, setOverwrite] = useState(false);
+  const [effectiveDate, setEffectiveDate] = useState(todayString);
 
   // Search employees — debounceable, but immediate is fine for small lists
   const searchParams = search.trim().length > 0 ? { search: search.trim() } : undefined;
@@ -80,15 +91,27 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
   const handleConfirm = () => {
     if (!selectedEmployee) return;
     copyMutation.mutate(
-      { id: targetEmployeeId, sourceId: selectedEmployee.id },
+      {
+        id: targetEmployeeId,
+        sourceId: selectedEmployee.id,
+        params: { overwrite, effectiveDate },
+      },
       {
         onSuccess: (result) => {
           queryClient.invalidateQueries({
             queryKey: getListEmployeePayRatesQueryKey(targetEmployeeId),
           });
-          setCopyResult({ copiedCount: result.copied.length, skipped: result.skipped });
+          const insertedCount = result.copied.length - result.updated.length;
+          setCopyResult({
+            insertedCount,
+            updatedCount: result.updated.length,
+            skipped: result.skipped,
+          });
           if (result.skipped.length === 0) {
-            toast({ title: `${result.copied.length} rate${result.copied.length !== 1 ? "s" : ""} copied` });
+            const parts: string[] = [];
+            if (insertedCount > 0) parts.push(`${insertedCount} inserted`);
+            if (result.updated.length > 0) parts.push(`${result.updated.length} updated`);
+            toast({ title: parts.join(", ") + (parts.length ? " rate" + (result.copied.length !== 1 ? "s" : "") : "0 rates copied") });
           }
         },
         onError: () =>
@@ -101,8 +124,21 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
     setSearch("");
     setSelectedEmployee(null);
     setCopyResult(null);
+    setOverwrite(false);
+    setEffectiveDate(todayString());
     onClose();
   };
+
+  /** Build a compact summary string from a CopyResult. */
+  function resultSummary(r: CopyResult): string {
+    const parts: string[] = [];
+    if (r.insertedCount > 0) parts.push(`${r.insertedCount} inserted`);
+    if (r.updatedCount > 0) parts.push(`${r.updatedCount} updated`);
+    if (r.skipped.length > 0) parts.push(`${r.skipped.length} skipped`);
+    return parts.length ? parts.join(", ") : "No rates processed";
+  }
+
+  const controlsDisabled = !!copyResult || copyMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -117,16 +153,21 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
           {/* ── Step 3: Result ─────────────────────────────────────────── */}
           {copyResult && (
             <div className="space-y-3">
-              {/* Copied summary */}
+              {/* Summary */}
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                <span className="font-medium">
-                  {copyResult.copiedCount} rate{copyResult.copiedCount !== 1 ? "s" : ""} copied
-                  {copyResult.skipped.length > 0
-                    ? `, ${copyResult.skipped.length} skipped`
-                    : ""}
-                </span>
+                <span className="font-medium">{resultSummary(copyResult)}</span>
               </div>
+
+              {/* Updated rows callout */}
+              {copyResult.updatedCount > 0 && (
+                <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
+                  <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {copyResult.updatedCount} existing rate{copyResult.updatedCount !== 1 ? "s" : ""} had their rate and unit updated. Date ranges were preserved.
+                  </span>
+                </div>
+              )}
 
               {/* Skipped details */}
               {copyResult.skipped.length > 0 && (
@@ -238,8 +279,10 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
                 <>
                   <p className="text-sm text-muted-foreground">
                     The following {sourceRates.length} rate
-                    {sourceRates.length !== 1 ? "s" : ""} will be copied. Any shift
-                    types that already exist on this employee will be skipped.
+                    {sourceRates.length !== 1 ? "s" : ""} will be copied.{" "}
+                    {overwrite
+                      ? "Existing rates for the same shift type will have their rate and unit updated."
+                      : "Any shift types that already exist on this employee will be skipped."}
                   </p>
                   <div className="border border-border/50 rounded-lg divide-y divide-border/50 max-h-48 overflow-y-auto">
                     {sourceRates.map((r) => (
@@ -261,6 +304,47 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
                   </div>
                 </>
               )}
+
+              {/* ── Options ──────────────────────────────────────────────── */}
+              <div className="rounded-lg border border-border/50 divide-y divide-border/50">
+                {/* Effective from date */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <Label htmlFor="copy-effective-date" className="text-sm font-medium leading-none">
+                      Effective from
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Start date for newly inserted rates
+                    </p>
+                  </div>
+                  <Input
+                    id="copy-effective-date"
+                    type="date"
+                    value={effectiveDate}
+                    onChange={(e) => setEffectiveDate(e.target.value)}
+                    disabled={controlsDisabled}
+                    className="w-36 text-sm shrink-0"
+                  />
+                </div>
+
+                {/* Overwrite toggle */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <Label htmlFor="copy-overwrite" className="text-sm font-medium leading-none">
+                      Overwrite existing rates
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Updates rate &amp; unit on conflicting types; date ranges are preserved
+                    </p>
+                  </div>
+                  <Switch
+                    id="copy-overwrite"
+                    checked={overwrite}
+                    onCheckedChange={setOverwrite}
+                    disabled={controlsDisabled}
+                  />
+                </div>
+              </div>
             </>
           )}
         </div>

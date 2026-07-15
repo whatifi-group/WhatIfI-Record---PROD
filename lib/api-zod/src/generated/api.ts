@@ -1086,6 +1086,17 @@ export const CopyEmployeePayRatesResponse = zod.object({
   "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
+  "updated": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftType": zod.string(),
+  "rate": zod.number(),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().nullish(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})).describe('Subset of copied that were overwritten (overwrite=true only)'),
   "skipped": zod.array(zod.string()).describe('Shift types skipped because the target employee already has a rate for them')
 })
 

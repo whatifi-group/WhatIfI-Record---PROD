@@ -320,6 +320,12 @@ const CopyFromQuery = z.object({
     .string()
     .optional()
     .transform((v) => v === "true"),
+  /**
+   * Effective start date for newly inserted rates (YYYY-MM-DD or ISO datetime).
+   * Defaults to today when omitted.  Has no effect on overwritten rates —
+   * those preserve the target's existing date range.
+   */
+  effectiveDate: DateString.optional(),
 });
 
 router.post(
@@ -339,7 +345,7 @@ router.post(
     }
 
     const { id: targetId, sourceId } = params.data;
-    const { overwrite } = query.data;
+    const { overwrite, effectiveDate } = query.data;
 
     if (targetId === sourceId) {
       res.status(400).json({ error: "Cannot copy pay rates from the same employee" });
@@ -347,6 +353,9 @@ router.post(
     }
 
     const today = new Date().toISOString().split("T")[0];
+    // effectiveFrom is used as the start date for newly inserted rates.
+    // Overwritten rates keep the target's existing date range regardless of this value.
+    const effectiveFrom = effectiveDate ?? today;
 
     // Fetch ALL source rates so we can report closed ones in `skipped`
     const allSourceRates = await payRateSelection().where(
@@ -394,7 +403,10 @@ router.post(
     type SkipReason = "source_closed" | "lov_inactive" | "conflict" | "overlap_on_target";
     type SkippedEntry = { shiftType: string; reason: SkipReason };
 
-    const copied = [];
+    // inserted = brand-new rows on target; updated = rows overwritten via overwrite=true
+    // copied = inserted ∪ updated, preserved for API backward-compatibility
+    const insertedRates = [];
+    const updatedRates = [];
     // Closed source rates are reported as skipped so the caller knows they were intentionally excluded
     const skipped: SkippedEntry[] = closedShiftTypes.map((st) => ({
       shiftType: st,
@@ -443,20 +455,20 @@ router.post(
           })
           .where(eq(employeePayRatesTable.id, existingRow.id));
 
-        const [updated] = await payRateSelection().where(
+        const [overwritten] = await payRateSelection().where(
           eq(employeePayRatesTable.id, existingRow.id),
         );
-        copied.push(updated);
+        updatedRates.push(overwritten);
       } else {
-        // No active conflict: insert new rate on target starting today.
-        // Run the full overlap guard in case a non-active rate (e.g. effectiveTo exactly
-        // today) would still overlap the new open-ended range.
-        if (await hasOverlappingRate(targetId, rate.shiftType, today, null)) {
+        // No active conflict: insert new rate on target starting at effectiveFrom.
+        // Run the full overlap guard in case an existing rate would still overlap the
+        // new open-ended range starting at effectiveFrom.
+        if (await hasOverlappingRate(targetId, rate.shiftType, effectiveFrom, null)) {
           skipped.push({ shiftType: rate.shiftType, reason: "overlap_on_target" });
           continue;
         }
 
-        const [inserted] = await db
+        const [insertResult] = await db
           .insert(employeePayRatesTable)
           .values({
             employeeId: targetId,
@@ -464,18 +476,21 @@ router.post(
             rate: String(rate.rate),
             rateUnit: rate.rateUnit,
             notes: rate.notes ?? null,
-            effectiveFrom: today,
+            effectiveFrom,
           })
           .returning({ id: employeePayRatesTable.id });
 
         const [created] = await payRateSelection().where(
-          eq(employeePayRatesTable.id, inserted.id),
+          eq(employeePayRatesTable.id, insertResult.id),
         );
-        copied.push(created);
+        insertedRates.push(created);
       }
     }
 
-    res.json({ copied, skipped });
+    // `copied` = inserted ∪ updated, preserved for API backward-compatibility.
+    // Callers that need to distinguish inserts from overwrites should use `updated`.
+    const copied = [...insertedRates, ...updatedRates];
+    res.json({ copied, updated: updatedRates, skipped });
   },
 );
 

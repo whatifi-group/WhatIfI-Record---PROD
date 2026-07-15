@@ -192,7 +192,7 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — edge cases",
       `/api/employees/${target}/pay-rates/copy-from/${source}`,
     );
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ copied: [], skipped: [] });
+    expect(res.body).toEqual({ copied: [], updated: [], skipped: [] });
   });
 
   it("copies all source rates when the target has none", async () => {
@@ -445,5 +445,156 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId?overwrite=true �
     expect(res.status).toBe(200);
     expect(res.body.copied).toEqual([]);
     expect(res.body.skipped.map((s: { shiftType: string }) => s.shiftType)).toContain("standard");
+  });
+});
+
+// ── updated field ─────────────────────────────────────────────────────────────
+
+describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — updated field", () => {
+  let source: number;
+  let target: number;
+
+  beforeEach(async () => {
+    source = await createTestEmployee();
+    target = await createTestEmployee();
+  });
+
+  afterEach(async () => {
+    await cleanupEmployee(source);
+    await cleanupEmployee(target);
+  });
+
+  it("updated is always empty when overwrite is not requested", async () => {
+    await insertPayRate(source, "standard", 20);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(`/api/employees/${target}/pay-rates/copy-from/${source}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.updated).toEqual([]);
+  });
+
+  it("updated contains the overwritten rate when overwrite=true", async () => {
+    await insertPayRate(source, "standard", 30, "daily");
+    await insertPayRate(target, "standard", 10, "hourly");
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.updated).toHaveLength(1);
+    expect(res.body.updated[0].shiftType).toBe("standard");
+    expect(res.body.updated[0].rate).toBe(30);
+    expect(res.body.updated[0].rateUnit).toBe("daily");
+    expect(res.body.updated[0].employeeId).toBe(target);
+    // updated is a subset of copied
+    expect(res.body.copied).toHaveLength(1);
+  });
+
+  it("updated contains only the overwritten rates, not newly inserted ones", async () => {
+    await insertPayRate(source, "standard", 20);  // conflicts → updated
+    await insertPayRate(source, "overtime", 35);  // no conflict → inserted
+    await insertPayRate(target, "standard", 10);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(2);
+    expect(res.body.updated).toHaveLength(1);
+    expect(res.body.updated[0].shiftType).toBe("standard");
+
+    const copiedTypes = res.body.copied.map((r: { shiftType: string }) => r.shiftType);
+    expect(copiedTypes).toContain("overtime");  // inserted
+    expect(copiedTypes).toContain("standard");  // also in copied (union)
+  });
+});
+
+// ── effectiveDate param ───────────────────────────────────────────────────────
+
+describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId?effectiveDate — start date", () => {
+  let source: number;
+  let target: number;
+
+  beforeEach(async () => {
+    source = await createTestEmployee();
+    target = await createTestEmployee();
+  });
+
+  afterEach(async () => {
+    await cleanupEmployee(source);
+    await cleanupEmployee(target);
+  });
+
+  it("uses the provided effectiveDate as effectiveFrom for newly inserted rates", async () => {
+    await insertPayRate(source, "standard", 20);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?effectiveDate=2025-08-01`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(1);
+    expect(res.body.copied[0].effectiveFrom).toBe("2025-08-01");
+  });
+
+  it("defaults to today when effectiveDate is omitted", async () => {
+    await insertPayRate(source, "standard", 20);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(`/api/employees/${target}/pay-rates/copy-from/${source}`);
+
+    const today = new Date().toISOString().split("T")[0];
+    expect(res.status).toBe(200);
+    expect(res.body.copied[0].effectiveFrom).toBe(today);
+  });
+
+  it("rejects an invalid effectiveDate format", async () => {
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?effectiveDate=not-a-date`,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("effectiveDate does not affect overwritten rates (they keep their existing effectiveFrom)", async () => {
+    const existingFrom = "2024-01-15";
+    await db.insert(employeePayRatesTable).values({
+      employeeId: target,
+      shiftType: "standard",
+      rate: "10",
+      rateUnit: "hourly",
+      effectiveFrom: existingFrom,
+    });
+    await insertPayRate(source, "standard", 25);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true&effectiveDate=2025-09-01`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.updated).toHaveLength(1);
+    // Overwritten rate keeps the target's original effectiveFrom
+    expect(res.body.updated[0].effectiveFrom).toBe(existingFrom);
+  });
+
+  it("accepts a future effectiveDate and inserts with that date", async () => {
+    await insertPayRate(source, "weekend", 22);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?effectiveDate=2030-01-01`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(1);
+    expect(res.body.copied[0].effectiveFrom).toBe("2030-01-01");
+    expect(res.body.updated).toEqual([]);
   });
 });

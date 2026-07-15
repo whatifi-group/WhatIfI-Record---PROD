@@ -158,9 +158,19 @@ export default function MarkAsLeaverDialog({
               Leaver Reason <span className="text-destructive">*</span>
             </Label>
             {reasonsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+                data-testid="reasons-loading"
+              >
                 <Loader2 className="w-4 h-4 animate-spin" /> Loading reasons…
               </div>
+            ) : activeReasons.length === 0 ? (
+              <p
+                className="text-sm text-muted-foreground"
+                data-testid="no-reasons-message"
+              >
+                No leaver reasons configured — ask a system admin to add some.
+              </p>
             ) : (
               <Select value={reason} onValueChange={setReason}>
                 <SelectTrigger id="leaver-reason">

@@ -386,6 +386,126 @@ describe("MarkAsLeaverDialog — pending state", () => {
   });
 });
 
+// ── Loading state ─────────────────────────────────────────────────────────────
+describe("MarkAsLeaverDialog — loading state", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows a loading spinner while reasons are being fetched", () => {
+    vi.mocked(useUpdateEmployee).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateEmployee>);
+
+    vi.mocked(useListLovItems).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    } as ReturnType<typeof useListLovItems>);
+
+    render(
+      <MarkAsLeaverDialog
+        open={true}
+        onClose={vi.fn()}
+        employeeId={42}
+        employeeName="Jane Smith"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId("reasons-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("reason-select")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("no-reasons-message")).not.toBeInTheDocument();
+  });
+});
+
+// ── Empty reasons ─────────────────────────────────────────────────────────────
+describe("MarkAsLeaverDialog — empty reasons", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("shows a helpful message when no leaver reasons have been configured", () => {
+    vi.mocked(useUpdateEmployee).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateEmployee>);
+
+    vi.mocked(useListLovItems).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as ReturnType<typeof useListLovItems>);
+
+    render(
+      <MarkAsLeaverDialog
+        open={true}
+        onClose={vi.fn()}
+        employeeId={42}
+        employeeName="Jane Smith"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.getByTestId("no-reasons-message")).toBeInTheDocument();
+    expect(screen.getByTestId("no-reasons-message")).toHaveTextContent(
+      /no leaver reasons configured/i,
+    );
+    expect(screen.getByTestId("no-reasons-message")).toHaveTextContent(
+      /ask a system admin/i,
+    );
+  });
+
+  it("Confirm button is disabled when no reasons are configured", () => {
+    vi.mocked(useUpdateEmployee).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateEmployee>);
+
+    vi.mocked(useListLovItems).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as ReturnType<typeof useListLovItems>);
+
+    render(
+      <MarkAsLeaverDialog
+        open={true}
+        onClose={vi.fn()}
+        employeeId={42}
+        employeeName="Jane Smith"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(
+      screen.getByRole("button", { name: /confirm leaver/i }),
+    ).toBeDisabled();
+  });
+
+  it("does not render the reason select when no reasons are configured", () => {
+    vi.mocked(useUpdateEmployee).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateEmployee>);
+
+    vi.mocked(useListLovItems).mockReturnValue({
+      data: [],
+      isLoading: false,
+    } as ReturnType<typeof useListLovItems>);
+
+    render(
+      <MarkAsLeaverDialog
+        open={true}
+        onClose={vi.fn()}
+        employeeId={42}
+        employeeName="Jane Smith"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    expect(screen.queryByTestId("reason-select")).not.toBeInTheDocument();
+  });
+});
+
 // ── Cancel ────────────────────────────────────────────────────────────────────
 describe("MarkAsLeaverDialog — cancel", () => {
   beforeEach(() => vi.clearAllMocks());

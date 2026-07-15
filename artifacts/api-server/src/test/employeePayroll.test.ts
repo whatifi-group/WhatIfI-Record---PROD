@@ -1,8 +1,32 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import router from "../routes/hr/employeePayroll";
-import { buildApp, cleanupEmployee, createTestEmployee } from "./helpers";
+import {
+  buildApp,
+  cleanupEmployee,
+  cleanupRole,
+  cleanupUser,
+  createTestEmployee,
+  createTestRole,
+  createTestUser,
+} from "./helpers";
 
-const api = buildApp(router);
+// Payroll routes are gated behind requirePermission(["view_payroll", "sysadmin"]).
+// We create one sysadmin role + user for the whole suite and inject the userId
+// via a fake session so the permission middleware can do its normal DB lookup.
+let roleId: number;
+let userId: number;
+let api: ReturnType<typeof buildApp>;
+
+beforeAll(async () => {
+  roleId = await createTestRole(["sysadmin"]);
+  userId = await createTestUser(roleId);
+  api = buildApp(router, userId);
+});
+
+afterAll(async () => {
+  await cleanupUser(userId);
+  await cleanupRole(roleId);
+});
 
 describe("Employee Payroll", () => {
   let empId: number;

@@ -21,6 +21,8 @@ import QualificationTypes from '@/pages/sysadmin/QualificationTypes';
 import PastEmployeesList from '@/pages/PastEmployeesList';
 import WorkRecordsList from '@/pages/WorkRecordsList';
 import ExpiringQualifications from '@/pages/ExpiringQualifications';
+import CourseManagement from '@/pages/CourseManagement';
+import Safety from '@/pages/Safety';
 import LoginPage from '@/pages/LoginPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
@@ -120,6 +122,12 @@ function MainRoutes() {
         </Route>
         <Route path="/expiring-qualifications">
           {() => <HrRoute component={ExpiringQualifications} />}
+        </Route>
+        <Route path="/course-management">
+          {() => <HrRoute component={CourseManagement} />}
+        </Route>
+        <Route path="/safety">
+          {() => <HrRoute component={Safety} />}
         </Route>
         <Route path="/sysadmin">
           {() => <AdminRoute component={SysadminDashboard} />}

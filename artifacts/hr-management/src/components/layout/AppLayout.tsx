@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle } from "lucide-react";
+import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, HardHat } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -55,6 +55,22 @@ const modules: Module[] = [
       { name: "Leave Requests", href: "/leave", icon: Calendar },
       { name: "Expiring Qualifications", href: "/expiring-qualifications", icon: AlertTriangle },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
+    ],
+  },
+  {
+    name: "Course Management",
+    icon: BookOpen,
+    hrOnly: true,
+    pages: [
+      { name: "Course Management", href: "/course-management", icon: BookOpen },
+    ],
+  },
+  {
+    name: "Safety",
+    icon: HardHat,
+    hrOnly: true,
+    pages: [
+      { name: "Safety", href: "/safety", icon: HardHat },
     ],
   },
   {

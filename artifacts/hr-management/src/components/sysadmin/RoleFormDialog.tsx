@@ -139,7 +139,7 @@ export function RoleFormDialog({ open, onOpenChange, role }: RoleFormDialogProps
                   <FormItem>
                     <FormLabel>Role Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Department Manager" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +153,7 @@ export function RoleFormDialog({ open, onOpenChange, role }: RoleFormDialogProps
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
                       <Textarea 
-                        placeholder="Briefly describe the purpose of this role..." 
+ 
                         className="resize-none h-20"
                         {...field} 
                       />

@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
                           <FormControl>
                             <Input
                               type="email"
-                              placeholder="name@whatifigroup.com"
+
                               className="bg-background"
                               disabled={loading}
                               {...field}

@@ -831,7 +831,7 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
                 className="mt-1"
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Additional details…"
+
               />
             </div>
           </div>
@@ -877,7 +877,7 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
                 onChange={(e) =>
                   setRevalidateForm((f) => ({ ...f, notes: e.target.value }))
                 }
-                placeholder="Reason for revalidation…"
+
               />
             </div>
           </div>

@@ -164,15 +164,15 @@ export default function EmployeeAttachmentsTab({ employeeId }: Props) {
           <div className="space-y-4 pt-2">
             <div>
               <Label>File Name *</Label>
-              <Input className="mt-1" value={form.fileName} onChange={e => setForm(f => ({ ...f, fileName: e.target.value }))} placeholder="document.pdf" />
+              <Input className="mt-1" value={form.fileName} onChange={e => setForm(f => ({ ...f, fileName: e.target.value }))} />
             </div>
             <div>
               <Label>File URL *</Label>
-              <Input className="mt-1" value={form.fileUrl} onChange={e => setForm(f => ({ ...f, fileUrl: e.target.value }))} placeholder="https://..." />
+              <Input className="mt-1" value={form.fileUrl} onChange={e => setForm(f => ({ ...f, fileUrl: e.target.value }))} />
             </div>
             <div>
               <Label>File Type</Label>
-              <Input className="mt-1" value={form.fileType} onChange={e => setForm(f => ({ ...f, fileType: e.target.value }))} placeholder="PDF, DOCX, PNG..." />
+              <Input className="mt-1" value={form.fileType} onChange={e => setForm(f => ({ ...f, fileType: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>

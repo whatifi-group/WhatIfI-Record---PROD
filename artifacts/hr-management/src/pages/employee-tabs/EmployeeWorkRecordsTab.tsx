@@ -278,11 +278,11 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
             </div>
             <div className="col-span-2">
               <Label>Hours Worked</Label>
-              <Input className="mt-1" type="number" step="0.5" min="0" value={form.hoursWorked} onChange={e => setForm(f => ({ ...f, hoursWorked: e.target.value }))} placeholder="8" />
+              <Input className="mt-1" type="number" step="0.5" min="0" value={form.hoursWorked} onChange={e => setForm(f => ({ ...f, hoursWorked: e.target.value }))} />
             </div>
             <div className="col-span-2">
               <Label>Notes</Label>
-              <Textarea className="mt-1" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes..." />
+              <Textarea className="mt-1" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
           </div>
           <DialogFooter>

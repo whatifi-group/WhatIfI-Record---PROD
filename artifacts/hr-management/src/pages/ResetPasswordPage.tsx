@@ -125,7 +125,7 @@ export default function ResetPasswordPage() {
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="At least 8 characters"
+
                               className="bg-background"
                               disabled={loading}
                               {...field}
@@ -145,7 +145,7 @@ export default function ResetPasswordPage() {
                           <FormControl>
                             <Input
                               type="password"
-                              placeholder="Repeat your new password"
+
                               className="bg-background"
                               disabled={loading}
                               {...field}

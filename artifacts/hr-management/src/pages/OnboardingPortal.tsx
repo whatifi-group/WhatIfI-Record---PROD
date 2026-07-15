@@ -360,7 +360,7 @@ export default function OnboardingPortal() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter the onboarding password"
+
                       className="pr-10"
                       autoComplete="current-password"
                     />
@@ -403,7 +403,7 @@ export default function OnboardingPortal() {
                     id="ob-firstName"
                     value={personal.firstName}
                     onChange={(e) => setPersonal((p) => ({ ...p, firstName: e.target.value }))}
-                    placeholder="Jane"
+
                   />
                   {personalErrors.firstName && (
                     <p className="text-xs text-destructive">{personalErrors.firstName}</p>
@@ -415,7 +415,7 @@ export default function OnboardingPortal() {
                     id="ob-lastName"
                     value={personal.lastName}
                     onChange={(e) => setPersonal((p) => ({ ...p, lastName: e.target.value }))}
-                    placeholder="Smith"
+
                   />
                   {personalErrors.lastName && (
                     <p className="text-xs text-destructive">{personalErrors.lastName}</p>
@@ -428,7 +428,7 @@ export default function OnboardingPortal() {
                     type="email"
                     value={personal.email}
                     onChange={(e) => setPersonal((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="jane.smith@example.com"
+
                   />
                   {personalErrors.email && (
                     <p className="text-xs text-destructive">{personalErrors.email}</p>
@@ -441,7 +441,7 @@ export default function OnboardingPortal() {
                     type="tel"
                     value={personal.phone}
                     onChange={(e) => setPersonal((p) => ({ ...p, phone: e.target.value }))}
-                    placeholder="+44 7700 900000"
+
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -462,7 +462,7 @@ export default function OnboardingPortal() {
                     id="ob-jobTitle"
                     value={personal.jobTitle}
                     onChange={(e) => setPersonal((p) => ({ ...p, jobTitle: e.target.value }))}
-                    placeholder="e.g. Operations Assistant"
+
                   />
                   {personalErrors.jobTitle && (
                     <p className="text-xs text-destructive">{personalErrors.jobTitle}</p>
@@ -584,7 +584,7 @@ export default function OnboardingPortal() {
                       <Input
                         value={q.notes}
                         onChange={(e) => updateQual(idx, "notes", e.target.value)}
-                        placeholder="Any relevant notes…"
+
                       />
                     </div>
                     {/* Certificate file upload */}

@@ -106,7 +106,7 @@ export function ResetPasswordDialog({ open, onOpenChange, userId, userName }: Pr
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Min. 8 characters"
+
                       autoComplete="new-password"
                       {...field}
                     />
@@ -125,7 +125,7 @@ export function ResetPasswordDialog({ open, onOpenChange, userId, userName }: Pr
                   <FormControl>
                     <Input
                       type="password"
-                      placeholder="Re-enter password"
+
                       autoComplete="new-password"
                       {...field}
                     />

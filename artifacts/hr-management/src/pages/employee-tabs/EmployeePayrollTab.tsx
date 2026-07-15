@@ -170,7 +170,7 @@ function PayRateFormFields({
           type="number"
           min="0"
           step="0.01"
-          placeholder="0.00"
+
           value={form.rate}
           onChange={(e) => onChange({ rate: e.target.value })}
         />
@@ -191,7 +191,7 @@ function PayRateFormFields({
         <Label className="text-xs">Notes (optional)</Label>
         <Input
           className="mt-1"
-          placeholder="Any notes…"
+
           value={form.notes}
           onChange={(e) => onChange({ notes: e.target.value })}
         />
@@ -761,7 +761,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, employeeNumber: e.target.value }))
                 }
-                placeholder="EMP001"
+
               />
             </div>
             <div>
@@ -772,7 +772,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, niNumber: e.target.value }))
                 }
-                placeholder="AB 12 34 56 C"
+
               />
             </div>
             <div>
@@ -783,7 +783,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, bankName: e.target.value }))
                 }
-                placeholder="Barclays"
+
               />
             </div>
             <div>
@@ -794,7 +794,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, accountHolder: e.target.value }))
                 }
-                placeholder="Full name on account"
+
               />
             </div>
             <div>
@@ -805,7 +805,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, sortCode: e.target.value }))
                 }
-                placeholder="00-00-00"
+
               />
             </div>
             <div>
@@ -816,7 +816,7 @@ export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props
                 onChange={(e) =>
                   setForm((f) => ({ ...f, accountNumber: e.target.value }))
                 }
-                placeholder="12345678"
+
               />
             </div>
           </div>

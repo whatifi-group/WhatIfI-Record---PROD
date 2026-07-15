@@ -257,7 +257,7 @@ export default function LovCategoryDetail() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Display Label</FormLabel>
-                    <FormControl><Input placeholder="e.g. Full Time" {...field} /></FormControl>
+                    <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

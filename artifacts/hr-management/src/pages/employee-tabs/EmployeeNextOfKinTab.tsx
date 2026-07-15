@@ -220,7 +220,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
             </div>
             <div>
               <Label>Relationship</Label>
-              <Input className="mt-1" value={form.relationship} onChange={e => setForm(f => ({ ...f, relationship: e.target.value }))} placeholder="Parent, Spouse, Sibling..." />
+              <Input className="mt-1" value={form.relationship} onChange={e => setForm(f => ({ ...f, relationship: e.target.value }))} />
             </div>
             <div>
               <Label>Email</Label>

@@ -514,7 +514,7 @@ export default function OnboardingQueue() {
                   type={showPassphrase ? "text" : "password"}
                   value={passphraseValue}
                   onChange={(e) => setPassphraseValue(e.target.value)}
-                  placeholder="New passphrase (min. 6 characters)"
+
                   className="pr-10"
                   autoComplete="new-password"
                 />
@@ -534,7 +534,7 @@ export default function OnboardingQueue() {
                 type={showPassphrase ? "text" : "password"}
                 value={passphraseConfirm}
                 onChange={(e) => setPassphraseConfirm(e.target.value)}
-                placeholder="Re-enter passphrase"
+
                 autoComplete="new-password"
               />
             </div>
@@ -658,7 +658,7 @@ export default function OnboardingQueue() {
                 id="approve-notes"
                 value={approveNotes}
                 onChange={(e) => setApproveNotes(e.target.value)}
-                placeholder="Any notes for the record…"
+
                 rows={3}
               />
             </div>
@@ -729,7 +729,7 @@ export default function OnboardingQueue() {
                 id="reject-notes"
                 value={rejectNotes}
                 onChange={(e) => setRejectNotes(e.target.value)}
-                placeholder="Any additional context…"
+
                 rows={2}
               />
             </div>

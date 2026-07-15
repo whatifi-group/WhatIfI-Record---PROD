@@ -231,7 +231,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Job Title</Label>
                 <Input
                   className="mt-1"
-                  placeholder="e.g. Senior Care Worker"
+
                   value={employment.jobTitle}
                   onChange={(e) => patchEmployment({ jobTitle: e.target.value })}
                 />
@@ -280,7 +280,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Employee Number</Label>
                 <Input
                   className="mt-1"
-                  placeholder="e.g. EMP-0042"
+
                   value={payroll.employeeNumber}
                   onChange={(e) => patchPayroll({ employeeNumber: e.target.value })}
                 />
@@ -289,7 +289,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">NI Number</Label>
                 <Input
                   className="mt-1"
-                  placeholder="e.g. AB123456C"
+
                   value={payroll.niNumber}
                   onChange={(e) => patchPayroll({ niNumber: e.target.value })}
                 />
@@ -298,7 +298,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Bank Name</Label>
                 <Input
                   className="mt-1"
-                  placeholder="e.g. Barclays"
+
                   value={payroll.bankName}
                   onChange={(e) => patchPayroll({ bankName: e.target.value })}
                 />
@@ -307,7 +307,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Account Holder Name</Label>
                 <Input
                   className="mt-1"
-                  placeholder="As it appears on the account"
+
                   value={payroll.accountHolder}
                   onChange={(e) => patchPayroll({ accountHolder: e.target.value })}
                 />
@@ -316,7 +316,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Sort Code</Label>
                 <Input
                   className="mt-1"
-                  placeholder="00-00-00"
+
                   value={payroll.sortCode}
                   onChange={(e) => patchPayroll({ sortCode: e.target.value })}
                 />
@@ -325,7 +325,7 @@ export default function ProfileCompletionModal({
                 <Label className="text-xs">Account Number</Label>
                 <Input
                   className="mt-1"
-                  placeholder="8 digits"
+
                   value={payroll.accountNumber}
                   onChange={(e) => patchPayroll({ accountNumber: e.target.value })}
                 />

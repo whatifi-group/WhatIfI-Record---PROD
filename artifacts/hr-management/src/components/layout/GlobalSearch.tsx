@@ -160,7 +160,7 @@ export function GlobalSearch() {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Search…"
+
           className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground min-w-0"
           aria-label="Global search"
           aria-expanded={showPopover}

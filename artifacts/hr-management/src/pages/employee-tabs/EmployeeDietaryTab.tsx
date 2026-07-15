@@ -111,7 +111,7 @@ export default function EmployeeDietaryTab({ employeeId }: Props) {
           <Textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Add any relevant dietary notes..."
+
             className="min-h-[100px]"
           />
         </div>

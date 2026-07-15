@@ -283,7 +283,7 @@ function UpdateChecksSection({
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Checked By</Label>
-            <Input className="h-7 text-xs" placeholder="Name of person who checked" value={form.checkedBy} onChange={(e) => setForm((f) => ({ ...f, checkedBy: e.target.value }))} />
+            <Input className="h-7 text-xs" value={form.checkedBy} onChange={(e) => setForm((f) => ({ ...f, checkedBy: e.target.value }))} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Notes (optional)</Label>
@@ -843,7 +843,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
               </div>
               <div className="space-y-1">
                 <Label>Certificate Number</Label>
-                <Input placeholder="Optional" value={form.certificateNumber} onChange={(e) => setForm((f) => ({ ...f, certificateNumber: e.target.value }))} />
+                <Input value={form.certificateNumber} onChange={(e) => setForm((f) => ({ ...f, certificateNumber: e.target.value }))} />
               </div>
             </div>
 
@@ -862,7 +862,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
               <Label>Conviction Details</Label>
               <Textarea
                 className="min-h-[80px]"
-                placeholder="Leave blank if no convictions"
+
                 value={form.convictionDetails}
                 onChange={(e) => setForm((f) => ({ ...f, convictionDetails: e.target.value }))}
               />
@@ -877,7 +877,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
               <Label>Notes</Label>
               <Textarea
                 className="min-h-[60px]"
-                placeholder="Optional notes"
+
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               />

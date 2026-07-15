@@ -249,7 +249,7 @@ export default function EmployeeServiceHistoryTab({ employeeId, canEdit }: Props
                 <Label htmlFor="add-reason">End Reason</Label>
                 <Input
                   id="add-reason"
-                  placeholder="e.g. Resigned, Contract ended…"
+
                   value={addForm.endReason}
                   onChange={(e) => setAddForm((f) => ({ ...f, endReason: e.target.value }))}
                 />
@@ -259,7 +259,7 @@ export default function EmployeeServiceHistoryTab({ employeeId, canEdit }: Props
                 <Textarea
                   id="add-notes"
                   rows={2}
-                  placeholder="Optional notes…"
+
                   value={addForm.notes}
                   onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
                 />
@@ -326,7 +326,7 @@ export default function EmployeeServiceHistoryTab({ employeeId, canEdit }: Props
                       <Label htmlFor={`edit-reason-${period.id}`}>End Reason</Label>
                       <Input
                         id={`edit-reason-${period.id}`}
-                        placeholder="e.g. Resigned, Contract ended…"
+
                         value={editForm.endReason}
                         onChange={(e) => setEditForm((f) => ({ ...f, endReason: e.target.value }))}
                       />

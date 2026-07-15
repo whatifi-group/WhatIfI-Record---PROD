@@ -289,7 +289,7 @@ export default function QualificationTypes() {
                 className="mt-1"
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. First Aid Certificate"
+
               />
             </div>
             <div>
@@ -298,7 +298,7 @@ export default function QualificationTypes() {
                 className="mt-1"
                 value={form.awardingBody}
                 onChange={(e) => setForm((f) => ({ ...f, awardingBody: e.target.value }))}
-                placeholder="e.g. British Red Cross"
+
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -310,7 +310,7 @@ export default function QualificationTypes() {
                   min="1"
                   value={form.validityValue}
                   onChange={(e) => setForm((f) => ({ ...f, validityValue: e.target.value }))}
-                  placeholder="e.g. 3"
+
                 />
               </div>
               <div>

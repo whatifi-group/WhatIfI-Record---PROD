@@ -217,11 +217,11 @@ export default function EmployeeAddressesTab({ employeeId }: Props) {
             </div>
             <div className="sm:col-span-2">
               <Label>Line 1 *</Label>
-              <Input className="mt-1" value={form.line1} onChange={e => setForm(f => ({ ...f, line1: e.target.value }))} placeholder="Street address" />
+              <Input className="mt-1" value={form.line1} onChange={e => setForm(f => ({ ...f, line1: e.target.value }))} />
             </div>
             <div className="sm:col-span-2">
               <Label>Line 2</Label>
-              <Input className="mt-1" value={form.line2} onChange={e => setForm(f => ({ ...f, line2: e.target.value }))} placeholder="Apartment, suite, etc." />
+              <Input className="mt-1" value={form.line2} onChange={e => setForm(f => ({ ...f, line2: e.target.value }))} />
             </div>
             <div>
               <Label>City</Label>

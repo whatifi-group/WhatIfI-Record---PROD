@@ -250,7 +250,7 @@ export default function EmployeesList() {
                       <FormItem>
                         <FormLabel>Temporary Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Min 8 characters" {...field} />
+                          <Input type="password" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -275,7 +275,7 @@ export default function EmployeesList() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by name, role, or email..."
+
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-background border-border/50"

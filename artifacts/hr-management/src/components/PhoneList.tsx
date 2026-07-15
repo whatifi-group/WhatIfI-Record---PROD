@@ -113,7 +113,7 @@ function PhoneListInner({ phones, isLoading, onCreate, onUpdate, onDelete, isMut
                   onChange={(e) =>
                     setEditForms((f) => ({ ...f, [ph.id]: { ...(f[ph.id] ?? { number: ph.number, label: ph.label as PhoneLabel, isPrimary: ph.isPrimary }), number: e.target.value } }))
                   }
-                  placeholder="Phone number"
+
                 />
               </div>
               <Select
@@ -200,7 +200,7 @@ function PhoneListInner({ phones, isLoading, onCreate, onUpdate, onDelete, isMut
               <Input
                 value={addForm.number}
                 onChange={(e) => setAddForm((f) => ({ ...f, number: e.target.value }))}
-                placeholder="Phone number"
+
                 autoFocus
                 onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") { setShowAdd(false); setAddForm(defaultForm); } }}
               />

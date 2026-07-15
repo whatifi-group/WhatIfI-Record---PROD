@@ -183,7 +183,7 @@ function ReviewModal({ row, onClose, onDone }: ReviewModalProps) {
               id="review-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add verification notes..."
+
               rows={3}
               disabled={isBusy}
             />

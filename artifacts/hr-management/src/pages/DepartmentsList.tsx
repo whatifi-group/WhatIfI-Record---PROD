@@ -158,7 +158,7 @@ export default function DepartmentsList() {
 
       <div className="mb-6">
         <Input 
-          placeholder="Filter departments by name..." 
+ 
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-md bg-card border-border/50"

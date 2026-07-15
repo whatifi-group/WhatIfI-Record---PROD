@@ -88,6 +88,8 @@ const MANUAL_ITEMS: SeedItem[] = [
   { category: "dietary_requirement", value: "dairy_free",  label: "Dairy Free",  sortOrder: 5 },
   { category: "dietary_requirement", value: "halal",       label: "Halal",       sortOrder: 6 },
   { category: "dietary_requirement", value: "kosher",      label: "Kosher",      sortOrder: 7 },
+  // system_config — shared onboarding passphrase (HR managers set the value via the UI)
+  { category: "system_config", value: "onboarding_password", label: "Onboarding Password", sortOrder: 1 },
 ];
 
 const SEED_ITEMS: SeedItem[] = [...schemaBackedItems, ...MANUAL_ITEMS];

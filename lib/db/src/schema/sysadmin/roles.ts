@@ -23,6 +23,10 @@ export const permissionValues = [
   "manage_leave",
   "view_reports",
   "view_payroll",
+  // Employee self-service permissions (granted to the employee_self_service role)
+  "view_own_profile",
+  "upload_qualifications",
+  "view_employee_directory",
 ] as const;
 
 export type Permission = (typeof permissionValues)[number];

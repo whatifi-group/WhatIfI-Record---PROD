@@ -31,6 +31,17 @@ const SEED_ROLES: SeedRole[] = [
     ],
     isSystem: true,
   },
+  {
+    name: "Employee Self-Service",
+    description:
+      "Limited role for employees who have completed self-service onboarding. Grants read-only access to own profile, the employee directory, and the ability to upload qualification certificates.",
+    permissions: [
+      "view_own_profile",
+      "upload_qualifications",
+      "view_employee_directory",
+    ],
+    isSystem: true,
+  },
 ];
 
 export async function seedRoles(): Promise<void> {

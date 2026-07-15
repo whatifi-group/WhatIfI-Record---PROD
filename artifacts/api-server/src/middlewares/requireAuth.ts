@@ -8,6 +8,9 @@ const PUBLIC_PATHS = new Set([
   "/auth/forgot-password",
   "/auth/reset-password",
   "/healthz",
+  // Onboarding public endpoints — JWT-gated internally, not session-gated
+  "/onboarding/verify",
+  "/onboarding/submit",
 ]);
 
 /**

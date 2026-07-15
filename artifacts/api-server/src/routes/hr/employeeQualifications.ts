@@ -11,6 +11,7 @@ import {
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
 import { MAX_FILE_SIZE_BYTES, ALLOWED_CONTENT_TYPES } from "../../lib/uploadPolicy";
+import { syncOnboardingSubmission } from "../../lib/onboardingSync";
 
 export const objectStorageService = new ObjectStorageService();
 
@@ -193,6 +194,10 @@ router.post(
       })
       .returning();
 
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after qualification add:", err);
+    });
+
     res.status(201).json({
       ...created,
       qualificationTypeName: qualType.name,
@@ -264,6 +269,10 @@ router.patch(
       .where(eq(employeeQualificationsTable.id, params.data.qualId))
       .returning();
 
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after qualification update:", err);
+    });
+
     res.json({
       ...updated,
       qualificationTypeName: qualType.name,
@@ -317,6 +326,10 @@ router.delete(
         }
       }
     }
+
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after qualification delete:", err);
+    });
 
     res.sendStatus(204);
   },
@@ -383,6 +396,10 @@ router.post(
       })
       .where(eq(employeeQualificationsTable.id, params.data.qualId))
       .returning();
+
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after qualification revalidation:", err);
+    });
 
     res.json({
       ...updated,
@@ -533,6 +550,11 @@ router.post(
         mimeType: parsed.data.mimeType ?? null,
       })
       .returning();
+
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after certificate add:", err);
+    });
+
     res.status(201).json(created);
   },
 );
@@ -579,6 +601,10 @@ router.delete(
         // Either way, the DB row is already gone — respond 204.
       }
     }
+
+    await syncOnboardingSubmission(params.data.id).catch((err) => {
+      console.error("onboarding sync failed after certificate delete:", err);
+    });
 
     res.sendStatus(204);
   },

@@ -5,11 +5,15 @@ import hrRouter from "./hr";
 import sysadminRouter from "./sysadmin";
 import storageRouter from "./storage";
 import searchRouter from "./search";
+import onboardingRouter from "./onboarding";
+import directoryRouter from "./directory";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(onboardingRouter);
+router.use(directoryRouter);
 router.use(hrRouter);
 router.use(sysadminRouter);
 router.use(storageRouter);

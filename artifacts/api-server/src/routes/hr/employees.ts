@@ -6,6 +6,7 @@ import {
   invalidatePermissionsCache,
 } from "../../middlewares/requirePermission";
 import { hashPassword } from "../../lib/password";
+import { syncOnboardingSubmission } from "../../lib/onboardingSync";
 import {
   CreateEmployeeBody,
   UpdateEmployeeBody,
@@ -287,6 +288,11 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   const [row] = await employeeSelection().where(
     eq(employeesTable.id, updated.id),
   );
+
+  // Best-effort sync — keep the linked onboarding submission current.
+  await syncOnboardingSubmission(updated.id).catch((err) => {
+    console.error("onboarding sync failed after employee update:", err);
+  });
 
   res.json(UpdateEmployeeResponse.parse(row));
 });

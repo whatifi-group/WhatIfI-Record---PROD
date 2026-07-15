@@ -162,6 +162,26 @@ describe("PATCH /api/employees/:id — leaver status validation", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when status is 'leaver' and leaverDate is explicitly null", async () => {
+    const res = await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "resignation", leaverDate: null });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/blank/i);
+  });
+
+  it("returns 400 when status is 'leaver' and leaverDate is more than 30 days in the future", async () => {
+    const farFuture = new Date();
+    farFuture.setDate(farFuture.getDate() + 31);
+    const farFutureStr = farFuture.toISOString().slice(0, 10);
+
+    const res = await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "resignation", leaverDate: farFutureStr });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/30 days/i);
+  });
+
   it("returns 200 and auto-sets leaverDate to today when leaverReason is provided", async () => {
     const before = new Date().toISOString().slice(0, 10);
 

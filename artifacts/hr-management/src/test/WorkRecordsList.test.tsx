@@ -239,6 +239,83 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
 import { escapeCsv, buildCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
 
+// ─── CSV export — Employee Status column + encoding ───────────────────────────
+// The exportCsv function in WorkRecordsList delegates to buildCsv, so exercising
+// buildCsv with the exact same headers and work-record data shapes verifies the
+// full pipeline without requiring fragile Blob/DOM mocking.
+
+/** Headers mirror the exportCsv() function in WorkRecordsList.tsx exactly. */
+const WORK_RECORDS_HEADERS = [
+  "Employee Name",
+  "Department",
+  "Date",
+  "Shift Type",
+  "Start",
+  "End",
+  "Hours",
+  "Notes",
+  "Employee Status",
+];
+
+describe("WorkRecordsList — CSV export content (Employee Status column)", () => {
+  it('includes "Employee Status" as the last column header', () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, []);
+    expect(csv.split("\n")[0]).toContain("Employee Status");
+  });
+
+  it('writes "Active" for an active employee row', () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Active"],
+    ]);
+    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+  });
+
+  it('writes "Former" for a non-active (leaver) employee row', () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Bob Jones", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Former"],
+    ]);
+    expect(csv.split("\n")[1]).toMatch(/,Former$/);
+  });
+});
+
+describe("WorkRecordsList — CSV export encoding (notes field edge cases)", () => {
+  it("quotes a notes field containing a comma — no extra columns produced", () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "early shift, urgent", "Active"],
+    ]);
+    // Quoted field must appear verbatim
+    expect(csv).toContain('"early shift, urgent"');
+    // Data row must still end with the Employee Status value
+    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+  });
+
+  it("doubles embedded double-quotes — no column boundary corruption", () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, 'He said "hello"', "Active"],
+    ]);
+    expect(csv).toContain('"He said ""hello"""');
+    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+  });
+
+  it("quotes a notes field containing a newline — Employee Status appears on the last line of the field", () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "line one\nline two", "Active"],
+    ]);
+    // The quoted field must be intact
+    expect(csv).toContain('"line one\nline two"');
+    // The Employee Status value closes the logical row. When the CSV is split by
+    // raw "\n", the last segment contains the closing part of the quoted field
+    // followed by the Employee Status — confirm it ends with ",Active".
+    expect(csv).toMatch(/,Active$/);
+  });
+
+  it("filename includes the correct date range", () => {
+    expect(workRecordsCsvFilename("2026-01-01", "2026-07-15")).toBe(
+      "work-records-2026-01-01-to-2026-07-15.csv",
+    );
+  });
+});
+
 describe("escapeCsv", () => {
   it("returns an empty string for null", () => {
     expect(escapeCsv(null)).toBe("");

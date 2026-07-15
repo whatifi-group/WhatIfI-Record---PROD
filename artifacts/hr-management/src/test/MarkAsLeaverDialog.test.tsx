@@ -522,4 +522,45 @@ describe("MarkAsLeaverDialog — cancel", () => {
     expect(mutateFn).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("resets leaverDate to today and re-enables Confirm after cancelling with a blank date", async () => {
+    vi.mocked(useUpdateEmployee).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateEmployee>);
+    vi.mocked(useListLovItems).mockReturnValue({
+      data: MOCK_REASONS,
+      isLoading: false,
+    } as ReturnType<typeof useListLovItems>);
+
+    const onClose = vi.fn();
+    render(
+      <MarkAsLeaverDialog
+        open={true}
+        onClose={onClose}
+        employeeId={42}
+        employeeName="Jane Smith"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: Wrapper },
+    );
+
+    // Clear the date field
+    const dateInput = screen.getByLabelText(/leaving date/i);
+    await userEvent.clear(dateInput);
+    expect(dateInput).toHaveValue("");
+
+    // Cancel — handleClose resets state and calls onClose
+    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onClose).toHaveBeenCalledOnce();
+
+    // Date should now show today (state was reset by handleClose)
+    const d = new Date();
+    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    expect(screen.getByLabelText(/leaving date/i)).toHaveValue(todayStr);
+
+    // Confirm should be enabled once a reason is selected (date is valid again)
+    await userEvent.selectOptions(screen.getByTestId("reason-select"), "resignation");
+    expect(screen.getByRole("button", { name: /confirm leaver/i })).not.toBeDisabled();
+  });
 });

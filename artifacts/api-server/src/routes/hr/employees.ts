@@ -188,6 +188,22 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     return;
   }
 
+  // Enforce: when setting status to leaver, leaverDate must not be null or far-future
+  if (parsed.data.status === "leaver") {
+    if (parsed.data.leaverDate === null) {
+      res.status(400).json({ error: "leaverDate cannot be blank when setting status to leaver" });
+      return;
+    }
+    if (parsed.data.leaverDate !== undefined) {
+      const maxFutureDate = new Date();
+      maxFutureDate.setDate(maxFutureDate.getDate() + 30);
+      if (toDateString(parsed.data.leaverDate as Date) > maxFutureDate.toISOString().slice(0, 10)) {
+        res.status(400).json({ error: "leaverDate cannot be more than 30 days in the future" });
+        return;
+      }
+    }
+  }
+
   const { salary, startDate, leaverDate, ...rest } = parsed.data;
   const today = new Date().toISOString().slice(0, 10);
 

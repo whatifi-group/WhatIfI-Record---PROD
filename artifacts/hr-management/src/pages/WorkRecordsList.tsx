@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { escapeCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
+import { buildCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
 
 const shiftTypeColor: Record<string, string> = {
   regular: "bg-secondary/20 text-secondary-foreground border-secondary/30",
@@ -102,20 +102,31 @@ export default function WorkRecordsList() {
   const totalHours = filteredRows.reduce((sum, row) => sum + (row.hoursWorked ?? 0), 0);
 
   function exportCsv() {
-    const headers = ["Employee Name", "Department", "Date", "Shift Type", "Start", "End", "Hours", "Notes"];
+    const headers = [
+      "Employee Name",
+      "Department",
+      "Date",
+      "Shift Type",
+      "Start",
+      "End",
+      "Hours",
+      "Notes",
+      "Employee Status",
+    ];
 
-    const csvRows = sortedRows.map((row) => [
-      escapeCsv(`${row.employeeFirstName} ${row.employeeLastName}`),
-      escapeCsv(row.employeeDepartmentName ?? ""),
-      escapeCsv(row.shiftDate),
-      escapeCsv(shiftTypes?.find((t) => t.value === row.shiftType)?.label ?? row.shiftType),
-      escapeCsv(row.startTime ?? ""),
-      escapeCsv(row.endTime ?? ""),
-      escapeCsv(row.hoursWorked ?? ""),
-      escapeCsv(row.notes ?? ""),
+    const dataRows = sortedRows.map((row) => [
+      `${row.employeeFirstName} ${row.employeeLastName}`,
+      row.employeeDepartmentName ?? "",
+      row.shiftDate,
+      shiftTypes?.find((t) => t.value === row.shiftType)?.label ?? row.shiftType,
+      row.startTime ?? "",
+      row.endTime ?? "",
+      row.hoursWorked ?? "",
+      row.notes ?? "",
+      row.employeeStatus === "active" ? "Active" : "Former",
     ]);
 
-    const csv = [headers.map(escapeCsv).join(","), ...csvRows.map((r) => r.join(","))].join("\n");
+    const csv = buildCsv(headers, dataRows);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

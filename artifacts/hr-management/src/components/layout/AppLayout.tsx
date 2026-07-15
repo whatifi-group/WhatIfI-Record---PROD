@@ -137,12 +137,12 @@ function AppSidebar() {
   return (
     <Sidebar variant="sidebar" className="border-r border-border bg-sidebar">
       <SidebarHeader className="p-6">
-        <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-border/50">
+        <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-shadow">
           <img src={logoUrl} alt="WhatIfI Group Ltd" className="w-10 h-10 object-contain" />
           <div className="flex flex-col">
             <span className="font-display font-bold text-sm text-foreground leading-tight">WhatIfI Record</span>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent className="px-4 py-2">
         <SidebarMenu>

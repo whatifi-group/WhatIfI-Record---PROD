@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, ShieldCheck, ArrowUpRight, ShieldX, X, AlertTriangle, Loader2, CheckCircle2, ClipboardList } from "lucide-react";
+import { Users, ShieldCheck, ArrowUpRight, ShieldX, X, AlertTriangle, Loader2, CheckCircle2, ClipboardList, GraduationCap, LifeBuoy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -37,6 +37,18 @@ const modules: ModuleLink[] = [
     href: "/sysadmin",
     icon: ShieldCheck,
     permission: "sysadmin",
+  },
+  {
+    name: "Courses Management",
+    description: "Training courses, enrolments, and completions.",
+    href: "/course-management",
+    icon: GraduationCap,
+  },
+  {
+    name: "Safety",
+    description: "Safety records, incidents, and compliance.",
+    href: "/safety",
+    icon: LifeBuoy,
   },
 ];
 

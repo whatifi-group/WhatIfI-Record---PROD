@@ -35,10 +35,18 @@ interface ModulePage {
   hrPastEmployeesOnly?: boolean;
 }
 
+interface ModuleSubSection {
+  name: string;
+  icon: LucideIcon;
+  pages: ModulePage[];
+}
+
 interface Module {
   name: string;
   icon: LucideIcon;
   pages: ModulePage[];
+  /** Optional grouped sub-sections rendered as nested collapsibles inside the module. */
+  subSections?: ModuleSubSection[];
   /** Visible only to users with the 'sysadmin' permission. */
   adminOnly?: boolean;
   /** Visible only to users with the 'hr:access' permission (or sysadmin). */
@@ -54,10 +62,18 @@ const modules: Module[] = [
       { name: "Directory", href: "/employees", icon: Users },
       { name: "Work Records", href: "/work-records", icon: ClipboardList },
       { name: "Leave Requests", href: "/leave", icon: Calendar },
-      { name: "Expiring Qualifications", href: "/expiring-qualifications", icon: AlertTriangle },
-      { name: "Qual. Verification", href: "/qualification-verification", icon: ShieldCheck },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
       { name: "Onboarding Queue", href: "/onboarding-queue", icon: ClipboardCheck },
+    ],
+    subSections: [
+      {
+        name: "Qualifications",
+        icon: GraduationCap,
+        pages: [
+          { name: "Qualification Verification", href: "/qualification-verification", icon: ShieldCheck },
+          { name: "Expiring Qualifications", href: "/expiring-qualifications", icon: AlertTriangle },
+        ],
+      },
     ],
   },
   {
@@ -124,7 +140,10 @@ function AppSidebar() {
   }, [canReviewOnboarding, location]);
 
   const isModuleActive = (mod: Module) =>
-    mod.pages.some((page) => location === page.href || location.startsWith(page.href));
+    mod.pages.some((page) => location === page.href || location.startsWith(page.href)) ||
+    (mod.subSections ?? []).some((ss) =>
+      ss.pages.some((page) => location === page.href || location.startsWith(page.href)),
+    );
 
   const handleLogout = () => {
     logout.mutate(undefined, {
@@ -213,6 +232,49 @@ function AppSidebar() {
                           </SidebarMenuSubItem>
                         );
                       })}
+
+                    {/* Nested sub-sections (e.g. Qualifications under HR) */}
+                    {(mod.subSections ?? []).map((ss) => {
+                      const ssActive = ss.pages.some(
+                        (p) => location === p.href || location.startsWith(p.href),
+                      );
+                      return (
+                        <Collapsible key={ss.name} defaultOpen={ssActive} className="group/subsection">
+                          <SidebarMenuSubItem>
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuSubButton isActive={ssActive} className="gap-2 cursor-pointer">
+                                <ss.icon className="h-3.5 w-3.5 shrink-0" />
+                                <span className="flex-1 text-xs font-medium">{ss.name}</span>
+                                <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-data-[state=open]/subsection:rotate-90" />
+                              </SidebarMenuSubButton>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="ml-3 mt-0.5 space-y-0.5 border-l border-border/50 pl-2">
+                                {ss.pages.map((page) => {
+                                  const isActive = location === page.href || location.startsWith(page.href);
+                                  return (
+                                    <Link
+                                      key={page.href}
+                                      href={page.href}
+                                      onClick={() => setOpenMobile(false)}
+                                      className={[
+                                        "flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] leading-snug transition-colors w-full",
+                                        isActive
+                                          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                                          : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                                      ].join(" ")}
+                                    >
+                                      <page.icon className="h-3 w-3 shrink-0" />
+                                      <span>{page.name}</span>
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </CollapsibleContent>
+                          </SidebarMenuSubItem>
+                        </Collapsible>
+                      );
+                    })}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>

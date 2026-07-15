@@ -3,10 +3,15 @@ import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Users, ShieldCheck, ArrowUpRight, ShieldX, X, AlertTriangle, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, ShieldCheck, ArrowUpRight, ShieldX, X, AlertTriangle, Loader2, CheckCircle2, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useListExpiringQualifications } from "@workspace/api-client-react";
+import {
+  useListExpiringQualifications,
+  useListPendingDisclosureReviews,
+  getListPendingDisclosureReviewsQueryKey,
+} from "@workspace/api-client-react";
 
 interface ModuleLink {
   name: string;
@@ -35,6 +40,12 @@ const modules: ModuleLink[] = [
   },
 ];
 
+const CHECK_TYPE_LABELS: Record<string, string> = {
+  dbs: "DBS",
+  pvg: "PVG",
+  access_ni: "Access NI",
+};
+
 const EXPIRY_WINDOWS = [
   { label: "Expiring within 30 days", days: 30 },
   { label: "Expiring within 60 days", days: 60 },
@@ -47,11 +58,22 @@ export default function CompanyDashboard() {
   const [showBanner, setShowBanner] = useState(false);
   const visibleModules = modules.filter((m) => !m.permission || hasPermission(m.permission));
 
+  const canReviewDisclosures =
+    hasPermission("review_disclosures") || hasPermission("sysadmin");
+
   const {
     data: expiringRecords,
     isLoading: expiringLoading,
     isError: expiringError,
   } = useListExpiringQualifications({ withinDays: 90 });
+
+  const {
+    data: pendingReviews,
+    isLoading: pendingLoading,
+    isError: pendingError,
+  } = useListPendingDisclosureReviews({
+    query: { enabled: canReviewDisclosures, queryKey: getListPendingDisclosureReviewsQueryKey() },
+  });
 
   const countWithin = (days: number) =>
     expiringRecords?.filter((r) => r.daysUntilExpiry >= 0 && r.daysUntilExpiry <= days).length ?? 0;
@@ -110,58 +132,131 @@ export default function CompanyDashboard() {
         ))}
       </div>
 
-      {/* Expiring Qualifications Summary */}
+      {/* Alerts section */}
       <div>
         <h2 className="text-lg font-display font-semibold text-foreground mb-4">Alerts</h2>
-        <Link href="/expiring-qualifications">
-          <Card className="border-border/50 shadow-sm hover-elevate transition-all cursor-pointer group max-w-lg">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <CardTitle className="text-base font-semibold">Expiring Qualifications</CardTitle>
-                <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors ml-auto" />
-              </div>
-              <CardDescription>Qualifications expiring across all employees.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 pb-1">
-              {expiringLoading && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        <div className="flex flex-col gap-4 max-w-lg">
+
+          {/* Expiring Qualifications */}
+          <Link href="/expiring-qualifications">
+            <Card className="border-border/50 shadow-sm hover-elevate transition-all cursor-pointer group">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  <CardTitle className="text-base font-semibold">Expiring Qualifications</CardTitle>
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors ml-auto" />
                 </div>
-              )}
-              {expiringError && (
-                <p className="text-sm text-muted-foreground px-6 py-4">
-                  Could not load expiry data.
-                </p>
-              )}
-              {!expiringLoading && !expiringError && (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {EXPIRY_WINDOWS.map((w, i) => (
-                      <tr
-                        key={w.days}
-                        className={`${i < EXPIRY_WINDOWS.length - 1 ? "border-b border-border/30" : ""} hover:bg-muted/20 transition-colors`}
-                      >
-                        <td className="px-6 py-3 text-muted-foreground">{w.label}</td>
-                        <td className="px-6 py-3 text-right font-semibold tabular-nums">
-                          <span
-                            className={
-                              countWithin(w.days) > 0
-                                ? "text-amber-600 dark:text-amber-400"
-                                : "text-muted-foreground"
-                            }
-                          >
-                            {countWithin(w.days)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
+                <CardDescription>Qualifications expiring across all employees.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 pb-1">
+                {expiringLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                )}
+                {expiringError && (
+                  <p className="text-sm text-muted-foreground px-6 py-4">
+                    Could not load expiry data.
+                  </p>
+                )}
+                {!expiringLoading && !expiringError && (
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {EXPIRY_WINDOWS.map((w, i) => (
+                        <tr
+                          key={w.days}
+                          className={`${i < EXPIRY_WINDOWS.length - 1 ? "border-b border-border/30" : ""} hover:bg-muted/20 transition-colors`}
+                        >
+                          <td className="px-6 py-3 text-muted-foreground">{w.label}</td>
+                          <td className="px-6 py-3 text-right font-semibold tabular-nums">
+                            <span
+                              className={
+                                countWithin(w.days) > 0
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {countWithin(w.days)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Disclosure Reviews Pending — visible to review_disclosures / sysadmin only */}
+          {canReviewDisclosures && (
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-rose-500" />
+                  <CardTitle className="text-base font-semibold">Disclosure Reviews Pending</CardTitle>
+                  {!pendingLoading && !pendingError && pendingReviews && pendingReviews.length > 0 && (
+                    <Badge variant="destructive" className="ml-auto tabular-nums">
+                      {pendingReviews.length}
+                    </Badge>
+                  )}
+                </div>
+                <CardDescription>Employees with conviction details awaiting senior sign-off.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 pb-1">
+                {pendingLoading && (
+                  <div className="flex justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
+                )}
+                {pendingError && (
+                  <p className="text-sm text-muted-foreground px-6 py-4">
+                    Could not load pending reviews.
+                  </p>
+                )}
+                {!pendingLoading && !pendingError && pendingReviews && pendingReviews.length === 0 && (
+                  <div className="flex items-center gap-2 px-6 py-4 text-sm text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>All clear — no outstanding reviews.</span>
+                  </div>
+                )}
+                {!pendingLoading && !pendingError && pendingReviews && pendingReviews.length > 0 && (
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {pendingReviews.map((r, i) => (
+                        <tr
+                          key={r.disclosureId}
+                          className={`${i < pendingReviews.length - 1 ? "border-b border-border/30" : ""} hover:bg-muted/20 transition-colors`}
+                        >
+                          <td className="px-6 py-3">
+                            <Link
+                              href={`/employees/${r.employeeId}?tab=disclosures`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-medium hover:text-primary transition-colors"
+                            >
+                              {r.employeeFirstName} {r.employeeLastName}
+                            </Link>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {CHECK_TYPE_LABELS[r.checkType] ?? r.checkType}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-right text-muted-foreground tabular-nums whitespace-nowrap">
+                            {r.daysPending === 0
+                              ? "Today"
+                              : r.daysPending === 1
+                                ? "1 day"
+                                : `${r.daysPending} days`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+        </div>
       </div>
     </div>
   );

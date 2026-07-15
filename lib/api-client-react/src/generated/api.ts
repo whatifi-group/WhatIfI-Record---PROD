@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CopyEmployeePayRatesParams,
   CopyPayRatesResult,
   Department,
   DepartmentInput,
@@ -75,6 +76,7 @@ import type {
   LovItem,
   LovItemInput,
   LovItemUpdate,
+  PendingDisclosureReview,
   QualificationCertificate,
   QualificationCertificateInput,
   QualificationRevalidateInput,
@@ -3719,29 +3721,29 @@ export const useDeleteEmployeePayRate = <TError = ErrorType<void>,
       return useMutation(getDeleteEmployeePayRateMutationOptions(options));
     }
 
-export interface CopyEmployeePayRatesParams {
-  /** When true, existing active rates on the target are overwritten with the source rate/unit (dates are preserved). */
-  overwrite?: boolean;
-  /** Effective start date (YYYY-MM-DD) for newly inserted rates. Defaults to today on the server. Has no effect on overwritten rates. */
-  effectiveDate?: string;
-}
-
 export const getCopyEmployeePayRatesUrl = (id: number,
-    sourceId: number, params?: CopyEmployeePayRatesParams) => {
+    sourceId: number,
+    params?: CopyEmployeePayRatesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
-  const searchParams = new URLSearchParams();
-  if (params?.overwrite) searchParams.set('overwrite', 'true');
-  if (params?.effectiveDate) searchParams.set('effectiveDate', params.effectiveDate);
-  const qs = searchParams.toString();
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-  return `/api/employees/${id}/pay-rates/copy-from/${sourceId}${qs ? `?${qs}` : ''}`
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/employees/${id}/pay-rates/copy-from/${sourceId}?${stringifiedParams}` : `/api/employees/${id}/pay-rates/copy-from/${sourceId}`
 }
 
 /**
  * @summary Copy pay rates from a source employee to this employee, skipping shift types that already exist
  */
 export const copyEmployeePayRates = async (id: number,
-    sourceId: number, params?: CopyEmployeePayRatesParams, options?: RequestInit): Promise<CopyPayRatesResult> => {
+    sourceId: number,
+    params?: CopyEmployeePayRatesParams, options?: RequestInit): Promise<CopyPayRatesResult> => {
 
   return customFetch<CopyPayRatesResult>(getCopyEmployeePayRatesUrl(id,sourceId,params),
   {
@@ -5153,6 +5155,83 @@ export const useSignOffDisclosureReview = <TError = ErrorType<void>,
       > => {
       return useMutation(getSignOffDisclosureReviewMutationOptions(options));
     }
+
+export const getListPendingDisclosureReviewsUrl = () => {
+
+
+
+
+  return `/api/disclosures/pending-reviews`
+}
+
+/**
+ * @summary List disclosures with conviction details awaiting sign-off (requires review_disclosures or sysadmin)
+ */
+export const listPendingDisclosureReviews = async ( options?: RequestInit): Promise<PendingDisclosureReview[]> => {
+
+  return customFetch<PendingDisclosureReview[]>(getListPendingDisclosureReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPendingDisclosureReviewsQueryKey = () => {
+    return [
+    `/api/disclosures/pending-reviews`
+    ] as const;
+    }
+
+
+export const getListPendingDisclosureReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listPendingDisclosureReviews>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPendingDisclosureReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPendingDisclosureReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPendingDisclosureReviews>>> = ({ signal }) => listPendingDisclosureReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPendingDisclosureReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPendingDisclosureReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listPendingDisclosureReviews>>>
+export type ListPendingDisclosureReviewsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List disclosures with conviction details awaiting sign-off (requires review_disclosures or sysadmin)
+ */
+
+export function useListPendingDisclosureReviews<TData = Awaited<ReturnType<typeof listPendingDisclosureReviews>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPendingDisclosureReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPendingDisclosureReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListLeaveRequestsUrl = (params?: ListLeaveRequestsParams,) => {
   const normalizedParams = new URLSearchParams();

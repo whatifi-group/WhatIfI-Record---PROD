@@ -124,11 +124,7 @@ export interface Employee {
      */
   leaverDate: string | null;
   createdAt: string;
-  /**
-   * True when the employee has at least one disclosure with conviction details
-   * that has not yet been signed off. Only populated for users with
-   * view_disclosures or sysadmin permission; false otherwise.
-   */
+  /** True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise. */
   pendingDisclosureReview?: boolean;
 }
 
@@ -732,11 +728,22 @@ export interface EmployeePayRateInput {
   effectiveTo?: string;
 }
 
-export type CopyPayRateSkipReason = 'source_closed' | 'lov_inactive' | 'conflict' | 'overlap_on_target';
+/**
+ * Why this shift type was skipped: source_closed — the source rate has already ended; lov_inactive — the shift type is deactivated; conflict — target already has an active rate and overwrite was not requested; overlap_on_target — an overwrite would create an invalid overlap on the target.
+ */
+export type CopyPayRateSkipReason = typeof CopyPayRateSkipReason[keyof typeof CopyPayRateSkipReason];
+
+
+export const CopyPayRateSkipReason = {
+  source_closed: 'source_closed',
+  lov_inactive: 'lov_inactive',
+  conflict: 'conflict',
+  overlap_on_target: 'overlap_on_target',
+} as const;
 
 export interface CopyPayRateSkip {
   shiftType: string;
-  /** Why this shift type was skipped */
+  /** Why this shift type was skipped: source_closed — the source rate has already ended; lov_inactive — the shift type is deactivated; conflict — target already has an active rate and overwrite was not requested; overlap_on_target — an overwrite would create an invalid overlap on the target. */
   reason: CopyPayRateSkipReason;
 }
 
@@ -1010,6 +1017,25 @@ export interface DisclosureUpdateCheckInput {
   notes?: string;
 }
 
+export type PendingDisclosureReviewCheckType = typeof PendingDisclosureReviewCheckType[keyof typeof PendingDisclosureReviewCheckType];
+
+
+export const PendingDisclosureReviewCheckType = {
+  dbs: 'dbs',
+  pvg: 'pvg',
+  access_ni: 'access_ni',
+} as const;
+
+export interface PendingDisclosureReview {
+  disclosureId: number;
+  employeeId: number;
+  employeeFirstName: string;
+  employeeLastName: string;
+  checkType: PendingDisclosureReviewCheckType;
+  /** Number of days since the disclosure was created without a signed-off review */
+  daysPending: number;
+}
+
 export type DisclosureReviewInputRecommendation = typeof DisclosureReviewInputRecommendation[keyof typeof DisclosureReviewInputRecommendation];
 
 
@@ -1069,6 +1095,17 @@ export type ListExpiringQualificationsParams = {
  * Return qualifications expiring within this many days (including already expired). Use 0 to return only already-expired records. Defaults to 30.
  */
 withinDays?: number;
+};
+
+export type CopyEmployeePayRatesParams = {
+/**
+ * When true, existing active rates on the target are overwritten with the source rate/unit (dates are preserved)
+ */
+overwrite?: boolean;
+/**
+ * Effective start date for newly inserted rates (YYYY-MM-DD). Defaults to today. Has no effect on overwritten rates.
+ */
+effectiveDate?: string;
 };
 
 export type ListWorkRecordsParams = {

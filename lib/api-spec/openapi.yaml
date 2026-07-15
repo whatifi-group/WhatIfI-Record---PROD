@@ -1667,6 +1667,21 @@ paths:
         "409":
           description: Already signed off
 
+  /disclosures/pending-reviews:
+    get:
+      operationId: listPendingDisclosureReviews
+      tags: [employee-sections]
+      summary: List disclosures with conviction details awaiting sign-off (requires review_disclosures or sysadmin)
+      responses:
+        "200":
+          description: List of pending disclosure reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PendingDisclosureReview"
+
   /leave-requests:
     get:
       operationId: listLeaveRequests
@@ -3715,6 +3730,25 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    PendingDisclosureReview:
+      type: object
+      required: [disclosureId, employeeId, employeeFirstName, employeeLastName, checkType, daysPending]
+      properties:
+        disclosureId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeFirstName:
+          type: string
+        employeeLastName:
+          type: string
+        checkType:
+          type: string
+          enum: [dbs, pvg, access_ni]
+        daysPending:
+          type: integer
+          description: Number of days since the disclosure was created without a signed-off review
 
     DisclosureReviewInput:
       type: object

@@ -248,7 +248,7 @@ export const ListEmployeesResponseItem = zod.object({
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
   "createdAt": zod.coerce.date(),
-  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.')
+  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
@@ -296,7 +296,8 @@ export const CreateEmployeeResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
 
@@ -323,7 +324,8 @@ export const GetEmployeeResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
 
@@ -372,7 +374,8 @@ export const UpdateEmployeeResponse = zod.object({
   "avatarUrl": zod.string().nullable(),
   "leaverReason": zod.string().nullable().describe('LOV value from leaver_reason category; required when status is leaver'),
   "leaverDate": zod.coerce.date().nullable().describe('Date the employee left; defaults to today when status is set to leaver'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "pendingDisclosureReview": zod.boolean().optional().describe('True when the employee has at least one disclosure with conviction details that has not yet been signed off. Only populated for users with view_disclosures or sysadmin permission; false otherwise.\n')
 })
 
 
@@ -1074,6 +1077,11 @@ export const CopyEmployeePayRatesParams = zod.object({
   "sourceId": zod.coerce.number()
 })
 
+export const CopyEmployeePayRatesQueryParams = zod.object({
+  "overwrite": zod.coerce.boolean().optional().describe('When true, existing active rates on the target are overwritten with the source rate\/unit (dates are preserved)'),
+  "effectiveDate": zod.date().optional().describe('Effective start date for newly inserted rates (YYYY-MM-DD). Defaults to today. Has no effect on overwritten rates.')
+})
+
 export const CopyEmployeePayRatesResponse = zod.object({
   "copied": zod.array(zod.object({
   "id": zod.number(),
@@ -1085,7 +1093,7 @@ export const CopyEmployeePayRatesResponse = zod.object({
   "effectiveFrom": zod.coerce.date(),
   "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
-})),
+})).describe('All successfully processed rates (both newly inserted and overwritten). Preserved for backward compatibility.'),
   "updated": zod.array(zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
@@ -1096,8 +1104,11 @@ export const CopyEmployeePayRatesResponse = zod.object({
   "effectiveFrom": zod.coerce.date(),
   "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
-})).describe('Subset of copied that were overwritten (overwrite=true only)'),
-  "skipped": zod.array(zod.string()).describe('Shift types skipped because the target employee already has a rate for them')
+})).describe('Subset of copied that were overwritten (overwrite=true only). Empty when overwrite was not requested.'),
+  "skipped": zod.array(zod.object({
+  "shiftType": zod.string(),
+  "reason": zod.enum(['source_closed', 'lov_inactive', 'conflict', 'overlap_on_target']).describe('Why this shift type was skipped: source_closed — the source rate has already ended; lov_inactive — the shift type is deactivated; conflict — target already has an active rate and overwrite was not requested; overlap_on_target — an overwrite would create an invalid overlap on the target.\n')
+})).describe('Rates that were not copied, each with a machine-readable reason code')
 })
 
 
@@ -1591,6 +1602,20 @@ export const SignOffDisclosureReviewResponse = zod.object({
   "signedOffAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
+
+
+/**
+ * @summary List disclosures with conviction details awaiting sign-off (requires review_disclosures or sysadmin)
+ */
+export const ListPendingDisclosureReviewsResponseItem = zod.object({
+  "disclosureId": zod.number(),
+  "employeeId": zod.number(),
+  "employeeFirstName": zod.string(),
+  "employeeLastName": zod.string(),
+  "checkType": zod.enum(['dbs', 'pvg', 'access_ni']),
+  "daysPending": zod.number().describe('Number of days since the disclosure was created without a signed-off review')
+})
+export const ListPendingDisclosureReviewsResponse = zod.array(ListPendingDisclosureReviewsResponseItem)
 
 
 /**

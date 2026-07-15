@@ -5,10 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { CopyPayRateSkip } from './copyPayRateSkip';
 import type { EmployeePayRate } from './employeePayRate';
 
 export interface CopyPayRatesResult {
+  /** All successfully processed rates (both newly inserted and overwritten). Preserved for backward compatibility. */
   copied: EmployeePayRate[];
-  /** Shift types skipped because the target employee already has a rate for them */
-  skipped: string[];
+  /** Subset of copied that were overwritten (overwrite=true only). Empty when overwrite was not requested. */
+  updated: EmployeePayRate[];
+  /** Rates that were not copied, each with a machine-readable reason code */
+  skipped: CopyPayRateSkip[];
 }

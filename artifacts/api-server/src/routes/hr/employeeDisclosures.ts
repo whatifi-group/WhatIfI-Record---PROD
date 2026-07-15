@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { and, eq, asc } from "drizzle-orm";
+import { and, eq, asc, isNotNull, isNull, sql } from "drizzle-orm";
 import {
   db,
   employeeDisclosuresTable,
   employeeDisclosureUpdateChecksTable,
   employeeDisclosureReviewsTable,
+  employeesTable,
   usersTable,
 } from "@workspace/db";
 import { z } from "zod";
@@ -504,6 +505,43 @@ router.post(
       .limit(1);
 
     res.json(review);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// GET /disclosures/pending-reviews — review_disclosures or sysadmin
+// Returns disclosures with conviction details that have no signed-off review.
+// ---------------------------------------------------------------------------
+router.get(
+  "/disclosures/pending-reviews",
+  canSignOff,
+  async (_req, res): Promise<void> => {
+    // Find all disclosures with conviction details where no signed-off review exists.
+    // Left-join reviews so we can filter on signedOffAt being null.
+    const rows = await db
+      .select({
+        disclosureId: employeeDisclosuresTable.id,
+        employeeId: employeeDisclosuresTable.employeeId,
+        employeeFirstName: employeesTable.firstName,
+        employeeLastName: employeesTable.lastName,
+        checkType: employeeDisclosuresTable.checkType,
+        daysPending: sql<number>`(CURRENT_DATE - ${employeeDisclosuresTable.createdAt}::date)::integer`,
+      })
+      .from(employeeDisclosuresTable)
+      .innerJoin(employeesTable, eq(employeeDisclosuresTable.employeeId, employeesTable.id))
+      .leftJoin(
+        employeeDisclosureReviewsTable,
+        eq(employeeDisclosureReviewsTable.disclosureId, employeeDisclosuresTable.id),
+      )
+      .where(
+        and(
+          isNotNull(employeeDisclosuresTable.convictionDetails),
+          isNull(employeeDisclosureReviewsTable.signedOffAt),
+        ),
+      )
+      .orderBy(asc(employeeDisclosuresTable.createdAt));
+
+    res.json(rows);
   },
 );
 

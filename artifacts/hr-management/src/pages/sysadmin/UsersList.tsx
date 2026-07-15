@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useListUsers, useDeleteUser, getListUsersQueryKey, User, UserStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert } from "lucide-react";
+import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert, Server } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,9 +31,8 @@ export default function UsersList() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
-  
+
   const { data: users, isLoading } = useListUsers({ search: search || undefined });
   const deleteUser = useDeleteUser();
   const queryClient = useQueryClient();
@@ -50,22 +50,14 @@ export default function UsersList() {
 
   const handleDelete = () => {
     if (!deletingUserId) return;
-    
     deleteUser.mutate({ id: deletingUserId }, {
       onSuccess: () => {
-        toast({
-          title: "User deleted",
-          description: "The user has been successfully removed.",
-        });
+        toast({ title: "User deleted", description: "The user has been successfully removed." });
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
         setDeletingUserId(null);
       },
       onError: () => {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to delete user.",
-        });
+        toast({ variant: "destructive", title: "Error", description: "Failed to delete user." });
         setDeletingUserId(null);
       }
     });
@@ -80,7 +72,7 @@ export default function UsersList() {
         </div>
         <Button onClick={handleCreate} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" />
-          Add User
+          Add System Account
         </Button>
       </div>
 
@@ -88,8 +80,8 @@ export default function UsersList() {
         <div className="p-4 border-b border-border/50 bg-muted/10">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search users..." 
+            <Input
+              placeholder="Search users..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-background"
@@ -126,7 +118,14 @@ export default function UsersList() {
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-medium text-foreground">{user.name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">{user.name}</span>
+                            {user.isSystemAccount && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 gap-1">
+                                <Server className="w-2.5 h-2.5" /> System
+                              </Badge>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">{user.email}</div>
                         </div>
                       </div>
@@ -163,7 +162,7 @@ export default function UsersList() {
                             <Pencil className="mr-2 h-4 w-4" /> Edit User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             onClick={() => setDeletingUserId(user.id)}
                           >
@@ -188,10 +187,10 @@ export default function UsersList() {
         </div>
       </div>
 
-      <UserFormDialog 
-        open={isFormOpen} 
-        onOpenChange={setIsFormOpen} 
-        user={editingUser} 
+      <UserFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        user={editingUser}
       />
 
       <AlertDialog open={!!deletingUserId} onOpenChange={(open) => !open && setDeletingUserId(null)}>

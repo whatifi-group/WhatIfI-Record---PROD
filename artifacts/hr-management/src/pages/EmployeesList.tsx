@@ -1,7 +1,14 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useListEmployees, useListDepartments, useCreateEmployee, getListEmployeesQueryKey, useListLovItems } from "@workspace/api-client-react";
-import { EmployeeStatus } from "@workspace/api-client-react";
+import {
+  useListEmployees,
+  useListDepartments,
+  useCreateEmployee,
+  useListRoles,
+  getListEmployeesQueryKey,
+  useListLovItems,
+  EmployeeStatus,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +33,9 @@ const employeeSchema = z.object({
   employmentType: z.string().min(1, "Engagement type is required"),
   status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
+  // System access — required to create the linked user account
+  userRole: z.coerce.number().min(1, "Role is required"),
+  temporaryPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -34,7 +44,7 @@ export default function EmployeesList() {
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  
+
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -43,6 +53,7 @@ export default function EmployeesList() {
   const { data: departments } = useListDepartments();
   const { data: employmentTypes } = useListLovItems("employment_type");
   const { data: employeeStatuses } = useListLovItems("employee_status");
+  const { data: roles } = useListRoles();
   const createEmployee = useCreateEmployee();
 
   const form = useForm<EmployeeFormValues>({
@@ -57,23 +68,36 @@ export default function EmployeesList() {
       employmentType: "full_time",
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
+      userRole: 0,
+      temporaryPassword: "",
     },
   });
 
   const onSubmit = (data: EmployeeFormValues) => {
     createEmployee.mutate(
-      { data: { ...data, status: data.status as EmployeeStatus } },
+      {
+        data: {
+          ...data,
+          status: data.status as EmployeeStatus,
+          userRole: data.userRole,
+          temporaryPassword: data.temporaryPassword,
+        },
+      },
       {
         onSuccess: () => {
-          toast({ title: "Employee added", description: "Successfully added new team member." });
+          toast({ title: "Employee added", description: "Employee and their system account have been created." });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
           setIsCreateOpen(false);
           form.reset();
         },
-        onError: () => {
-          toast({ title: "Failed to add employee", description: "Please check your inputs and try again.", variant: "destructive" });
+        onError: (err: unknown) => {
+          const msg =
+            err instanceof Error && err.message.includes("409")
+              ? "A user account with this email already exists."
+              : "Please check your inputs and try again.";
+          toast({ title: "Failed to add employee", description: msg, variant: "destructive" });
         },
-      }
+      },
     );
   };
 
@@ -82,14 +106,16 @@ export default function EmployeesList() {
     return employees.filter((emp) => {
       if (emp.status !== EmployeeStatus.active) return false;
 
-      const matchesSearch = search === "" || 
-        emp.firstName.toLowerCase().includes(search.toLowerCase()) || 
+      const matchesSearch =
+        search === "" ||
+        emp.firstName.toLowerCase().includes(search.toLowerCase()) ||
         emp.lastName.toLowerCase().includes(search.toLowerCase()) ||
         emp.email.toLowerCase().includes(search.toLowerCase()) ||
         emp.jobTitle.toLowerCase().includes(search.toLowerCase());
-        
-      const matchesDept = departmentFilter === "all" || emp.departmentId === parseInt(departmentFilter);
-      
+
+      const matchesDept =
+        departmentFilter === "all" || emp.departmentId === parseInt(departmentFilter);
+
       return matchesSearch && matchesDept;
     });
   }, [employees, search, departmentFilter]);
@@ -108,13 +134,16 @@ export default function EmployeesList() {
               <Plus className="w-4 h-4 mr-2" /> Add Employee
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="font-display text-2xl">Add New Employee</DialogTitle>
-              <DialogDescription>Add a new employee. They will be visible in the directory immediately.</DialogDescription>
+              <DialogDescription>
+                Add a new employee. A system account will be created automatically so they can log in.
+              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+                {/* Employee details */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField control={form.control} name="firstName" render={({ field }) => (
                     <FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -131,7 +160,7 @@ export default function EmployeesList() {
                   <FormField control={form.control} name="jobTitle" render={({ field }) => (
                     <FormItem className="md:col-span-2"><FormLabel>Role / Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-                  
+
                   <FormField control={form.control} name="departmentId" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Department</FormLabel>
@@ -191,8 +220,45 @@ export default function EmployeesList() {
                       <FormMessage />
                     </FormItem>
                   )} />
-
                 </div>
+
+                {/* System access section */}
+                <div className="border border-border/50 rounded-lg p-4 space-y-4 bg-muted/20">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">System Access</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      A login account will be created automatically using the employee's email address.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="userRole" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
+                          <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {roles?.map(r => (
+                              <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="temporaryPassword" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Temporary Password</FormLabel>
+                        <FormControl>
+                          <Input type="password" placeholder="Min 8 characters" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </div>
+
                 <DialogFooter>
                   <Button type="submit" disabled={createEmployee.isPending}>
                     {createEmployee.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
@@ -209,8 +275,8 @@ export default function EmployeesList() {
         <div className="p-4 border-b border-border/50 bg-muted/20 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search by name, role, or email..." 
+            <Input
+              placeholder="Search by name, role, or email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-background border-border/50"
@@ -254,8 +320,8 @@ export default function EmployeesList() {
               </TableHeader>
               <TableBody>
                 {filteredEmployees.map((employee, idx) => (
-                  <TableRow 
-                    key={employee.id} 
+                  <TableRow
+                    key={employee.id}
                     className="group border-border/30 hover:bg-muted/10 transition-colors cursor-pointer"
                     style={{ animationDelay: `${idx * 50}ms` }}
                     onClick={() => setLocation(`/employees/${employee.id}`)}

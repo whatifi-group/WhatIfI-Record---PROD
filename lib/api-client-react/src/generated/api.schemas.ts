@@ -117,6 +117,13 @@ export interface EmployeeInput {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /** Role ID to assign to the automatically created user account */
+  userRole: number;
+  /**
+     * Temporary password for the automatically created user account
+     * @minLength 8
+     */
+  temporaryPassword: string;
 }
 
 export interface EmployeeUpdate {
@@ -270,6 +277,13 @@ export interface RoleUpdate {
   permissions?: Permission[];
 }
 
+export interface UserLinkedEmployee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  status: EmployeeStatus;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -278,6 +292,10 @@ export interface User {
   roleId: number;
   roleName: string;
   permissions: Permission[];
+  isSystemAccount: boolean;
+  /** @nullable */
+  employeeId?: number | null;
+  employee?: UserLinkedEmployee | null;
   /** @nullable */
   lastLoginAt?: string | null;
   createdAt: string;
@@ -291,6 +309,7 @@ export interface UserInput {
   /** @minLength 8 */
   password: string;
   roleId: number;
+  isSystemAccount?: boolean;
   permissions?: Permission[];
 }
 

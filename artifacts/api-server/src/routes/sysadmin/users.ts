@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
-import crypto from "node:crypto";
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { hashPassword } from "../../lib/password";
 import {
   CreateUserBody,
   UpdateUserBody,
@@ -17,14 +17,6 @@ import {
 
 const router: IRouter = Router();
 
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto
-    .pbkdf2Sync(password, salt, 100_000, 64, "sha512")
-    .toString("hex");
-  return `${salt}:${hash}`;
-}
-
 function userSelection() {
   return db
     .select({
@@ -35,6 +27,8 @@ function userSelection() {
       roleId: usersTable.roleId,
       roleName: rolesTable.name,
       permissions: usersTable.permissions,
+      isSystemAccount: usersTable.isSystemAccount,
+      employeeId: usersTable.employeeId,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })
@@ -50,6 +44,17 @@ router.get("/sysadmin/users", async (req, res): Promise<void> => {
   }
 
   const conditions: SQL[] = [];
+
+  // Exclude suspended leaver-linked accounts (they belong to ex-employees and
+  // clutter the sysadmin view). System accounts always appear regardless of status.
+  conditions.push(
+    or(
+      eq(usersTable.isSystemAccount, true),
+      isNull(usersTable.employeeId),
+      ne(usersTable.status, "suspended"),
+    )!,
+  );
+
   if (query.data.search) {
     const term = `%${query.data.search}%`;
     conditions.push(
@@ -66,11 +71,9 @@ router.get("/sysadmin/users", async (req, res): Promise<void> => {
     conditions.push(eq(usersTable.roleId, query.data.roleId));
   }
 
-  const base = userSelection();
-  const rows = await (conditions.length > 0
-    ? base.where(and(...conditions))
-    : base
-  ).orderBy(usersTable.name);
+  const rows = await userSelection()
+    .where(and(...conditions))
+    .orderBy(usersTable.name);
 
   res.json(ListUsersResponse.parse(rows));
 });
@@ -109,7 +112,7 @@ router.post("/sysadmin/users", async (req, res): Promise<void> => {
 
   const [created] = await db
     .insert(usersTable)
-    .values({ ...rest, passwordHash })
+    .values({ ...rest, passwordHash, isSystemAccount: true, employeeId: null })
     .returning();
 
   const [row] = await userSelection().where(eq(usersTable.id, created.id));

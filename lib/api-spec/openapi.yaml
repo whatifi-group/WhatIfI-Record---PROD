@@ -1798,7 +1798,7 @@ components:
 
     EmployeeInput:
       type: object
-      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate]
+      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate, userRole, temporaryPassword]
       properties:
         firstName:
           type: string
@@ -1827,6 +1827,13 @@ components:
           type: ["number", "null"]
         avatarUrl:
           type: ["string", "null"]
+        userRole:
+          type: integer
+          description: Role ID to assign to the automatically created user account
+        temporaryPassword:
+          type: string
+          minLength: 8
+          description: Temporary password for the automatically created user account
 
     EmployeeUpdate:
       type: object
@@ -2076,9 +2083,22 @@ components:
           items:
             $ref: "#/components/schemas/Permission"
 
+    UserLinkedEmployee:
+      type: object
+      required: [id, firstName, lastName, status]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        status:
+          $ref: "#/components/schemas/EmployeeStatus"
+
     User:
       type: object
-      required: [id, name, email, status, roleId, roleName, permissions, createdAt]
+      required: [id, name, email, status, roleId, roleName, permissions, isSystemAccount, createdAt]
       properties:
         id:
           type: integer
@@ -2096,6 +2116,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Permission"
+        isSystemAccount:
+          type: boolean
+        employeeId:
+          type: ["integer", "null"]
+        employee:
+          oneOf:
+            - $ref: "#/components/schemas/UserLinkedEmployee"
+            - type: "null"
         lastLoginAt:
           type: ["string", "null"]
           format: date-time
@@ -2118,6 +2146,9 @@ components:
           minLength: 8
         roleId:
           type: integer
+        isSystemAccount:
+          type: boolean
+          default: true
         permissions:
           type: array
           items:

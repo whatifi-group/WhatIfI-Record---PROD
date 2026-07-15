@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,7 +37,7 @@ import {
   getListUsersQueryKey,
   User,
   UserStatus,
-  Permission
+  Permission,
 } from "@workspace/api-client-react";
 
 const PERMISSION_LABELS: Record<Permission, string> = {
@@ -59,11 +59,7 @@ const userSchema = z.object({
   password: z.string().optional(),
   roleId: z.coerce.number().min(1, "Role is required"),
   status: z.nativeEnum(UserStatus).default(UserStatus.active),
-  permissions: z.array(z.nativeEnum(Permission)).default([])
-}).superRefine((data, ctx) => {
-  if (data.status === undefined) return; // handled by default
-  // We can't know inside zod if it's create or update without passing context,
-  // so we'll do the password check manually in the form submit if it's a new user.
+  permissions: z.array(z.nativeEnum(Permission)).default([]),
 });
 
 interface UserFormDialogProps {
@@ -76,7 +72,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
   const isEditing = !!user;
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { data: roles } = useListRoles();
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
@@ -92,8 +88,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       permissions: [],
     },
   });
-
-  const initializedForId = useRef<number | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -121,49 +115,56 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
 
   const onSubmit = (data: z.infer<typeof userSchema>) => {
     if (!isEditing && !data.password) {
-      form.setError("password", { type: "manual", message: "Password is required for new users" });
+      form.setError("password", { type: "manual", message: "Password is required for new accounts" });
       return;
     }
 
     if (isEditing && user) {
-      updateUser.mutate({
-        id: user.id,
-        data: {
-          name: data.name,
-          email: data.email,
-          status: data.status,
-          roleId: data.roleId,
-          permissions: data.permissions.length > 0 ? data.permissions : undefined,
-        }
-      }, {
-        onSuccess: () => {
-          toast({ title: "User updated successfully" });
-          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-          onOpenChange(false);
+      updateUser.mutate(
+        {
+          id: user.id,
+          data: {
+            name: data.name,
+            email: data.email,
+            status: data.status,
+            roleId: data.roleId,
+            permissions: data.permissions.length > 0 ? data.permissions : undefined,
+          },
         },
-        onError: () => {
-          toast({ variant: "destructive", title: "Failed to update user" });
-        }
-      });
+        {
+          onSuccess: () => {
+            toast({ title: "User updated successfully" });
+            queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+            onOpenChange(false);
+          },
+          onError: () => {
+            toast({ variant: "destructive", title: "Failed to update user" });
+          },
+        },
+      );
     } else {
-      createUser.mutate({
-        data: {
-          name: data.name,
-          email: data.email,
-          password: data.password!,
-          roleId: data.roleId,
-          permissions: data.permissions.length > 0 ? data.permissions : undefined,
-        }
-      }, {
-        onSuccess: () => {
-          toast({ title: "User created successfully" });
-          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-          onOpenChange(false);
+      createUser.mutate(
+        {
+          data: {
+            name: data.name,
+            email: data.email,
+            password: data.password!,
+            roleId: data.roleId,
+            isSystemAccount: true,
+            permissions: data.permissions.length > 0 ? data.permissions : undefined,
+          },
         },
-        onError: () => {
-          toast({ variant: "destructive", title: "Failed to create user" });
-        }
-      });
+        {
+          onSuccess: () => {
+            toast({ title: "System account created" });
+            queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+            onOpenChange(false);
+          },
+          onError: () => {
+            toast({ variant: "destructive", title: "Failed to create system account" });
+          },
+        },
+      );
     }
   };
 
@@ -171,9 +172,13 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 bg-muted/30 border-b border-border">
-          <DialogTitle className="text-xl font-display">{isEditing ? "Edit User" : "Add New User"}</DialogTitle>
+          <DialogTitle className="text-xl font-display">
+            {isEditing ? "Edit User" : "Add System Account"}
+          </DialogTitle>
           <DialogDescription>
-            {isEditing ? "Update user details and access levels." : "Create a new user profile and assign permissions."}
+            {isEditing
+              ? "Update user details and access levels."
+              : "Create a system account for administrators or service users. Employee accounts are created automatically when adding an employee."}
           </DialogDescription>
         </DialogHeader>
 
@@ -215,7 +220,10 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
+                    <Select
+                      onValueChange={(v) => field.onChange(Number(v))}
+                      value={field.value ? field.value.toString() : ""}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
@@ -264,10 +272,10 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 <FormItem>
                   <FormLabel>{isEditing ? "New Password (Optional)" : "Password"}</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder={isEditing ? "Leave blank to keep current" : "Secure password"} 
-                      type="password" 
-                      {...field} 
+                    <Input
+                      placeholder={isEditing ? "Leave blank to keep current" : "Secure password"}
+                      type="password"
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -276,9 +284,9 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             />
 
             <div className="space-y-3 pt-2">
-              <FormLabel>Individual Overrides (Optional)</FormLabel>
+              <FormLabel>Individual Permission Overrides (Optional)</FormLabel>
               <div className="text-xs text-muted-foreground mb-3">
-                Permissions granted here combine with the user's role. Typically, leave this blank and rely on roles.
+                Permissions granted here combine with the user's role. Typically leave blank and rely on roles.
               </div>
               <div className="grid grid-cols-2 gap-3 bg-muted/10 p-4 rounded-lg border border-border/50 h-[180px] overflow-y-auto">
                 <FormField
@@ -291,32 +299,26 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                           key={item}
                           control={form.control}
                           name="permissions"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={item}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(item)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, item])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== item
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal text-sm cursor-pointer">
-                                  {PERMISSION_LABELS[item]}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
+                          render={({ field }) => (
+                            <FormItem
+                              key={item}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item)}
+                                  onCheckedChange={(checked) =>
+                                    checked
+                                      ? field.onChange([...field.value, item])
+                                      : field.onChange(field.value?.filter((v) => v !== item))
+                                  }
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal text-sm cursor-pointer">
+                                {PERMISSION_LABELS[item]}
+                              </FormLabel>
+                            </FormItem>
+                          )}
                         />
                       ))}
                     </>
@@ -330,7 +332,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 Cancel
               </Button>
               <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>
-                {isEditing ? "Save Changes" : "Create User"}
+                {isEditing ? "Save Changes" : "Create System Account"}
               </Button>
             </DialogFooter>
           </form>

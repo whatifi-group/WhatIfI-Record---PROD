@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeesTable } from "@workspace/db";
+import { db, departmentsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import { requirePermission } from "../../middlewares/requirePermission";
+import { hashPassword } from "../../lib/password";
 import {
   CreateEmployeeBody,
   UpdateEmployeeBody,
@@ -90,19 +91,58 @@ router.post("/employees", async (req, res): Promise<void> => {
     return;
   }
 
-  const [created] = await db
-    .insert(employeesTable)
-    .values({
-      ...parsed.data,
-      startDate: toDateString(parsed.data.startDate),
-      salary: parsed.data.salary != null ? String(parsed.data.salary) : null,
-    })
-    .returning();
+  // Check that the email is not already in use by an existing user account
+  const existingUser = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, parsed.data.email.toLowerCase()))
+    .limit(1);
 
-  const [row] = await employeeSelection().where(
-    eq(employeesTable.id, created.id),
-  );
+  if (existingUser.length > 0) {
+    res.status(409).json({ error: "A user account with this email already exists" });
+    return;
+  }
 
+  // Verify the requested role exists
+  const role = await db
+    .select({ id: rolesTable.id })
+    .from(rolesTable)
+    .where(eq(rolesTable.id, parsed.data.userRole))
+    .limit(1);
+
+  if (role.length === 0) {
+    res.status(400).json({ error: "User role not found" });
+    return;
+  }
+
+  const { userRole, temporaryPassword, ...employeeData } = parsed.data;
+
+  // Create employee + linked user in a single transaction
+  const created = await db.transaction(async (tx) => {
+    const [employee] = await tx
+      .insert(employeesTable)
+      .values({
+        ...employeeData,
+        startDate: toDateString(employeeData.startDate),
+        salary: employeeData.salary != null ? String(employeeData.salary) : null,
+      })
+      .returning();
+
+    await tx.insert(usersTable).values({
+      name: `${employeeData.firstName} ${employeeData.lastName}`,
+      email: employeeData.email.toLowerCase(),
+      passwordHash: hashPassword(temporaryPassword),
+      status: "active",
+      roleId: userRole,
+      permissions: [],
+      isSystemAccount: false,
+      employeeId: employee.id,
+    });
+
+    return employee;
+  });
+
+  const [row] = await employeeSelection().where(eq(employeesTable.id, created.id));
   res.status(201).json(CreateEmployeeResponse.parse(row));
 });
 
@@ -174,6 +214,14 @@ router.patch("/employees/:id", requirePermission("edit_employees"), async (req, 
     return;
   }
 
+  // When marking as leaver, suspend the linked user account in the same operation
+  if (parsed.data.status === "leaver") {
+    await db
+      .update(usersTable)
+      .set({ status: "suspended", updatedAt: new Date() })
+      .where(eq(usersTable.employeeId, updated.id));
+  }
+
   const [row] = await employeeSelection().where(
     eq(employeesTable.id, updated.id),
   );
@@ -188,6 +236,7 @@ router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res):
     return;
   }
 
+  // Cascade via FK deletes linked user automatically
   const [deleted] = await db
     .delete(employeesTable)
     .where(eq(employeesTable.id, params.data.id))

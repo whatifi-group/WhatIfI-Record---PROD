@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Permission } from './permission';
+import type { UserLinkedEmployee } from './userLinkedEmployee';
 import type { UserStatus } from './userStatus';
 
 export interface User {
@@ -16,6 +17,10 @@ export interface User {
   roleId: number;
   roleName: string;
   permissions: Permission[];
+  isSystemAccount: boolean;
+  /** @nullable */
+  employeeId?: number | null;
+  employee?: UserLinkedEmployee | null;
   /** @nullable */
   lastLoginAt?: Date | null;
   createdAt: Date;

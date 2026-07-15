@@ -15,5 +15,6 @@ export interface UserInput {
   /** @minLength 8 */
   password: string;
   roleId: number;
+  isSystemAccount?: boolean;
   permissions?: Permission[];
 }

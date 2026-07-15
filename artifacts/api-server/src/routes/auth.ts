@@ -1,26 +1,10 @@
 import { Router, type IRouter } from "express";
-import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { verifyPassword } from "../lib/password";
 import { LoginBody, LoginResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
-
-function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
-  const verify = crypto
-    .pbkdf2Sync(password, salt, 100_000, 64, "sha512")
-    .toString("hex");
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(hash, "hex"),
-      Buffer.from(verify, "hex"),
-    );
-  } catch {
-    return false;
-  }
-}
 
 function userRow(row: {
   id: number;
@@ -31,6 +15,9 @@ function userRow(row: {
   roleName: string | null;
   rolePermissions: unknown;
   userPermissions: unknown;
+  isSystemAccount: boolean;
+  employeeId: number | null;
+  employee: { id: number; firstName: string; lastName: string; status: string } | null;
   lastLoginAt: Date | null;
   createdAt: Date;
 }) {
@@ -46,6 +33,9 @@ function userRow(row: {
     roleId: row.roleId,
     roleName: row.roleName ?? "",
     permissions: effectivePermissions,
+    isSystemAccount: row.isSystemAccount,
+    employeeId: row.employeeId,
+    employee: row.employee,
     lastLoginAt: row.lastLoginAt,
     createdAt: row.createdAt,
   };
@@ -62,13 +52,34 @@ async function fetchUser(id: number) {
       roleName: rolesTable.name,
       rolePermissions: rolesTable.permissions,
       userPermissions: usersTable.permissions,
+      isSystemAccount: usersTable.isSystemAccount,
+      employeeId: usersTable.employeeId,
+      employeeRecordId: employeesTable.id,
+      employeeFirstName: employeesTable.firstName,
+      employeeLastName: employeesTable.lastName,
+      employeeStatus: employeesTable.status,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })
     .from(usersTable)
     .leftJoin(rolesTable, eq(usersTable.roleId, rolesTable.id))
+    .leftJoin(employeesTable, eq(usersTable.employeeId, employeesTable.id))
     .where(eq(usersTable.id, id));
-  return row ?? null;
+
+  if (!row) return null;
+
+  return {
+    ...row,
+    employee:
+      row.employeeRecordId != null
+        ? {
+            id: row.employeeRecordId,
+            firstName: row.employeeFirstName!,
+            lastName: row.employeeLastName!,
+            status: row.employeeStatus!,
+          }
+        : null,
+  };
 }
 
 // POST /api/auth/login

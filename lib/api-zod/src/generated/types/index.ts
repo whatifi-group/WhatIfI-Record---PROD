@@ -70,5 +70,6 @@ export * from './roleUpdate';
 export * from './sysadminSummary';
 export * from './user';
 export * from './userInput';
+export * from './userLinkedEmployee';
 export * from './userStatus';
 export * from './userUpdate';

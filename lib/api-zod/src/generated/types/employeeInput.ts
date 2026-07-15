@@ -27,4 +27,11 @@ export interface EmployeeInput {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
+  /** Role ID to assign to the automatically created user account */
+  userRole: number;
+  /**
+     * Temporary password for the automatically created user account
+     * @minLength 8
+     */
+  temporaryPassword: string;
 }

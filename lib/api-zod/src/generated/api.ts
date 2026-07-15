@@ -28,6 +28,14 @@ export const LoginResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -50,6 +58,14 @@ export const GetMeResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -190,6 +206,8 @@ export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
 
 
+export const createEmployeeBodyTemporaryPasswordMin = 8;
+
 
 
 export const CreateEmployeeBody = zod.object({
@@ -203,7 +221,9 @@ export const CreateEmployeeBody = zod.object({
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullish(),
-  "avatarUrl": zod.string().nullish()
+  "avatarUrl": zod.string().nullish(),
+  "userRole": zod.number().describe('Role ID to assign to the automatically created user account'),
+  "temporaryPassword": zod.string().min(createEmployeeBodyTemporaryPasswordMin).describe('Temporary password for the automatically created user account')
 })
 
 export const CreateEmployeeResponse = zod.object({
@@ -1417,6 +1437,14 @@ export const ListUsersResponseItem = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -1430,6 +1458,7 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 
 export const createUserBodyPasswordMin = 8;
 
+export const createUserBodyIsSystemAccountDefault = true;
 export const createUserBodyPermissionsDefault = [];
 
 export const CreateUserBody = zod.object({
@@ -1437,6 +1466,7 @@ export const CreateUserBody = zod.object({
   "email": zod.string().min(1),
   "password": zod.string().min(createUserBodyPasswordMin),
   "roleId": zod.number(),
+  "isSystemAccount": zod.boolean().default(createUserBodyIsSystemAccountDefault),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])).default(createUserBodyPermissionsDefault)
 })
 
@@ -1448,6 +1478,14 @@ export const CreateUserResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -1468,6 +1506,14 @@ export const GetUserResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -1500,6 +1546,14 @@ export const UpdateUserResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
@@ -1531,6 +1585,14 @@ export const GetSysadminSummaryResponse = zod.object({
   "roleId": zod.number(),
   "roleName": zod.string(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports'])),
+  "isSystemAccount": zod.boolean(),
+  "employeeId": zod.number().nullish(),
+  "employee": zod.union([zod.object({
+  "id": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver'])
+}),zod.null()]).optional(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 }))

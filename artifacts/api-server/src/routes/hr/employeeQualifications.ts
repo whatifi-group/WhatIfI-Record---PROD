@@ -42,7 +42,12 @@ const RevalidateInput = z.object({
 
 const CertificateInput = z.object({
   fileName: z.string().min(1),
-  fileUrl: z.string().url(),
+  // Accept either a full https:// URL (legacy) or an internal object storage
+  // path returned by the upload endpoint (e.g. "/objects/uploads/uuid").
+  fileUrl: z.string().min(1).refine(
+    (v) => v.startsWith("/objects/") || /^https?:\/\/.+/.test(v),
+    { message: "fileUrl must be an absolute URL or an internal /objects/ path" },
+  ),
   mimeType: z.string().optional().nullable(),
 });
 

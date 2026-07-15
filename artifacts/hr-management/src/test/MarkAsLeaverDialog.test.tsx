@@ -104,7 +104,7 @@ function renderDialog(opts: {
   vi.mocked(useUpdateEmployee).mockReturnValue({
     mutate: mutateFn,
     isPending: opts.isPending ?? false,
-  } as ReturnType<typeof useUpdateEmployee>);
+  } as unknown as ReturnType<typeof useUpdateEmployee>);
 
   vi.mocked(useListLovItems).mockReturnValue({
     data: MOCK_REASONS,

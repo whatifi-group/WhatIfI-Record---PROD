@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useListEmployeeQualifications,
   useCreateEmployeeQualification,
@@ -18,6 +18,7 @@ import type {
   EmployeeQualification,
   QualificationType,
 } from "@workspace/api-client-react";
+import { useUpload } from "@workspace/object-storage-web";
 import { useQueryClient } from "@tanstack/react-query";
 import TabErrorState from "@/components/TabErrorState";
 import { Button } from "@/components/ui/button";
@@ -60,8 +61,21 @@ import {
   ChevronRight,
   Paperclip,
   ExternalLink,
+  Upload,
 } from "lucide-react";
 import { format, parseISO, isPast, differenceInDays } from "date-fns";
+
+/**
+ * Resolve a stored fileUrl to a browseable href.
+ * New uploads store an objectPath like "/objects/uploads/uuid" which needs
+ * to be served via /api/storage. Legacy records store full https:// URLs.
+ */
+function resolveFileHref(fileUrl: string): string {
+  if (fileUrl.startsWith("/objects/")) {
+    return `/api/storage${fileUrl}`;
+  }
+  return fileUrl;
+}
 
 interface Props {
   employeeId: number;
@@ -78,10 +92,6 @@ interface RevalidateForm {
   notes: string;
 }
 
-interface CertForm {
-  fileName: string;
-  fileUrl: string;
-}
 
 const defaultQualForm: QualForm = {
   qualificationTypeId: "",
@@ -182,32 +192,43 @@ function CertificatesList({
   const createCert = useCreateQualificationCertificate();
   const deleteCert = useDeleteQualificationCertificate();
   const [addOpen, setAddOpen] = useState(false);
-  const [certForm, setCertForm] = useState<CertForm>({ fileName: "", fileUrl: "" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadFile, isUploading, progress } = useUpload({
+    onError: () => toast({ title: "Upload failed", variant: "destructive" }),
+  });
 
   const invalidate = () =>
     queryClient.invalidateQueries({
       queryKey: getListQualificationCertificatesQueryKey(employeeId, qualId),
     });
 
-  const handleAdd = () => {
-    if (!certForm.fileName.trim() || !certForm.fileUrl.trim()) {
-      toast({ title: "File name and URL are required", variant: "destructive" });
-      return;
-    }
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await uploadFile(file);
+    if (!result) return; // error already toasted by onError
+
     createCert.mutate(
       {
         id: employeeId,
         qualId,
-        data: { fileName: certForm.fileName.trim(), fileUrl: certForm.fileUrl.trim() },
+        data: {
+          fileName: file.name,
+          fileUrl: result.objectPath,
+          mimeType: file.type || undefined,
+        },
       },
       {
         onSuccess: () => {
-          toast({ title: "Certificate added" });
+          toast({ title: "Certificate uploaded" });
           invalidate();
           setAddOpen(false);
-          setCertForm({ fileName: "", fileUrl: "" });
+          // reset file input so the same file can be re-selected if needed
+          if (fileInputRef.current) fileInputRef.current.value = "";
         },
-        onError: () => toast({ title: "Failed to add certificate", variant: "destructive" }),
+        onError: () => toast({ title: "Failed to save certificate", variant: "destructive" }),
       },
     );
   };
@@ -222,6 +243,8 @@ function CertificatesList({
     );
   };
 
+  const isBusy = isUploading || createCert.isPending;
+
   if (isLoading)
     return <Loader2 className="w-3 h-3 animate-spin text-muted-foreground mx-auto" />;
 
@@ -233,7 +256,7 @@ function CertificatesList({
             <div key={c.id} className="flex items-center gap-2 text-xs">
               <Paperclip className="w-3 h-3 text-muted-foreground shrink-0" />
               <a
-                href={c.fileUrl}
+                href={resolveFileHref(c.fileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-primary hover:underline truncate max-w-[220px]"
@@ -249,6 +272,7 @@ function CertificatesList({
                 size="icon"
                 className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 ml-auto"
                 onClick={() => handleDelete(c.id)}
+                disabled={isBusy}
               >
                 <Trash2 className="w-2.5 h-2.5" />
               </Button>
@@ -256,49 +280,72 @@ function CertificatesList({
           ))}
         </div>
       )}
+
+      {/* Hidden file input — triggered by the button below */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.heic"
+        className="hidden"
+        onChange={handleFileChange}
+        disabled={isBusy}
+      />
+
       {!addOpen ? (
-        <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={() => setAddOpen(true)}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setAddOpen(true)}
+        >
           <Plus className="w-3 h-3" /> Add Certificate
         </Button>
       ) : (
         <div className="border border-border/50 rounded-lg p-3 space-y-2 bg-muted/20">
-          <div>
-            <Label className="text-xs">File Name</Label>
-            <Input
-              className="h-7 text-xs mt-0.5"
-              placeholder="certificate.pdf"
-              value={certForm.fileName}
-              onChange={(e) => setCertForm((f) => ({ ...f, fileName: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">File URL</Label>
-            <Input
-              className="h-7 text-xs mt-0.5"
-              placeholder="https://..."
-              value={certForm.fileUrl}
-              onChange={(e) => setCertForm((f) => ({ ...f, fileUrl: e.target.value }))}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              onClick={handleAdd}
-              disabled={createCert.isPending}
-            >
-              {createCert.isPending && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
-              Add
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => { setAddOpen(false); setCertForm({ fileName: "", fileUrl: "" }); }}
-            >
-              Cancel
-            </Button>
-          </div>
+          {isBusy ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                <span>
+                  {isUploading
+                    ? `Uploading… ${progress}%`
+                    : "Saving certificate…"}
+                </span>
+              </div>
+              {isUploading && (
+                <div className="h-1 rounded-full bg-border overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Choose a PDF or image file to upload.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-3 h-3" />
+                  Choose file
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setAddOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -139,6 +139,8 @@ router.get("/work-records", async (req, res): Promise<void> => {
         employeeDepartmentId: employeesTable.departmentId,
         employeeDepartmentName: departmentsTable.name,
         employeeAvatarUrl: employeesTable.avatarUrl,
+        employeeLeaverDate: employeesTable.leaverDate,
+        employeeLeaverReason: employeesTable.leaverReason,
       })
       .from(employeeWorkRecordsTable)
       .innerJoin(

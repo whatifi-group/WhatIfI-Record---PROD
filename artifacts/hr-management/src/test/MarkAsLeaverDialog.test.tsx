@@ -371,6 +371,51 @@ describe("MarkAsLeaverDialog — submission", () => {
       expect.objectContaining({ variant: "destructive" }),
     );
   });
+
+  it("shows the server 400 error message in the toast description", async () => {
+    const serverError = { data: { error: "leaverDate cannot be more than 30 days in the future" } };
+    const mutateFn = vi
+      .fn()
+      .mockImplementation((_args: unknown, { onError }: { onError: (e: unknown) => void }) => {
+        onError(serverError);
+      });
+    renderDialog({ mutateFn });
+
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /confirm leaver/i }));
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: "destructive",
+        description: "leaverDate cannot be more than 30 days in the future",
+      }),
+    );
+  });
+
+  it("falls back to the generic description when no server error message is present", async () => {
+    const mutateFn = vi
+      .fn()
+      .mockImplementation((_args: unknown, { onError }: { onError: (e: unknown) => void }) => {
+        onError(new Error("Network error"));
+      });
+    renderDialog({ mutateFn });
+
+    await userEvent.selectOptions(
+      screen.getByTestId("reason-select"),
+      "resignation",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /confirm leaver/i }));
+
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: "destructive",
+        description: "Could not mark this employee as a leaver.",
+      }),
+    );
+  });
 });
 
 // ── Pending state ─────────────────────────────────────────────────────────────

@@ -3173,6 +3173,13 @@ components:
           type: ["string", "null"]
         employeeAvatarUrl:
           type: ["string", "null"]
+        employeeLeaverDate:
+          type: ["string", "null"]
+          format: date
+          description: "Leaving date of the employee; null for active employees"
+        employeeLeaverReason:
+          type: ["string", "null"]
+          description: "Leaver reason LOV value; null for active employees"
 
     EmployeeWorkRecord:
       type: object

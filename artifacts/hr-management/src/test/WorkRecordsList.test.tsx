@@ -431,64 +431,115 @@ const WORK_RECORDS_HEADERS = [
   "Hours",
   "Notes",
   "Employee Status",
+  "Leaving Date",
+  "Leaving Reason",
 ];
 
 describe("WorkRecordsList — CSV export content (Employee Status column)", () => {
-  it('includes "Employee Status" as the last column header', () => {
+  it('includes "Employee Status" in the header row', () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, []);
     expect(csv.split("\n")[0]).toContain("Employee Status");
   });
 
-  it('writes "Active" for an active employee row', () => {
+  it('writes "Active" in the Employee Status column for an active employee', () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, [
-      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Active"],
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Active", "", ""],
     ]);
-    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+    expect(csv.split("\n")[1]).toContain(",Active,");
   });
 
-  it('writes "Former" for a non-active (leaver) employee row', () => {
+  it('writes "Former" in the Employee Status column for a non-active (leaver) employee', () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, [
-      ["Bob Jones", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Former"],
+      ["Bob Jones", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Former", "", ""],
     ]);
-    expect(csv.split("\n")[1]).toMatch(/,Former$/);
+    expect(csv.split("\n")[1]).toContain(",Former,");
   });
 });
 
 describe("WorkRecordsList — CSV export encoding (notes field edge cases)", () => {
   it("quotes a notes field containing a comma — no extra columns produced", () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, [
-      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "early shift, urgent", "Active"],
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "early shift, urgent", "Active", "", ""],
     ]);
     // Quoted field must appear verbatim
     expect(csv).toContain('"early shift, urgent"');
-    // Data row must still end with the Employee Status value
-    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+    // Employee Status must still be present in the row
+    expect(csv.split("\n")[1]).toContain(",Active,");
   });
 
   it("doubles embedded double-quotes — no column boundary corruption", () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, [
-      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, 'He said "hello"', "Active"],
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, 'He said "hello"', "Active", "", ""],
     ]);
     expect(csv).toContain('"He said ""hello"""');
-    expect(csv.split("\n")[1]).toMatch(/,Active$/);
+    expect(csv.split("\n")[1]).toContain(",Active,");
   });
 
-  it("quotes a notes field containing a newline — Employee Status appears on the last line of the field", () => {
+  it("quotes a notes field containing a newline — row still has correct column count", () => {
     const csv = buildCsv(WORK_RECORDS_HEADERS, [
-      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "line one\nline two", "Active"],
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "line one\nline two", "Active", "", ""],
     ]);
     // The quoted field must be intact
     expect(csv).toContain('"line one\nline two"');
-    // The Employee Status value closes the logical row. When the CSV is split by
-    // raw "\n", the last segment contains the closing part of the quoted field
-    // followed by the Employee Status — confirm it ends with ",Active".
-    expect(csv).toMatch(/,Active$/);
+    // The row ends with the two empty leaving columns
+    expect(csv).toMatch(/,Active,,$/);
   });
 
   it("filename includes the correct date range", () => {
     expect(workRecordsCsvFilename("2026-01-01", "2026-07-15")).toBe(
       "work-records-2026-01-01-to-2026-07-15.csv",
     );
+  });
+});
+
+// ─── CSV leaving columns ───────────────────────────────────────────────────────
+
+describe("WorkRecordsList — CSV leaving columns", () => {
+  it('includes "Leaving Date" and "Leaving Reason" in the header row', () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, []);
+    const header = csv.split("\n")[0];
+    expect(header).toContain("Leaving Date");
+    expect(header).toContain("Leaving Reason");
+  });
+
+  it("populates leaving columns for a former employee", () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Bob Jones", "Engineering", "2026-06-01", "Regular", "09:00", "17:00", 8, "", "Former", "2026-06-30", "resignation"],
+    ]);
+    const row = csv.split("\n")[1];
+    expect(row).toContain("2026-06-30");
+    expect(row).toContain("resignation");
+  });
+
+  it("leaves the leaving columns blank for an active employee", () => {
+    const csv = buildCsv(WORK_RECORDS_HEADERS, [
+      ["Alice Smith", "Engineering", "2026-07-01", "Regular", "09:00", "17:00", 8, "", "Active", "", ""],
+    ]);
+    // Row ends with Active,, (two empty leaving columns)
+    expect(csv.split("\n")[1]).toMatch(/,Active,,$/);
+  });
+});
+
+// ─── Server-side search ───────────────────────────────────────────────────────
+
+describe("WorkRecordsList — server-side search", () => {
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.clearAllMocks();
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [], total: 0, page: 1, pageSize: 50, totalPages: 0 },
+      isLoading: false,
+    } as any);
+  });
+
+  it("does not pass a search param when the input is empty", () => {
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    const calls = vi.mocked(useListWorkRecords).mock.calls;
+    const lastCall = calls[calls.length - 1][0] as Record<string, unknown>;
+    expect(lastCall.search).toBeUndefined();
   });
 });
 

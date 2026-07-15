@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useListWorkRecords, useListDepartments, useListLovItems } from "@workspace/api-client-react";
-import type { WorkRecordRow } from "@workspace/api-client-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useListWorkRecords, useListDepartments, useListLovItems, listWorkRecords, EmployeeStatus } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { buildCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const shiftTypeColor: Record<string, string> = {
   regular: "bg-secondary/20 text-secondary-foreground border-secondary/30",
@@ -29,62 +29,64 @@ export default function WorkRecordsList() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [dateFrom, setDateFrom] = useState(thirtyDaysAgo);
   const [dateTo, setDateTo] = useState(today);
   const [shiftTypeFilter, setShiftTypeFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [includeFormer, setIncludeFormer] = useState(false);
   const [page, setPage] = useState(1);
+  const [csvLoading, setCsvLoading] = useState(false);
+  const { toast } = useToast();
+
+  // Debounce search input — 300 ms
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 300);
+  }, []);
 
   // Reset to page 1 whenever any server-side filter changes
   useEffect(() => {
     setPage(1);
-  }, [dateFrom, dateTo, shiftTypeFilter, departmentFilter, includeFormer]);
+  }, [dateFrom, dateTo, shiftTypeFilter, departmentFilter, includeFormer, debouncedSearch]);
 
   const { data: departments } = useListDepartments();
   const { data: shiftTypes } = useListLovItems("shift_type");
 
-  // Single aggregated request — server applies date-range, shift-type,
-  // department, and employee-status filters so the browser never fans out
-  // one request per employee.
+  // Single aggregated request — server applies all filters including search.
   const { data, isLoading } = useListWorkRecords({
     from: dateFrom || undefined,
     to: dateTo || undefined,
     shiftType: shiftTypeFilter !== "all" ? shiftTypeFilter : undefined,
     departmentId: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
     employeeStatus: !includeFormer ? "active" : undefined,
+    search: debouncedSearch || undefined,
     page,
     pageSize: 50,
   });
 
   const rows = data?.rows ?? [];
 
-  // Client-side text search (fast in-memory, no debounce needed)
-  const filteredRows = useMemo<WorkRecordRow[]>(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
-      const fullName = `${row.employeeFirstName} ${row.employeeLastName}`.toLowerCase();
-      const email = row.employeeEmail.toLowerCase();
-      return fullName.includes(q) || email.includes(q);
-    });
-  }, [rows, searchQuery]);
-
   // Sort by date descending, then employee name
   const sortedRows = useMemo(() => {
-    return [...filteredRows].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       const dateDiff = new Date(b.shiftDate).getTime() - new Date(a.shiftDate).getTime();
       if (dateDiff !== 0) return dateDiff;
       const nameA = `${a.employeeFirstName} ${a.employeeLastName}`;
       const nameB = `${b.employeeFirstName} ${b.employeeLastName}`;
       return nameA.localeCompare(nameB);
     });
-  }, [filteredRows]);
+  }, [rows]);
 
   // Hours per employee
   const hoursByEmployee = useMemo(() => {
     const map: Record<number, { name: string; hours: number; isFormer: boolean }> = {};
-    filteredRows.forEach((row) => {
+    rows.forEach((row) => {
       if (!map[row.employeeId]) {
         map[row.employeeId] = {
           name: `${row.employeeFirstName} ${row.employeeLastName}`,
@@ -97,21 +99,21 @@ export default function WorkRecordsList() {
     return Object.entries(map)
       .map(([id, v]) => ({ employeeId: Number(id), ...v }))
       .sort((a, b) => b.hours - a.hours);
-  }, [filteredRows]);
+  }, [rows]);
 
   // Hours per department
   const hoursByDept = useMemo(() => {
     const map: Record<string, number> = {};
-    filteredRows.forEach((row) => {
+    rows.forEach((row) => {
       const key = row.employeeDepartmentName ?? "No Department";
       map[key] = (map[key] ?? 0) + (row.hoursWorked ?? 0);
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [filteredRows]);
+  }, [rows]);
 
-  const totalHours = filteredRows.reduce((sum, row) => sum + (row.hoursWorked ?? 0), 0);
+  const totalHours = rows.reduce((sum, row) => sum + (row.hoursWorked ?? 0), 0);
 
-  function exportCsv() {
+  async function exportCsv() {
     const headers = [
       "Employee Name",
       "Department",
@@ -122,9 +124,57 @@ export default function WorkRecordsList() {
       "Hours",
       "Notes",
       "Employee Status",
+      "Leaving Date",
+      "Leaving Reason",
     ];
 
-    const dataRows = sortedRows.map((row) => [
+    // Fetch all matching records by paginating with max allowed pageSize
+    setCsvLoading(true);
+    const CSV_PAGE_SIZE = 200;
+    const baseParams = {
+      from: dateFrom || undefined,
+      to: dateTo || undefined,
+      shiftType: shiftTypeFilter !== "all" ? shiftTypeFilter : undefined,
+      departmentId: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
+      employeeStatus: !includeFormer ? EmployeeStatus.active : undefined,
+      search: debouncedSearch || undefined,
+      pageSize: CSV_PAGE_SIZE,
+    };
+
+    let allRows;
+    try {
+      // First page also gives us the total so we know how many more to fetch
+      const firstPage = await listWorkRecords({ ...baseParams, page: 1 });
+      allRows = [...firstPage.rows];
+      const totalPages = firstPage.totalPages;
+      if (totalPages > 1) {
+        const remaining = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) =>
+            listWorkRecords({ ...baseParams, page: i + 2 }),
+          ),
+        );
+        for (const r of remaining) allRows.push(...r.rows);
+      }
+    } catch {
+      toast({
+        title: "Export failed",
+        description: "Could not download work records. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    } finally {
+      setCsvLoading(false);
+    }
+
+    const sorted = [...allRows].sort((a, b) => {
+      const dateDiff = new Date(b.shiftDate).getTime() - new Date(a.shiftDate).getTime();
+      if (dateDiff !== 0) return dateDiff;
+      const nameA = `${a.employeeFirstName} ${a.employeeLastName}`;
+      const nameB = `${b.employeeFirstName} ${b.employeeLastName}`;
+      return nameA.localeCompare(nameB);
+    });
+
+    const dataRows = sorted.map((row) => [
       `${row.employeeFirstName} ${row.employeeLastName}`,
       row.employeeDepartmentName ?? "",
       row.shiftDate,
@@ -134,6 +184,8 @@ export default function WorkRecordsList() {
       row.hoursWorked ?? "",
       row.notes ?? "",
       row.employeeStatus === "active" ? "Active" : "Former",
+      row.employeeLeaverDate ?? "",
+      row.employeeLeaverReason ?? "",
     ]);
 
     const csv = buildCsv(headers, dataRows);
@@ -161,10 +213,14 @@ export default function WorkRecordsList() {
           size="sm"
           className="shrink-0 gap-1.5"
           onClick={exportCsv}
-          disabled={isLoading || sortedRows.length === 0}
+          disabled={isLoading || csvLoading || sortedRows.length === 0}
         >
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
+          {csvLoading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Download className="h-3.5 w-3.5" />
+          )}
+          {csvLoading ? "Exporting…" : "Export CSV"}
         </Button>
       </div>
 
@@ -180,7 +236,7 @@ export default function WorkRecordsList() {
                   type="search"
                   placeholder="Name or email…"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="h-9 text-sm pl-8"
                 />
               </div>
@@ -249,7 +305,7 @@ export default function WorkRecordsList() {
                 size="sm"
                 className="h-7 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => {
-                  setSearchQuery("");
+                  handleSearchChange("");
                   setDateFrom(thirtyDaysAgo);
                   setDateTo(today);
                   setShiftTypeFilter("all");

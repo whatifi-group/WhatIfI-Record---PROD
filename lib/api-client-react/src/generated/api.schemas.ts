@@ -754,6 +754,10 @@ export interface WorkRecordRow {
   employeeDepartmentName?: string | null;
   /** @nullable */
   employeeAvatarUrl?: string | null;
+  /** @nullable */
+  employeeLeaverDate?: string | null;
+  /** @nullable */
+  employeeLeaverReason?: string | null;
 }
 
 export interface WorkRecordsPage {

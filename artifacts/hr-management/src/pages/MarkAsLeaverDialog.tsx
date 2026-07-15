@@ -118,10 +118,20 @@ export default function MarkAsLeaverDialog({
           handleClose();
           onSuccess(updated);
         },
-        onError: () => {
+        onError: (error: unknown) => {
+          const serverMessage =
+            error != null &&
+            typeof error === "object" &&
+            "data" in error &&
+            error.data != null &&
+            typeof error.data === "object" &&
+            "error" in error.data &&
+            typeof (error.data as Record<string, unknown>).error === "string"
+              ? (error.data as Record<string, string>).error
+              : undefined;
           toast({
             title: "Action failed",
-            description: "Could not mark this employee as a leaver.",
+            description: serverMessage ?? "Could not mark this employee as a leaver.",
             variant: "destructive",
           });
         },

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, asc } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db, employeeServicePeriodsTable } from "@workspace/db";
 import { z } from "zod";
 
@@ -62,6 +62,31 @@ router.post("/employees/:id/service-periods", async (req, res): Promise<void> =>
     return;
   }
 
+  // Overlap check — reject if any existing period for this employee shares time with the new one.
+  // Two periods [s1,e1] and [s2,e2] overlap iff s1 < e2_eff AND s2 < e1_eff (NULL end = open/infinity).
+  {
+    const overlapWhere: ReturnType<typeof and>[] = [
+      eq(employeeServicePeriodsTable.employeeId, params.data.id),
+      // existing period ends after new period starts (or existing is open-ended)
+      or(
+        isNull(employeeServicePeriodsTable.endDate),
+        gt(employeeServicePeriodsTable.endDate, parsed.data.startDate),
+      )!,
+    ];
+    // If new period has an end date, existing must start before it
+    if (parsed.data.endDate) {
+      overlapWhere.push(lt(employeeServicePeriodsTable.startDate, parsed.data.endDate) as ReturnType<typeof and>);
+    }
+    const overlapping = await db
+      .select({ id: employeeServicePeriodsTable.id })
+      .from(employeeServicePeriodsTable)
+      .where(and(...overlapWhere));
+    if (overlapping.length > 0) {
+      res.status(400).json({ error: "Service period overlaps an existing period for this employee" });
+      return;
+    }
+  }
+
   const [created] = await db
     .insert(employeeServicePeriodsTable)
     .values({
@@ -119,6 +144,29 @@ router.put(
     ) {
       res.status(400).json({ error: "endDate must be after startDate" });
       return;
+    }
+
+    // Overlap check — same logic as POST but excluding the period being updated.
+    {
+      const overlapWhere: ReturnType<typeof and>[] = [
+        eq(employeeServicePeriodsTable.employeeId, params.data.id),
+        ne(employeeServicePeriodsTable.id, params.data.periodId),
+        or(
+          isNull(employeeServicePeriodsTable.endDate),
+          gt(employeeServicePeriodsTable.endDate, effectiveStartDate),
+        )!,
+      ];
+      if (effectiveEndDate) {
+        overlapWhere.push(lt(employeeServicePeriodsTable.startDate, effectiveEndDate) as ReturnType<typeof and>);
+      }
+      const overlapping = await db
+        .select({ id: employeeServicePeriodsTable.id })
+        .from(employeeServicePeriodsTable)
+        .where(and(...overlapWhere));
+      if (overlapping.length > 0) {
+        res.status(400).json({ error: "Service period overlaps an existing period for this employee" });
+        return;
+      }
     }
 
     const [updated] = await db

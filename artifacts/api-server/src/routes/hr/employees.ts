@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import { db, departmentsTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import {
   requirePermission,
   invalidatePermissionsCache,
@@ -191,6 +191,19 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   const { salary, startDate, leaverDate, ...rest } = parsed.data;
   const today = new Date().toISOString().slice(0, 10);
 
+  // Pre-fetch current status so we can detect leaver ↔ active transitions for
+  // service-period sync (done after the update below).
+  const [currentEmployee] = await db
+    .select({ status: employeesTable.status })
+    .from(employeesTable)
+    .where(eq(employeesTable.id, params.data.id))
+    .limit(1);
+
+  if (!currentEmployee) {
+    res.status(404).json({ error: "Employee not found" });
+    return;
+  }
+
   const [updated] = await db
     .update(employeesTable)
     .set({
@@ -218,11 +231,40 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     return;
   }
 
-  // When marking as leaver, suspend the linked user account in the same operation
+  // When marking as leaver: suspend user account + close open service period
   if (parsed.data.status === "leaver") {
     await db
       .update(usersTable)
       .set({ status: "suspended", updatedAt: new Date() })
+      .where(eq(usersTable.employeeId, updated.id));
+
+    const closingDate = updated.leaverDate ?? today;
+    await db
+      .update(employeeServicePeriodsTable)
+      .set({
+        endDate: closingDate,
+        endReason: parsed.data.leaverReason ?? "leaver",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(employeeServicePeriodsTable.employeeId, updated.id),
+          isNull(employeeServicePeriodsTable.endDate),
+        ),
+      );
+  }
+
+  // When re-activating from leaver: open a new service period + re-enable user
+  if (currentEmployee.status === "leaver" && parsed.data.status === "active") {
+    await db.insert(employeeServicePeriodsTable).values({
+      employeeId: updated.id,
+      startDate: today,
+      endDate: null,
+    });
+
+    await db
+      .update(usersTable)
+      .set({ status: "active", updatedAt: new Date() })
       .where(eq(usersTable.employeeId, updated.id));
   }
 

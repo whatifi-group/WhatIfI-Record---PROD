@@ -180,7 +180,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Jane Doe" {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,7 +193,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="jane@whatifi.group" type="email" {...field} />
+                      <Input type="email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -261,7 +261,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                   <FormLabel>{isEditing ? "New Password (Optional)" : "Password"}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder={isEditing ? "Leave blank to keep current" : "Secure password"}
                       type="password"
                       {...field}
                     />

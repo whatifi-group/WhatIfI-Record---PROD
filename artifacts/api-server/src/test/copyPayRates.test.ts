@@ -306,3 +306,140 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — edge cases",
     expect(res.body.copied[0].notes).toBeNull();
   });
 });
+
+// ── Overwrite behaviour ───────────────────────────────────────────────────────
+
+describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId?overwrite=true — overwrite", () => {
+  let source: number;
+  let target: number;
+
+  beforeEach(async () => {
+    source = await createTestEmployee();
+    target = await createTestEmployee();
+  });
+
+  afterEach(async () => {
+    await cleanupEmployee(source);
+    await cleanupEmployee(target);
+  });
+
+  it("replaces a conflicting shift type on the target with the source values", async () => {
+    await insertPayRate(source, "standard", 25, "hourly", "New rate");
+    await insertPayRate(target, "standard", 10, "hourly", "Old rate");
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(1);
+    expect(res.body.skipped).toEqual([]);
+
+    const copied = res.body.copied[0];
+    expect(copied.shiftType).toBe("standard");
+    expect(copied.rate).toBe(25);
+    expect(copied.notes).toBe("New rate");
+    expect(copied.employeeId).toBe(target);
+  });
+
+  it("places previously-skipped rates in copied when overwrite=true", async () => {
+    await insertPayRate(source, "standard", 15);
+    await insertPayRate(source, "weekend", 20);
+    await insertPayRate(target, "standard", 12);
+
+    const api = buildApp(router, payrollUserId);
+
+    // Without overwrite: standard is skipped
+    const resNoOverwrite = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}`,
+    );
+    expect(resNoOverwrite.body.skipped).toContain("standard");
+
+    // With overwrite: standard should now be in copied
+    const resOverwrite = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+    expect(resOverwrite.status).toBe(200);
+    expect(resOverwrite.body.skipped).toEqual([]);
+    const copiedTypes = resOverwrite.body.copied.map((r: { shiftType: string }) => r.shiftType);
+    expect(copiedTypes).toContain("standard");
+    expect(copiedTypes).toContain("weekend");
+  });
+
+  it("overwrites all conflicting rates when all shift types conflict", async () => {
+    await insertPayRate(source, "standard", 30, "daily", "Source standard");
+    await insertPayRate(source, "weekend", 40, "flat", "Source weekend");
+    await insertPayRate(target, "standard", 10);
+    await insertPayRate(target, "weekend", 18);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(2);
+    expect(res.body.skipped).toEqual([]);
+
+    const copiedByType = Object.fromEntries(
+      res.body.copied.map((r: { shiftType: string; rate: number; rateUnit: string }) => [
+        r.shiftType,
+        r,
+      ]),
+    );
+    expect(copiedByType["standard"].rate).toBe(30);
+    expect(copiedByType["standard"].rateUnit).toBe("daily");
+    expect(copiedByType["weekend"].rate).toBe(40);
+    expect(copiedByType["weekend"].rateUnit).toBe("flat");
+  });
+
+  it("inserts non-conflicting rates and overwrites conflicting ones in a single call", async () => {
+    await insertPayRate(source, "standard", 20); // conflicts
+    await insertPayRate(source, "overtime", 35); // no conflict
+    await insertPayRate(target, "standard", 10);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(2);
+    expect(res.body.skipped).toEqual([]);
+
+    const copiedTypes = res.body.copied.map((r: { shiftType: string }) => r.shiftType);
+    expect(copiedTypes).toContain("standard");
+    expect(copiedTypes).toContain("overtime");
+  });
+
+  it("does not modify the source employee's rates during overwrite", async () => {
+    await insertPayRate(source, "standard", 20, "hourly", "Source note");
+    await insertPayRate(target, "standard", 10);
+
+    const api = buildApp(router, payrollUserId);
+    await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`,
+    );
+
+    const sourceRates = await getPayRates(source);
+    expect(sourceRates).toHaveLength(1);
+    expect(sourceRates[0].shiftType).toBe("standard");
+    expect(Number(sourceRates[0].rate)).toBe(20);
+    expect(sourceRates[0].notes).toBe("Source note");
+  });
+
+  it("default behaviour (no param) still skips conflicts even after overwrite was used previously", async () => {
+    await insertPayRate(source, "standard", 25);
+    await insertPayRate(target, "standard", 10);
+
+    const api = buildApp(router, payrollUserId);
+    const res = await api.post(
+      `/api/employees/${target}/pay-rates/copy-from/${source}`,
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toEqual([]);
+    expect(res.body.skipped).toContain("standard");
+  });
+});

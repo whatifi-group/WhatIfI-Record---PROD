@@ -159,6 +159,13 @@ router.put(
   },
 );
 
+const CopyFromQuery = z.object({
+  overwrite: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+});
+
 router.post(
   "/employees/:id/pay-rates/copy-from/:sourceId",
   requirePermission(["view_payroll", "sysadmin"]),
@@ -169,7 +176,14 @@ router.post(
       return;
     }
 
+    const query = CopyFromQuery.safeParse(req.query);
+    if (!query.success) {
+      res.status(400).json({ error: query.error.message });
+      return;
+    }
+
     const { id: targetId, sourceId } = params.data;
+    const { overwrite } = query.data;
 
     if (targetId === sourceId) {
       res.status(400).json({ error: "Cannot copy pay rates from the same employee" });
@@ -181,13 +195,13 @@ router.post(
       eq(employeePayRatesTable.employeeId, sourceId),
     );
 
-    // Fetch shift types already on the target to detect conflicts
+    // Fetch existing target rates to detect conflicts
     const existingRows = await db
-      .select({ shiftType: employeePayRatesTable.shiftType })
+      .select({ id: employeePayRatesTable.id, shiftType: employeePayRatesTable.shiftType })
       .from(employeePayRatesTable)
       .where(eq(employeePayRatesTable.employeeId, targetId));
 
-    const existingShiftTypes = new Set(existingRows.map((r) => r.shiftType));
+    const existingByShiftType = new Map(existingRows.map((r) => [r.shiftType, r.id]));
 
     // Fetch active shift types from the LOV so we don't copy orphaned values
     const activeRows = await db
@@ -198,30 +212,57 @@ router.post(
       );
     const activeLovValues = new Set(activeRows.map((r) => r.value));
 
-    const toInsert = sourceRates.filter(
-      (r) => !existingShiftTypes.has(r.shiftType) && activeLovValues.has(r.shiftType),
-    );
-    const skipped = sourceRates
-      .filter((r) => existingShiftTypes.has(r.shiftType) || !activeLovValues.has(r.shiftType))
-      .map((r) => r.shiftType);
-
     const copied = [];
-    for (const rate of toInsert) {
-      const [inserted] = await db
-        .insert(employeePayRatesTable)
-        .values({
-          employeeId: targetId,
-          shiftType: rate.shiftType,
-          rate: String(rate.rate),
-          rateUnit: rate.rateUnit,
-          notes: rate.notes ?? null,
-        })
-        .returning({ id: employeePayRatesTable.id });
+    const skipped: string[] = [];
 
-      const [created] = await payRateSelection().where(
-        eq(employeePayRatesTable.id, inserted.id),
-      );
-      copied.push(created);
+    for (const rate of sourceRates) {
+      // Skip rates for inactive LOV entries regardless of overwrite flag
+      if (!activeLovValues.has(rate.shiftType)) {
+        skipped.push(rate.shiftType);
+        continue;
+      }
+
+      const existingId = existingByShiftType.get(rate.shiftType);
+
+      if (existingId !== undefined) {
+        if (!overwrite) {
+          // Default behaviour: skip conflicts
+          skipped.push(rate.shiftType);
+          continue;
+        }
+
+        // overwrite=true: update the target's existing rate with the source values
+        await db
+          .update(employeePayRatesTable)
+          .set({
+            rate: String(rate.rate),
+            rateUnit: rate.rateUnit,
+            notes: rate.notes ?? null,
+          })
+          .where(eq(employeePayRatesTable.id, existingId));
+
+        const [updated] = await payRateSelection().where(
+          eq(employeePayRatesTable.id, existingId),
+        );
+        copied.push(updated);
+      } else {
+        // No conflict: insert new rate on target
+        const [inserted] = await db
+          .insert(employeePayRatesTable)
+          .values({
+            employeeId: targetId,
+            shiftType: rate.shiftType,
+            rate: String(rate.rate),
+            rateUnit: rate.rateUnit,
+            notes: rate.notes ?? null,
+          })
+          .returning({ id: employeePayRatesTable.id });
+
+        const [created] = await payRateSelection().where(
+          eq(employeePayRatesTable.id, inserted.id),
+        );
+        copied.push(created);
+      }
     }
 
     res.json({ copied, skipped });

@@ -142,6 +142,47 @@ describe("Permission cache — role permission update", () => {
   });
 });
 
+// ── Test 4b: role update via API evicts only that role's members ─────────────
+
+describe("Permission cache — role update via API (targeted eviction isolation)", () => {
+  it("evicts members of the updated role but leaves unrelated users' cache intact", async () => {
+    // Two completely separate roles, each with one member.
+    const roleA = await createTestRole(["edit_employees"], "Role A (updated)");
+    const roleB = await createTestRole(["edit_employees"], "Role B (untouched)");
+    const userA = await createTestUser(roleA);
+    const userB = await createTestUser(roleB);
+
+    try {
+      // Prime the cache for both users.
+      const beforeA = await getEffectivePermissions(userA);
+      const beforeB = await getEffectivePermissions(userB);
+      expect(beforeA.has("edit_employees")).toBe(true);
+      expect(beforeB.has("edit_employees")).toBe(true);
+
+      // Update roleA's permissions via the sysadmin API — roleB is untouched.
+      const res = await buildApp(sysadminRouter, sysadminUserId)
+        .patch(`/api/sysadmin/roles/${roleA}`)
+        .send({ permissions: ["view_reports"] });
+      expect(res.status).toBe(200);
+
+      // userA's entry was evicted by the role update; they now see the new permissions.
+      const afterA = await getEffectivePermissions(userA);
+      expect(afterA.has("view_reports")).toBe(true);
+      expect(afterA.has("edit_employees")).toBe(false);
+
+      // userB's entry must still be cached — a DB change to roleA must not
+      // evict an unrelated user.  userB still sees edit_employees from cache.
+      const afterB = await getEffectivePermissions(userB);
+      expect(afterB.has("edit_employees")).toBe(true);
+    } finally {
+      await cleanupUser(userA);
+      await cleanupUser(userB);
+      await cleanupRole(roleA);
+      await cleanupRole(roleB);
+    }
+  });
+});
+
 // ── Test 5: employee deletion cascades to evict linked user's cache ──────────
 
 describe("Permission cache — employee deletion cascades to linked user", () => {

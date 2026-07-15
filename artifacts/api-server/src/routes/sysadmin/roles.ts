@@ -114,22 +114,28 @@ router.patch("/sysadmin/roles/:id", async (req, res): Promise<void> => {
     .set(parsed.data)
     .where(eq(rolesTable.id, params.data.id));
 
-  // Evict only cache entries for users who hold this role — avoids a
-  // thundering-herd where every user simultaneously re-fetches permissions.
-  // Unrelated users' cache entries survive untouched.
+  // Collect affected user IDs now (consistent with the just-committed update)
+  // but run the eviction loop AFTER the response is sent so the caller's
+  // latency is not proportional to the number of role members.
   // clearPermissionsCache() remains available as a last-resort escape hatch.
+  let affectedUserIds: number[] = [];
   if (parsed.data.permissions !== undefined) {
     const affected = await db
       .select({ id: usersTable.id })
       .from(usersTable)
       .where(eq(usersTable.roleId, params.data.id));
-    for (const u of affected) {
-      invalidatePermissionsCache(u.id);
-    }
+    affectedUserIds = affected.map((u) => u.id);
   }
 
   const [row] = await roleSelection().where(eq(rolesTable.id, params.data.id));
   res.json(UpdateRoleResponse.parse(row));
+
+  // Fire eviction in the background — response is already sent to the client.
+  setImmediate(() => {
+    for (const id of affectedUserIds) {
+      invalidatePermissionsCache(id);
+    }
+  });
 });
 
 router.delete("/sysadmin/roles/:id", async (req, res): Promise<void> => {

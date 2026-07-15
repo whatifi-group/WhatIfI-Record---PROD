@@ -32,12 +32,17 @@ Deliberately out of scope for v1: payroll, attendance/time tracking.
 
 ## Schema migrations (drizzle-kit)
 
-`drizzle-kit push` requires an interactive TTY and will hang in non-interactive shells (CI, Replit's shell runner). To apply schema changes:
+Schema changes are applied via `lib/db/scripts/safe-push.mjs`, a thin wrapper around `drizzle-kit push` that prevents silent data loss in non-interactive shells.
 
-- **Interactive shell**: run `pnpm --filter @workspace/db push` — it prompts you to confirm destructive changes.
-- **Force push (skip prompts)**: run `pnpm --filter @workspace/db push-force` — use only when you are certain no data will be lost (e.g. adding new tables/columns).
+| Situation | Command | Behaviour |
+|-----------|---------|-----------|
+| Interactive shell (normal) | `pnpm --filter @workspace/db push` | Passes through to drizzle-kit; prompts appear as usual for destructive changes. |
+| Non-interactive, additive-only changes | `FORCE=1 pnpm --filter @workspace/db push` | Passes `--force`; skips prompts. Prints a prominent warning. Use only when you are certain no columns/tables will be dropped (e.g. adding new tables/columns). |
+| Non-interactive, unknown safety | `pnpm --filter @workspace/db push` | Detects the missing TTY, prints a clear error, and **exits 1** without touching the database. |
 
-Never leave one-off raw-SQL migration scripts in the repo. If `drizzle-kit push` cannot run (e.g. no TTY available), open an interactive shell session first and run the push command there.
+`push-force` is an alias for `FORCE=1 … push` and is kept for convenience.
+
+Never leave one-off raw-SQL migration scripts in the repo.
 
 ## User preferences
 - Brand identity from the uploaded logo: navy/red/green compass motif.

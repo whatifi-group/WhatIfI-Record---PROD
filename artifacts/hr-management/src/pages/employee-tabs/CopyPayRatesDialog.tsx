@@ -84,6 +84,16 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
     },
   );
 
+  // Target employee's existing rates — used to annotate conflict status per row
+  const { data: targetRates = [] } = useListEmployeePayRates(targetEmployeeId, {
+    query: {
+      queryKey: getListEmployeePayRatesQueryKey(targetEmployeeId),
+    },
+  });
+
+  /** Set of shiftTypes that already exist on the target employee (O(1) lookup). */
+  const targetShiftTypes = new Set(targetRates.map((r) => r.shiftType));
+
   const copyMutation = useCopyEmployeePayRates();
 
   const filteredEmployees = employees.filter((e) => e.id !== targetEmployeeId);
@@ -206,7 +216,7 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   className="pl-9"
-
+                  placeholder="Search by name or email…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   autoFocus
@@ -285,22 +295,37 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
                       : "Any shift types that already exist on this employee will be skipped."}
                   </p>
                   <div className="border border-border/50 rounded-lg divide-y divide-border/50 max-h-48 overflow-y-auto">
-                    {sourceRates.map((r) => (
-                      <div
-                        key={r.id}
-                        className="px-4 py-2.5 flex items-center justify-between text-sm"
-                      >
-                        <span className="font-medium capitalize">
-                          {r.shiftType.replace(/_/g, " ")}
-                        </span>
-                        <span className="font-mono text-foreground">
-                          £{Number(r.rate).toFixed(2)}
-                          <span className="ml-1 text-xs text-muted-foreground font-sans">
-                            / {RATE_UNIT_LABELS[r.rateUnit] ?? r.rateUnit}
+                    {sourceRates.map((r) => {
+                      const hasConflict = targetShiftTypes.has(r.shiftType);
+                      const badge = hasConflict
+                        ? overwrite
+                          ? { label: "Will update", className: "bg-blue-100 text-blue-700" }
+                          : { label: "Will skip", className: "bg-amber-100 text-amber-700" }
+                        : { label: "Will insert", className: "bg-green-100 text-green-700" };
+                      return (
+                        <div
+                          key={r.id}
+                          className="px-4 py-2.5 flex items-center justify-between text-sm"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium capitalize">
+                              {r.shiftType.replace(/_/g, " ")}
+                            </span>
+                            <span
+                              className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
+                          <span className="font-mono text-foreground shrink-0">
+                            £{Number(r.rate).toFixed(2)}
+                            <span className="ml-1 text-xs text-muted-foreground font-sans">
+                              / {RATE_UNIT_LABELS[r.rateUnit] ?? r.rateUnit}
+                            </span>
                           </span>
-                        </span>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               )}

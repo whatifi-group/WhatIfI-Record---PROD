@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, departmentsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
-import { requirePermission } from "../../middlewares/requirePermission";
+import { requirePermission, getEffectivePermissions } from "../../middlewares/requirePermission";
 import { hashPassword } from "../../lib/password";
 import {
   CreateEmployeeBody,
@@ -49,6 +49,20 @@ function employeeSelection() {
     );
 }
 
+/** True when the given permission set allows viewing payroll-sensitive fields. */
+function canViewPayroll(perms: Set<string>): boolean {
+  return perms.has("view_payroll") || perms.has("sysadmin");
+}
+
+/** Strip salary from an employee row if the caller lacks payroll permission. */
+function redactSalary<T extends { salary?: number | null }>(
+  row: T,
+  allowed: boolean,
+): T {
+  if (allowed) return row;
+  return { ...row, salary: null };
+}
+
 router.get("/employees", async (req, res): Promise<void> => {
   const query = ListEmployeesQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -81,7 +95,12 @@ router.get("/employees", async (req, res): Promise<void> => {
     : base
   ).orderBy(employeesTable.lastName, employeesTable.firstName);
 
-  res.json(ListEmployeesResponse.parse(rows));
+  // Salary is payroll-sensitive — only expose it to users with view_payroll or sysadmin.
+  const userId = req.session?.userId;
+  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  const showSalary = canViewPayroll(perms);
+
+  res.json(ListEmployeesResponse.parse(rows.map((r) => redactSalary(r, showSalary))));
 });
 
 router.post("/employees", async (req, res): Promise<void> => {
@@ -162,10 +181,12 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetEmployeeResponse.parse(row));
+  const userId = req.session?.userId;
+  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  res.json(GetEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
 });
 
-router.patch("/employees/:id", requirePermission("edit_employees"), async (req, res): Promise<void> => {
+router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
   const params = UpdateEmployeeParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -226,7 +247,9 @@ router.patch("/employees/:id", requirePermission("edit_employees"), async (req, 
     eq(employeesTable.id, updated.id),
   );
 
-  res.json(UpdateEmployeeResponse.parse(row));
+  const userId = req.session?.userId;
+  const perms = userId ? await getEffectivePermissions(userId) : new Set<string>();
+  res.json(UpdateEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
 });
 
 router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {

@@ -12,6 +12,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
+      // Mirrors the vite.config.ts @assets alias so tests that transitively
+      // import pages using logo/image assets can resolve them.
+      "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
     },
     dedupe: ["react", "react-dom"],
   },

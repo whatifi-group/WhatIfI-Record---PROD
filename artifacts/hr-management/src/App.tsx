@@ -69,7 +69,7 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
-function HrRoute({ component: Component }: { component: React.ComponentType }) {
+export function HrRoute({ component: Component }: { component: React.ComponentType }) {
   const { hasPermission } = useAuth();
   if (!hasPermission('hr:access') && !hasPermission('sysadmin')) {
     return <AccessDenied />;

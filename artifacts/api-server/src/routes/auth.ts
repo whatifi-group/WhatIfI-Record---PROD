@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import { verifyPassword } from "../lib/password";
-import { LoginBody, LoginResponse } from "@workspace/api-zod";
+import { LoginBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -115,7 +115,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   req.session.userId = user.id;
 
   const row = await fetchUser(user.id);
-  res.json(LoginResponse.parse(userRow(row!)));
+  res.json(userRow(row!));
 });
 
 // POST /api/auth/logout
@@ -146,7 +146,7 @@ router.get("/auth/me", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(LoginResponse.parse(userRow(row)));
+  res.json(userRow(row));
 });
 
 export default router;

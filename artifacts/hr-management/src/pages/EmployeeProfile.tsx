@@ -18,7 +18,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { GroupedTabNav } from "@/components/GroupedTabNav";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -70,6 +71,7 @@ export default function EmployeeProfile() {
   const canViewPayroll = hasPermission('view_payroll') || hasPermission('sysadmin');
   const canViewDisclosures = hasPermission('view_disclosures') || hasPermission('sysadmin');
 
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isEditing, setIsEditing] = useState(canEdit);
   const [isMarkingLeaver, setIsMarkingLeaver] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
@@ -347,20 +349,40 @@ export default function EmployeeProfile() {
 
         {/* Main Content — Tabbed */}
         <div className="flex-1 min-w-0">
-          <Tabs defaultValue={initialTab}>
-            <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/60 p-1 mb-4">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="addresses">Addresses</TabsTrigger>
-              {canViewPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
-              <TabsTrigger value="attachments">Attachments</TabsTrigger>
-              <TabsTrigger value="medical">Medical</TabsTrigger>
-              <TabsTrigger value="dietary">Dietary</TabsTrigger>
-              <TabsTrigger value="next-of-kin">Next of Kin</TabsTrigger>
-              <TabsTrigger value="qualifications">Qualifications</TabsTrigger>
-              <TabsTrigger value="work-record">Work Record</TabsTrigger>
-              <TabsTrigger value="service-history">Service History</TabsTrigger>
-              {canViewDisclosures && <TabsTrigger value="disclosures">Disclosures</TabsTrigger>}
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <GroupedTabNav
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              sections={[
+                {
+                  title: "Personal Details",
+                  children: [
+                    { value: "details", label: "Details" },
+                    { value: "addresses", label: "Addresses" },
+                    { value: "medical", label: "Medical" },
+                    { value: "dietary", label: "Dietary" },
+                    { value: "next-of-kin", label: "Next of Kin" },
+                    ...(canViewDisclosures ? [{ value: "disclosures", label: "Disclosures" }] : []),
+                  ],
+                },
+                {
+                  title: "Employment",
+                  children: [
+                    ...(canViewPayroll ? [{ value: "payroll", label: "Payroll" }] : []),
+                    { value: "work-record", label: "Work Record" },
+                    { value: "service-history", label: "Employment History" },
+                  ],
+                },
+                {
+                  title: "Qualifications",
+                  children: [{ value: "qualifications", label: "Qualifications" }],
+                },
+                {
+                  title: "Attachments",
+                  children: [{ value: "attachments", label: "Attachments" }],
+                },
+              ]}
+            />
 
             {/* Details Tab */}
             <TabsContent value="details">

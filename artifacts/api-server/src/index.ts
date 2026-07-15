@@ -2,7 +2,9 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedLov, assertLovSync } from "./lib/seedLov";
 import { seedRoles } from "./lib/seedRoles";
-import { runMigrations } from "@workspace/db";
+import { seedAdmin } from "./lib/seedAdmin";
+import { runMigrations, db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import path from "path";
 
 const rawPort = process.env["PORT"];
@@ -24,11 +26,39 @@ if (Number.isNaN(port) || port <= 0) {
 // always co-located with the compiled bundle.
 const migrationsFolder = path.join(__dirname, "drizzle");
 
+/**
+ * Ensure the connect-pg-simple session table exists.
+ *
+ * We cannot use `createTableIfMissing: true` on the PgSession store because
+ * that feature reads a table.sql asset file at runtime — a file that esbuild
+ * never copies into dist/.  Instead we run the DDL directly here after
+ * migrations so it is always present, even if drizzle-kit push --force drops
+ * it (push drops tables that are not in the Drizzle schema).
+ */
+async function ensureSessionTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "user_sessions" (
+      "sid"    varchar      NOT NULL COLLATE "default",
+      "sess"   json         NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire"
+      ON "user_sessions" ("expire")
+  `);
+}
+
 runMigrations(migrationsFolder)
   .then(() => {
     logger.info("Database migrations applied");
+    return ensureSessionTable();
+  })
+  .then(() => {
     return Promise.all([seedLov().then(() => assertLovSync()), seedRoles()]);
   })
+  .then(() => seedAdmin())
   .then(() => {
     app.listen(port, (err) => {
       if (err) {

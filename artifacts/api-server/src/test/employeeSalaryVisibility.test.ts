@@ -6,7 +6,7 @@
  * whether the HR frontend is used.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import router from "../routes/hr/employees";
+import router from "../routes/hr/index";
 import {
   buildApp,
   cleanupEmployee,

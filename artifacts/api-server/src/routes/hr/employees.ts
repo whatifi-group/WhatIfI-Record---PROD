@@ -3,10 +3,8 @@ import { and, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, departmentsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import {
   requirePermission,
-  getEffectivePermissions,
   invalidatePermissionsCache,
 } from "../../middlewares/requirePermission";
-import { canViewPayroll, redactSalary } from "../../lib/salaryGuard";
 import { hashPassword } from "../../lib/password";
 import {
   CreateEmployeeBody,
@@ -54,32 +52,6 @@ function employeeSelection() {
     );
 }
 
-/**
- * ⚠️  IMPORTANT — future endpoint authors:
- * Every route that returns employee data MUST call redactSalary() before
- * sending the response.  `canViewPayroll` and `redactSalary` are exported
- * from `../../lib/salaryGuard` — import them there.  The middleware
- * `payrollVisibilityMiddleware` (mounted on the HR router) pre-computes
- * `req.canViewPayroll`; use the helper below which falls back to a fresh
- * computation for direct-mounted routers (e.g. unit tests).
- *
- * Integration tests in src/test/employeeSalaryVisibility.test.ts verify this
- * for every existing endpoint — add a new test block when you add a new route.
- */
-
-/**
- * Returns whether the current request may see salary data.
- * Uses the pre-computed value from `payrollVisibilityMiddleware` when
- * available, computing fresh when the middleware was not mounted (e.g. tests).
- */
-async function resolveShowSalary(req: import("express").Request): Promise<boolean> {
-  if (req.canViewPayroll !== undefined) return req.canViewPayroll;
-  const userId = req.session?.userId;
-  const perms =
-    req.effectivePermissions ??
-    (userId ? await getEffectivePermissions(userId) : new Set<string>());
-  return canViewPayroll(perms);
-}
 
 router.get("/employees", async (req, res): Promise<void> => {
   const query = ListEmployeesQueryParams.safeParse(req.query);
@@ -113,8 +85,7 @@ router.get("/employees", async (req, res): Promise<void> => {
     : base
   ).orderBy(employeesTable.lastName, employeesTable.firstName);
 
-  const showSalary = await resolveShowSalary(req);
-  res.json(ListEmployeesResponse.parse(rows.map((r) => redactSalary(r, showSalary))));
+  res.json(ListEmployeesResponse.parse(rows));
 });
 
 router.post("/employees", async (req, res): Promise<void> => {
@@ -195,7 +166,7 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetEmployeeResponse.parse(redactSalary(row, await resolveShowSalary(req))));
+  res.json(GetEmployeeResponse.parse(row));
 });
 
 router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
@@ -259,7 +230,7 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     eq(employeesTable.id, updated.id),
   );
 
-  res.json(UpdateEmployeeResponse.parse(redactSalary(row, await resolveShowSalary(req))));
+  res.json(UpdateEmployeeResponse.parse(row));
 });
 
 router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {

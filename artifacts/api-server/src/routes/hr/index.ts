@@ -13,17 +13,20 @@ import employeeWorkRecordsRouter from "./employeeWorkRecords";
 import employeePayRatesRouter from "./employeePayRates";
 import employeeServicePeriodsRouter from "./employeeServicePeriods";
 
-import { payrollVisibilityMiddleware } from "../../lib/salaryGuard";
+import { payrollVisibilityMiddleware, salaryRedactionMiddleware } from "../../lib/salaryGuard";
 
 // HR module: departments, employees, leave requests, and employee section sub-resources.
 // Future modules (e.g. payroll, recruiting) should follow the same pattern:
 // a self-contained folder under routes/ with its own index.ts, mounted below.
 const router: IRouter = Router();
 
-// Pre-compute req.canViewPayroll for every HR request so that any
-// employee-returning route can call redactSalary(row, req.canViewPayroll ?? false)
-// without repeating the permission-check logic.
+// 1. Pre-compute req.canViewPayroll for every HR request.
+// 2. salaryRedactionMiddleware intercepts res.json() and automatically strips
+//    the salary field from any employee-shaped response when the caller lacks
+//    payroll permission.  Individual route handlers do NOT call redactSalary —
+//    they just call res.json() and redaction is applied centrally.
 router.use(payrollVisibilityMiddleware);
+router.use(salaryRedactionMiddleware);
 
 router.use(departmentsRouter);
 router.use(employeesRouter);

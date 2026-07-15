@@ -23,4 +23,7 @@ export const PERMISSION_LABELS = {
   view_payroll: "View Payroll & Pay Rates",
   view_disclosures: "View Disclosure Records (DBS/PVG/AccessNI)",
   review_disclosures: "Sign Off Disclosure Reviews",
+  view_own_profile: "View Own Profile (Self-Service)",
+  upload_qualifications: "Upload Own Qualifications (Self-Service)",
+  view_employee_directory: "View Employee Directory (Self-Service)",
 } satisfies Record<Permission, string>;

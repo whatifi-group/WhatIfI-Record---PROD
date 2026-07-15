@@ -1,5 +1,5 @@
 /**
- * Onboarding endpoint — payroll guard tests.
+ * Onboarding endpoint — payroll guard tests + self-service directory access.
  *
  * Verifies:
  * 1. POST /onboarding/submit strips payroll-adjacent keys (salary, payRate, etc.)
@@ -7,9 +7,13 @@
  * 2. POST /onboarding/submissions/:id/approve never inserts rows into
  *    employee_pay_rates for the newly-created employee.
  * 3. The "Employee Self-Service" seed role contains no payroll permissions.
+ * 4. After approving an onboarding submission, the created employee user can
+ *    call GET /api/directory (200) and the response contains no payroll fields.
+ * 5. GET /api/directory returns 403 for a user without view_employee_directory.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import onboardingRouter from "../routes/onboarding";
+import directoryRouter from "../routes/directory";
 import {
   buildApp,
   cleanupEmployee,
@@ -24,6 +28,7 @@ import {
   onboardingSubmissionsTable,
   employeePayRatesTable,
   rolesTable,
+  usersTable,
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { seedRoles } from "../lib/seedRoles";
@@ -219,6 +224,92 @@ describe("POST /api/onboarding/submissions/:id/approve — pay rate guard", () =
       .post(`/api/onboarding/submissions/${testSubmissionId}/approve`)
       .send({});
     expect(res.status).toBe(409);
+  });
+});
+
+// ── Directory access after approval ───────────────────────────────────────────
+
+describe("POST approve → employee user → GET /api/directory", () => {
+  let submissionId: number;
+  let approvedEmployeeId: number | null = null;
+  let approvedUserId: number | null = null;
+
+  beforeAll(async () => {
+    const [sub] = await db
+      .insert(onboardingSubmissionsTable)
+      .values({
+        firstName: "Directory",
+        lastName: "AccessTest",
+        email: `dir-access-${Date.now()}@example-test.invalid`,
+        jobTitle: "Tester",
+        employmentType: "full_time",
+        startDate: "2025-06-01",
+        onboardingStatus: "pending",
+      })
+      .returning({ id: onboardingSubmissionsTable.id });
+    submissionId = sub.id;
+  });
+
+  afterAll(async () => {
+    if (approvedEmployeeId) {
+      await cleanupEmployee(approvedEmployeeId);
+    } else {
+      await db
+        .delete(onboardingSubmissionsTable)
+        .where(eq(onboardingSubmissionsTable.id, submissionId));
+    }
+  });
+
+  it("approves the submission and creates a user account", async () => {
+    const api = buildApp(onboardingRouter, hrUserId);
+    const res = await api
+      .post(`/api/onboarding/submissions/${submissionId}/approve`)
+      .send({});
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty("employeeId");
+    approvedEmployeeId = res.body.employeeId;
+
+    // Look up the created user for this employee
+    const [user] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.employeeId, approvedEmployeeId!))
+      .limit(1);
+    expect(user).toBeDefined();
+    approvedUserId = user.id;
+  });
+
+  it("GET /api/directory returns 200 for the approved employee user", async () => {
+    expect(approvedUserId).not.toBeNull();
+    const api = buildApp(directoryRouter, approvedUserId!);
+    const res = await api.get("/api/directory");
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it("directory response contains no salary, payRate, hourlyRate or employeePayRates fields", async () => {
+    expect(approvedUserId).not.toBeNull();
+    const api = buildApp(directoryRouter, approvedUserId!);
+    const res = await api.get("/api/directory");
+    for (const row of res.body as Array<Record<string, unknown>>) {
+      expect(row).not.toHaveProperty("salary");
+      expect(row).not.toHaveProperty("payRate");
+      expect(row).not.toHaveProperty("hourlyRate");
+      expect(row).not.toHaveProperty("employeePayRates");
+    }
+  });
+
+  it("GET /api/directory returns 403 for a user without view_employee_directory", async () => {
+    const noPermRoleId = await createTestRole(["view_own_profile"]);
+    const noPermUserId = await createTestUser(noPermRoleId);
+    try {
+      const api = buildApp(directoryRouter, noPermUserId);
+      const res = await api.get("/api/directory");
+      expect(res.status).toBe(403);
+    } finally {
+      await cleanupUser(noPermUserId);
+      await cleanupRole(noPermRoleId);
+    }
   });
 });
 

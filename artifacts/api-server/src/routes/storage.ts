@@ -117,9 +117,16 @@ router.get(
  * GET /storage/objects/*
  *
  * Serve object entities from PRIVATE_OBJECT_DIR.
- * Requires an authenticated session and view_payroll/sysadmin permission —
- * stored objects are HR documents (certificates, attachments) that must not
- * be accessible to authenticated users without the appropriate role.
+ * Requires an authenticated session plus one of:
+ *  - view_payroll  — full payroll HR staff
+ *  - sysadmin      — system administrators
+ *  - hr:access     — HR managers (needed to review qualification certificates
+ *                    in the onboarding queue without needing payroll access)
+ *
+ * Note: view_employee_directory (self-service) is intentionally excluded —
+ * this endpoint serves the full private namespace and cannot enforce per-object
+ * ownership checks; granting it here would let any self-service user retrieve
+ * other employees' documents once a path is known.
  */
 router.get(
   "/storage/objects/*path",
@@ -132,7 +139,12 @@ router.get(
     const perms = req.effectivePermissions
       ?? (await getEffectivePermissions(req.session.userId));
 
-    if (!perms.has("view_payroll") && !perms.has("sysadmin")) {
+    const canRead =
+      perms.has("view_payroll") ||
+      perms.has("sysadmin") ||
+      perms.has("hr:access");
+
+    if (!canRead) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

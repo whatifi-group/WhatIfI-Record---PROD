@@ -32,6 +32,11 @@ import { requireOnboardingSession } from "../middlewares/requireOnboardingSessio
 import { signOnboardingToken } from "../lib/onboardingJwt";
 import { hashPassword } from "../lib/password";
 import crypto from "node:crypto";
+import { objectStorageService } from "./storage";
+import {
+  MAX_FILE_SIZE_BYTES,
+  ALLOWED_CONTENT_TYPES,
+} from "../lib/uploadPolicy";
 
 const router: IRouter = Router();
 
@@ -552,6 +557,116 @@ router.post(
     }
 
     res.json({ employeeId: result.employeeId });
+  },
+);
+
+// ── POST /api/onboarding/upload-url ──────────────────────────────────────────
+
+const UploadUrlBody = z.object({
+  name: z.string().min(1),
+  size: z.number().int().positive(),
+  contentType: z.string().min(1),
+});
+
+/**
+ * Request a presigned upload URL for a qualification certificate.
+ * Requires a valid onboarding JWT (same token used for /submit).
+ */
+router.post(
+  "/onboarding/upload-url",
+  requireOnboardingSession,
+  async (req, res): Promise<void> => {
+    const parsed = UploadUrlBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Missing or invalid fields: name, size, contentType required" });
+      return;
+    }
+
+    const { name, size, contentType } = parsed.data;
+
+    if (size > MAX_FILE_SIZE_BYTES) {
+      res.status(400).json({
+        error: `File size exceeds the 20 MB limit (received ${(size / 1024 / 1024).toFixed(1)} MB).`,
+      });
+      return;
+    }
+
+    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+      res.status(400).json({
+        error: `File type "${contentType}" is not allowed. Accepted types: PDF, PNG, JPEG, GIF, WEBP, HEIC.`,
+      });
+      return;
+    }
+
+    try {
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
+      res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
+    } catch (error) {
+      console.error("Error generating upload URL", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  },
+);
+
+// ── GET /api/onboarding/passphrase-status ────────────────────────────────────
+
+router.get(
+  "/onboarding/passphrase-status",
+  requirePermission(["hr:access", "sysadmin"]),
+  async (_req, res): Promise<void> => {
+    const passphrase = await getOnboardingPassphrase();
+    res.json({ isSet: passphrase !== null });
+  },
+);
+
+// ── PATCH /api/onboarding/passphrase ─────────────────────────────────────────
+
+const PatchPassphraseBody = z.object({
+  passphrase: z.string().min(6, "Passphrase must be at least 6 characters"),
+  confirm: z.string().min(1),
+});
+
+router.patch(
+  "/onboarding/passphrase",
+  requirePermission(["hr:access", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const parsed = PatchPassphraseBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? parsed.error.message });
+      return;
+    }
+
+    const { passphrase, confirm } = parsed.data;
+    if (passphrase !== confirm) {
+      res.status(400).json({ error: "Passphrase and confirmation do not match" });
+      return;
+    }
+
+    // Update the LOV item for the onboarding password — store the passphrase
+    // in the label field (plain text, same convention as the existing seed).
+    const [existing] = await db
+      .select({ id: lovItemsTable.id })
+      .from(lovItemsTable)
+      .where(
+        and(
+          eq(lovItemsTable.category, "system_config"),
+          eq(lovItemsTable.value, "onboarding_password"),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      res.status(500).json({ error: "Onboarding passphrase LOV row not found — run seed first" });
+      return;
+    }
+
+    await db
+      .update(lovItemsTable)
+      .set({ label: passphrase, isActive: true, updatedAt: new Date() })
+      .where(eq(lovItemsTable.id, existing.id));
+
+    res.json({ success: true, isSet: true });
   },
 );
 

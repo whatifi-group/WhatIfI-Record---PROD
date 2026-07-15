@@ -31,7 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2, XCircle, Eye, Copy, Check, AlertCircle, Info } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, Copy, Check, AlertCircle, Info, Settings, Link } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useLocation } from "wouter";
 
@@ -115,6 +115,68 @@ export default function OnboardingQueue() {
   const [rejectNotes, setRejectNotes] = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
   const [rejectError, setRejectError] = useState("");
+
+  // Passphrase management
+  const [passphraseIsSet, setPassphraseIsSet] = useState<boolean | null>(null);
+  const [passphraseValue, setPassphraseValue] = useState("");
+  const [passphraseConfirm, setPassphraseConfirm] = useState("");
+  const [showPassphrase, setShowPassphrase] = useState(false);
+  const [passphraseLoading, setPassphraseLoading] = useState(false);
+  const [passphraseError, setPassphraseError] = useState("");
+  const [passphraseSuccess, setPassphraseSuccess] = useState(false);
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false);
+
+  // Fetch passphrase status on mount
+  useEffect(() => {
+    fetch("/api/onboarding/passphrase-status", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setPassphraseIsSet(d.isSet ?? false))
+      .catch(() => setPassphraseIsSet(false));
+  }, []);
+
+  async function handleSetPassphrase(e: React.FormEvent) {
+    e.preventDefault();
+    setPassphraseError("");
+    setPassphraseSuccess(false);
+    if (passphraseValue !== passphraseConfirm) {
+      setPassphraseError("Passphrase and confirmation do not match.");
+      return;
+    }
+    if (passphraseValue.length < 6) {
+      setPassphraseError("Passphrase must be at least 6 characters.");
+      return;
+    }
+    setPassphraseLoading(true);
+    try {
+      const res = await fetch("/api/onboarding/passphrase", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ passphrase: passphraseValue, confirm: passphraseConfirm }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setPassphraseError(body.error ?? "Failed to update passphrase.");
+        return;
+      }
+      setPassphraseIsSet(true);
+      setPassphraseSuccess(true);
+      setPassphraseValue("");
+      setPassphraseConfirm("");
+    } catch {
+      setPassphraseError("Could not reach the server.");
+    } finally {
+      setPassphraseLoading(false);
+    }
+  }
+
+  function copyInviteLink() {
+    const url = `${window.location.origin}/onboarding`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedInviteLink(true);
+      setTimeout(() => setCopiedInviteLink(false), 2000);
+    });
+  }
 
   const fetchSubmissions = useCallback(async () => {
     setLoading(true);
@@ -411,6 +473,100 @@ export default function OnboardingQueue() {
           )}
         </div>
       )}
+
+      {/* ── Onboarding Settings ─────────────────────────────────────────── */}
+      <div className="border border-border/50 rounded-xl p-5 bg-card space-y-4">
+        <div className="flex items-center gap-2">
+          <Settings className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">Onboarding Settings</h2>
+        </div>
+
+        {/* Passphrase status + form */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Passphrase status:</span>
+            {passphraseIsSet === null ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+            ) : passphraseIsSet ? (
+              <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Set
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+                <AlertCircle className="w-3.5 h-3.5" /> Not set — onboarding portal is locked
+              </span>
+            )}
+          </div>
+
+          <form onSubmit={handleSetPassphrase} className="space-y-3 max-w-sm">
+            <div className="space-y-1.5">
+              <Label htmlFor="ob-new-passphrase" className="text-sm">
+                {passphraseIsSet ? "Rotate passphrase" : "Set passphrase"}
+              </Label>
+              <div className="relative">
+                <Input
+                  id="ob-new-passphrase"
+                  type={showPassphrase ? "text" : "password"}
+                  value={passphraseValue}
+                  onChange={(e) => setPassphraseValue(e.target.value)}
+                  placeholder="New passphrase (min. 6 characters)"
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassphrase((v) => !v)}
+                >
+                  {showPassphrase ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ob-confirm-passphrase" className="text-sm">Confirm passphrase</Label>
+              <Input
+                id="ob-confirm-passphrase"
+                type={showPassphrase ? "text" : "password"}
+                value={passphraseConfirm}
+                onChange={(e) => setPassphraseConfirm(e.target.value)}
+                placeholder="Re-enter passphrase"
+                autoComplete="new-password"
+              />
+            </div>
+            {passphraseError && (
+              <p className="text-sm text-destructive">{passphraseError}</p>
+            )}
+            {passphraseSuccess && (
+              <p className="text-sm text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Passphrase updated successfully.
+              </p>
+            )}
+            <Button
+              type="submit"
+              size="sm"
+              disabled={passphraseLoading || !passphraseValue || !passphraseConfirm}
+            >
+              {passphraseLoading && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              {passphraseIsSet ? "Rotate Passphrase" : "Set Passphrase"}
+            </Button>
+          </form>
+        </div>
+
+        {/* Invite link */}
+        <div className="pt-2 border-t border-border/40 space-y-1.5">
+          <p className="text-sm text-muted-foreground">
+            Share this link with new hires along with the onboarding passphrase.
+          </p>
+          <Button variant="outline" size="sm" onClick={copyInviteLink}>
+            {copiedInviteLink ? (
+              <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            ) : (
+              <Link className="w-3.5 h-3.5 mr-1.5" />
+            )}
+            {copiedInviteLink ? "Copied!" : "Copy invite link"}
+          </Button>
+        </div>
+      </div>
 
       {/* ── Detail Dialog ────────────────────────────────────────────────── */}
       <Dialog open={!!detailSub} onOpenChange={(open) => { if (!open) setDetailSub(null); }}>

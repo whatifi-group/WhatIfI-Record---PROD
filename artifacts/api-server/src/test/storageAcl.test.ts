@@ -3,9 +3,14 @@
  *
  * Confirms that the private object download endpoint:
  *  (a) Returns 401 for unauthenticated callers (no session).
- *  (b) Returns 403 for authenticated callers without view_payroll or sysadmin.
+ *  (b) Returns 403 for authenticated callers with no relevant permission.
  *  (c) Returns 200 for callers with view_payroll.
  *  (d) Returns 200 for sysadmin callers.
+ *  (e) Returns 200 for callers with hr:access (HR managers reviewing
+ *      qualification certificates in the onboarding queue).
+ *  (f) Returns 403 for callers with only view_employee_directory —
+ *      this endpoint serves the full private namespace and cannot enforce
+ *      per-object ownership; self-service users must not have blanket access.
  *
  * GCS storage interactions are mocked so no live bucket is required.
  */
@@ -54,6 +59,10 @@ let payrollRoleId: number;
 let payrollUserId: number;
 let sysadminRoleId: number;
 let sysadminUserId: number;
+let hrAccessRoleId: number;
+let hrAccessUserId: number;
+let viewDirectoryOnlyRoleId: number;
+let viewDirectoryOnlyUserId: number;
 let unpermittedRoleId: number;
 let unpermittedUserId: number;
 
@@ -64,6 +73,14 @@ beforeAll(async () => {
   sysadminRoleId = await createTestRole(["sysadmin"]);
   sysadminUserId = await createTestUser(sysadminRoleId);
 
+  hrAccessRoleId = await createTestRole(["hr:access"]);
+  hrAccessUserId = await createTestUser(hrAccessRoleId);
+
+  // Self-service users have view_employee_directory but not hr:access or view_payroll.
+  // They must NOT get blanket object storage access.
+  viewDirectoryOnlyRoleId = await createTestRole(["view_employee_directory", "view_own_profile"]);
+  viewDirectoryOnlyUserId = await createTestUser(viewDirectoryOnlyRoleId);
+
   unpermittedRoleId = await createTestRole(["view_employees"]);
   unpermittedUserId = await createTestUser(unpermittedRoleId);
 });
@@ -73,6 +90,10 @@ afterAll(async () => {
   await cleanupRole(payrollRoleId);
   await cleanupUser(sysadminUserId);
   await cleanupRole(sysadminRoleId);
+  await cleanupUser(hrAccessUserId);
+  await cleanupRole(hrAccessRoleId);
+  await cleanupUser(viewDirectoryOnlyUserId);
+  await cleanupRole(viewDirectoryOnlyRoleId);
   await cleanupUser(unpermittedUserId);
   await cleanupRole(unpermittedRoleId);
 });
@@ -88,7 +109,7 @@ describe("GET /api/storage/objects/* — ACL enforcement", () => {
     expect(res.status).toBe(401);
   });
 
-  it("(b) returns 403 for authenticated callers without view_payroll or sysadmin", async () => {
+  it("(b) returns 403 for authenticated callers with no relevant permission", async () => {
     const api = buildApp(storageRouter, unpermittedUserId);
     const res = await api.get(PATH);
     expect(res.status).toBe(403);
@@ -104,5 +125,17 @@ describe("GET /api/storage/objects/* — ACL enforcement", () => {
     const api = buildApp(storageRouter, sysadminUserId);
     const res = await api.get(PATH);
     expect(res.status).toBe(200);
+  });
+
+  it("(e) returns 200 for callers with hr:access (onboarding certificate reviewers)", async () => {
+    const api = buildApp(storageRouter, hrAccessUserId);
+    const res = await api.get(PATH);
+    expect(res.status).toBe(200);
+  });
+
+  it("(f) returns 403 for self-service users with only view_employee_directory — no per-object ownership enforcement exists", async () => {
+    const api = buildApp(storageRouter, viewDirectoryOnlyUserId);
+    const res = await api.get(PATH);
+    expect(res.status).toBe(403);
   });
 });

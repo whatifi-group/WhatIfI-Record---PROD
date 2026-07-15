@@ -10,14 +10,14 @@
  *
  * Pay rate / salary fields never appear here.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useListDepartments } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { Loader2, CheckCircle2, ChevronRight, ChevronLeft, Plus, Trash2, Eye, EyeOff, Paperclip, X } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,11 @@ interface QualEntry {
   dateAchieved: string;
   expiryDate: string;
   notes: string;
+  fileName: string | null;
+  fileUrl: string | null;
+  mimeType: string | null;
+  uploading: boolean;
+  uploadError: string | null;
 }
 
 interface PersonalForm {
@@ -138,21 +143,101 @@ export default function OnboardingPortal() {
 
   // ── Step 2: Qualifications ────────────────────────────────────────────────
 
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
   function addQual() {
     setQuals((prev) => [
       ...prev,
-      { qualificationTypeId: 0, dateAchieved: "", expiryDate: "", notes: "" },
+      {
+        qualificationTypeId: 0,
+        dateAchieved: "",
+        expiryDate: "",
+        notes: "",
+        fileName: null,
+        fileUrl: null,
+        mimeType: null,
+        uploading: false,
+        uploadError: null,
+      },
     ]);
   }
 
   function removeQual(idx: number) {
     setQuals((prev) => prev.filter((_, i) => i !== idx));
+    fileInputRefs.current = fileInputRefs.current.filter((_, i) => i !== idx);
   }
 
-  function updateQual(idx: number, field: keyof QualEntry, value: string | number) {
+  function updateQual(idx: number, field: keyof QualEntry, value: string | number | boolean | null) {
     setQuals((prev) =>
       prev.map((q, i) => (i === idx ? { ...q, [field]: value } : q)),
     );
+  }
+
+  async function handleFileSelect(idx: number, file: File) {
+    updateQual(idx, "uploading", true);
+    updateQual(idx, "uploadError", null);
+    try {
+      // Request a presigned URL from the onboarding-scoped endpoint
+      const urlRes = await fetch("/api/onboarding/upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      if (!urlRes.ok) {
+        const body = await urlRes.json().catch(() => ({}));
+        updateQual(idx, "uploadError", body.error ?? "Could not get upload URL");
+        return;
+      }
+      const { uploadURL, objectPath } = await urlRes.json();
+
+      // Upload the file directly to the presigned URL
+      const putRes = await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!putRes.ok) {
+        updateQual(idx, "uploadError", "Upload failed. Please try again.");
+        return;
+      }
+
+      // Store the metadata on the qualification entry
+      setQuals((prev) =>
+        prev.map((q, i) =>
+          i === idx
+            ? {
+                ...q,
+                fileName: file.name,
+                fileUrl: objectPath,
+                mimeType: file.type,
+                uploading: false,
+                uploadError: null,
+              }
+            : q,
+        ),
+      );
+    } catch {
+      updateQual(idx, "uploadError", "Could not reach the server. Please try again.");
+    } finally {
+      setQuals((prev) =>
+        prev.map((q, i) => (i === idx ? { ...q, uploading: false } : q)),
+      );
+    }
+  }
+
+  function clearFile(idx: number) {
+    setQuals((prev) =>
+      prev.map((q, i) =>
+        i === idx
+          ? { ...q, fileName: null, fileUrl: null, mimeType: null, uploadError: null }
+          : q,
+      ),
+    );
+    const input = fileInputRefs.current[idx];
+    if (input) input.value = "";
   }
 
   // ── Step 3: Submit ─────────────────────────────────────────────────────────
@@ -177,6 +262,9 @@ export default function OnboardingPortal() {
             dateAchieved: q.dateAchieved,
             expiryDate: q.expiryDate || null,
             notes: q.notes || null,
+            fileName: q.fileName ?? null,
+            fileUrl: q.fileUrl ?? null,
+            mimeType: q.mimeType ?? null,
           })),
       };
 
@@ -499,6 +587,55 @@ export default function OnboardingPortal() {
                         placeholder="Any relevant notes…"
                       />
                     </div>
+                    {/* Certificate file upload */}
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Certificate (optional)</Label>
+                      {q.fileUrl ? (
+                        <div className="flex items-center gap-2 text-sm bg-muted/40 rounded px-3 py-2 border border-border/50">
+                          <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="flex-1 truncate text-foreground">{q.fileName}</span>
+                          <button
+                            type="button"
+                            onClick={() => clearFile(idx)}
+                            className="text-muted-foreground hover:text-destructive"
+                            aria-label="Remove file"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.heic"
+                            ref={(el) => { fileInputRefs.current[idx] = el; }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleFileSelect(idx, file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs"
+                            disabled={q.uploading}
+                            onClick={() => fileInputRefs.current[idx]?.click()}
+                          >
+                            {q.uploading ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            ) : (
+                              <Paperclip className="w-3.5 h-3.5 mr-1.5" />
+                            )}
+                            {q.uploading ? "Uploading…" : "Attach certificate"}
+                          </Button>
+                        </div>
+                      )}
+                      {q.uploadError && (
+                        <p className="text-xs text-destructive">{q.uploadError}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -574,13 +711,21 @@ export default function OnboardingPortal() {
                     {quals
                       .filter((q) => q.qualificationTypeId > 0 && q.dateAchieved)
                       .map((q, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm">
-                          <Badge variant="outline" className="text-xs">
-                            {qualTypes.find((qt) => qt.id === q.qualificationTypeId)?.name ?? `ID ${q.qualificationTypeId}`}
-                          </Badge>
-                          <span className="text-muted-foreground">achieved {q.dateAchieved}</span>
-                          {q.expiryDate && (
-                            <span className="text-muted-foreground">· expires {q.expiryDate}</span>
+                        <div key={i} className="flex flex-col gap-0.5 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {qualTypes.find((qt) => qt.id === q.qualificationTypeId)?.name ?? `ID ${q.qualificationTypeId}`}
+                            </Badge>
+                            <span className="text-muted-foreground">achieved {q.dateAchieved}</span>
+                            {q.expiryDate && (
+                              <span className="text-muted-foreground">· expires {q.expiryDate}</span>
+                            )}
+                          </div>
+                          {q.fileName && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground ml-1">
+                              <Paperclip className="w-3 h-3" />
+                              <span>{q.fileName}</span>
+                            </div>
                           )}
                         </div>
                       ))}

@@ -170,7 +170,7 @@ function MainRoutes() {
   );
 }
 
-function Router() {
+export function Router() {
   const { isAuthenticated, isLoading, hasPermission } = useAuth();
   const [location, setLocation] = useLocation();
 

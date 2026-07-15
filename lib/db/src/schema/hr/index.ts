@@ -12,3 +12,4 @@ export * from "./employeeQualifications";
 export * from "./qualificationRevalidations";
 export * from "./qualificationCertificates";
 export * from "./employeeWorkRecords";
+export * from "./employeePayRates";

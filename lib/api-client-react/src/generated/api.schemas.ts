@@ -581,6 +581,44 @@ export interface QualificationTypeUpdate {
   isActive?: boolean;
 }
 
+export type EmployeePayRateRateUnit = typeof EmployeePayRateRateUnit[keyof typeof EmployeePayRateRateUnit];
+
+
+export const EmployeePayRateRateUnit = {
+  hourly: 'hourly',
+  daily: 'daily',
+  flat: 'flat',
+} as const;
+
+export interface EmployeePayRate {
+  id: number;
+  employeeId: number;
+  shiftType: string;
+  rate: number;
+  rateUnit: EmployeePayRateRateUnit;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type EmployeePayRateInputRateUnit = typeof EmployeePayRateInputRateUnit[keyof typeof EmployeePayRateInputRateUnit];
+
+
+export const EmployeePayRateInputRateUnit = {
+  hourly: 'hourly',
+  daily: 'daily',
+  flat: 'flat',
+} as const;
+
+export interface EmployeePayRateInput {
+  /** @minLength 1 */
+  shiftType: string;
+  /** @minimum 0 */
+  rate: number;
+  rateUnit: EmployeePayRateInputRateUnit;
+  notes?: string;
+}
+
 export interface EmployeeWorkRecord {
   id: number;
   employeeId: number;

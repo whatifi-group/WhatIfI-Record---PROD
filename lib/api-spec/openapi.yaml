@@ -935,6 +935,102 @@ paths:
                 items:
                   $ref: "#/components/schemas/ExpiringQualification"
 
+  /employees/{id}/pay-rates:
+    get:
+      operationId: listEmployeePayRates
+      tags: [employee-sections]
+      summary: List pay rates for an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of pay rates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeePayRate"
+    post:
+      operationId: createEmployeePayRate
+      tags: [employee-sections]
+      summary: Add a pay rate to an employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeePayRateInput"
+      responses:
+        "201":
+          description: Created pay rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayRate"
+
+  /employees/{id}/pay-rates/{rateId}:
+    put:
+      operationId: updateEmployeePayRate
+      tags: [employee-sections]
+      summary: Update a pay rate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: rateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeePayRateInput"
+      responses:
+        "200":
+          description: Updated pay rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayRate"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteEmployeePayRate
+      tags: [employee-sections]
+      summary: Delete a pay rate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: rateId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
   /employees/{id}/work-records:
     get:
       operationId: listEmployeeWorkRecords
@@ -2442,6 +2538,43 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+
+    EmployeePayRate:
+      type: object
+      required: [id, employeeId, shiftType, rate, rateUnit, createdAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        shiftType:
+          type: string
+        rate:
+          type: number
+        rateUnit:
+          type: string
+          enum: [hourly, daily, flat]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeePayRateInput:
+      type: object
+      required: [shiftType, rate, rateUnit]
+      properties:
+        shiftType:
+          type: string
+          minLength: 1
+        rate:
+          type: number
+          minimum: 0
+        rateUnit:
+          type: string
+          enum: [hourly, daily, flat]
+        notes:
+          type: string
 
     EmployeeWorkRecord:
       type: object

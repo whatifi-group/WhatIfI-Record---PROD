@@ -892,6 +892,97 @@ export const ListExpiringQualificationsResponse = zod.array(ListExpiringQualific
 
 
 /**
+ * @summary List pay rates for an employee
+ */
+export const ListEmployeePayRatesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListEmployeePayRatesResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftType": zod.string(),
+  "rate": zod.number(),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListEmployeePayRatesResponse = zod.array(ListEmployeePayRatesResponseItem)
+
+
+/**
+ * @summary Add a pay rate to an employee
+ */
+export const CreateEmployeePayRateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const createEmployeePayRateBodyRateMin = 0;
+
+
+
+export const CreateEmployeePayRateBody = zod.object({
+  "shiftType": zod.string().min(1),
+  "rate": zod.number().min(createEmployeePayRateBodyRateMin),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().optional()
+})
+
+export const CreateEmployeePayRateResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftType": zod.string(),
+  "rate": zod.number(),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a pay rate
+ */
+export const UpdateEmployeePayRateParams = zod.object({
+  "id": zod.coerce.number(),
+  "rateId": zod.coerce.number()
+})
+
+
+export const updateEmployeePayRateBodyRateMin = 0;
+
+
+
+export const UpdateEmployeePayRateBody = zod.object({
+  "shiftType": zod.string().min(1),
+  "rate": zod.number().min(updateEmployeePayRateBodyRateMin),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().optional()
+})
+
+export const UpdateEmployeePayRateResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "shiftType": zod.string(),
+  "rate": zod.number(),
+  "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a pay rate
+ */
+export const DeleteEmployeePayRateParams = zod.object({
+  "id": zod.coerce.number(),
+  "rateId": zod.coerce.number()
+})
+
+export const DeleteEmployeePayRateResponse = zod.void()
+
+
+/**
  * @summary List work records (shifts/timesheets) for an employee
  */
 export const ListEmployeeWorkRecordsParams = zod.object({

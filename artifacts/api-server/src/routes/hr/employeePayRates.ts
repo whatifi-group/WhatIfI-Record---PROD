@@ -1,0 +1,160 @@
+import { Router, type IRouter } from "express";
+import { and, eq, sql } from "drizzle-orm";
+import { db, employeePayRatesTable } from "@workspace/db";
+import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
+
+const router: IRouter = Router({ mergeParams: true });
+
+const IdParam = z.object({ id: z.coerce.number().int().positive() });
+const RateIdParam = z.object({
+  id: z.coerce.number().int().positive(),
+  rateId: z.coerce.number().int().positive(),
+});
+
+const PayRateInput = z.object({
+  shiftType: z.string().min(1),
+  rate: z.number().min(0),
+  rateUnit: z.enum(["hourly", "daily", "flat"]).default("hourly"),
+  notes: z.string().optional().nullable(),
+});
+
+const PayRateUpdate = z.object({
+  shiftType: z.string().min(1).optional(),
+  rate: z.number().min(0).optional(),
+  rateUnit: z.enum(["hourly", "daily", "flat"]).optional(),
+  notes: z.string().optional().nullable(),
+});
+
+/** Select all columns, casting rate numeric → JS number to match the OpenAPI contract. */
+function payRateSelection() {
+  return db
+    .select({
+      id: employeePayRatesTable.id,
+      employeeId: employeePayRatesTable.employeeId,
+      shiftType: employeePayRatesTable.shiftType,
+      rate: sql<number>`${employeePayRatesTable.rate}::float8`,
+      rateUnit: employeePayRatesTable.rateUnit,
+      notes: employeePayRatesTable.notes,
+      createdAt: employeePayRatesTable.createdAt,
+    })
+    .from(employeePayRatesTable);
+}
+
+router.get(
+  "/employees/:id/pay-rates",
+  requirePermission(["view_payroll", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = IdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const rows = await payRateSelection()
+      .where(eq(employeePayRatesTable.employeeId, params.data.id))
+      .orderBy(employeePayRatesTable.createdAt);
+    res.json(rows);
+  },
+);
+
+router.post(
+  "/employees/:id/pay-rates",
+  requirePermission(["view_payroll", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = IdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const parsed = PayRateInput.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const [inserted] = await db
+      .insert(employeePayRatesTable)
+      .values({
+        ...parsed.data,
+        rate: String(parsed.data.rate),
+        employeeId: params.data.id,
+      })
+      .returning({ id: employeePayRatesTable.id });
+
+    const [created] = await payRateSelection().where(
+      eq(employeePayRatesTable.id, inserted.id),
+    );
+    res.status(201).json(created);
+  },
+);
+
+router.put(
+  "/employees/:id/pay-rates/:rateId",
+  requirePermission(["view_payroll", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = RateIdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const parsed = PayRateUpdate.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+
+    const updateData: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.rate !== undefined) {
+      updateData.rate = String(parsed.data.rate);
+    }
+
+    const [patched] = await db
+      .update(employeePayRatesTable)
+      .set(updateData)
+      .where(
+        and(
+          eq(employeePayRatesTable.id, params.data.rateId),
+          eq(employeePayRatesTable.employeeId, params.data.id),
+        ),
+      )
+      .returning({ id: employeePayRatesTable.id });
+
+    if (!patched) {
+      res.status(404).json({ error: "Pay rate not found" });
+      return;
+    }
+
+    const [updated] = await payRateSelection().where(
+      eq(employeePayRatesTable.id, patched.id),
+    );
+    res.json(updated);
+  },
+);
+
+router.delete(
+  "/employees/:id/pay-rates/:rateId",
+  requirePermission(["view_payroll", "sysadmin"]),
+  async (req, res): Promise<void> => {
+    const params = RateIdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const [deleted] = await db
+      .delete(employeePayRatesTable)
+      .where(
+        and(
+          eq(employeePayRatesTable.id, params.data.rateId),
+          eq(employeePayRatesTable.employeeId, params.data.id),
+        ),
+      )
+      .returning({ id: employeePayRatesTable.id });
+
+    if (!deleted) {
+      res.status(404).json({ error: "Pay rate not found" });
+      return;
+    }
+    res.status(204).send();
+  },
+);
+
+export default router;

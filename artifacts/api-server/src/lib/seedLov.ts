@@ -44,6 +44,13 @@ const SEED_ITEMS: SeedItem[] = [
   { category: "dietary_requirement", value: "dairy_free", label: "Dairy Free", sortOrder: 5 },
   { category: "dietary_requirement", value: "halal", label: "Halal", sortOrder: 6 },
   { category: "dietary_requirement", value: "kosher", label: "Kosher", sortOrder: 7 },
+  // shift_type
+  { category: "shift_type", value: "standard", label: "Standard", sortOrder: 1 },
+  { category: "shift_type", value: "overtime", label: "Overtime", sortOrder: 2 },
+  { category: "shift_type", value: "night_shift", label: "Night Shift", sortOrder: 3 },
+  { category: "shift_type", value: "weekend", label: "Weekend", sortOrder: 4 },
+  { category: "shift_type", value: "bank_holiday", label: "Bank Holiday", sortOrder: 5 },
+  { category: "shift_type", value: "on_call", label: "On-Call", sortOrder: 6 },
 ];
 
 export async function seedLov(): Promise<void> {

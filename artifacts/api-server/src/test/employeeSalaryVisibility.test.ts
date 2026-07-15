@@ -184,6 +184,25 @@ describe("GET /api/employees/:id — unauthenticated request (no session)", () =
   });
 });
 
+// ── POST /employees — permission guard ────────────────────────────────────────
+describe("POST /api/employees — permission guard", () => {
+  it("returns 403 for a view_employees-only user", async () => {
+    const api = buildApp(router, viewerUserId);
+    const res = await api.post("/api/employees").send({
+      firstName: "Blocked",
+      lastName: "User",
+      email: `post-blocked-${Date.now()}@example-test.invalid`,
+      jobTitle: "Tester",
+      employmentType: "full_time",
+      status: "active",
+      startDate: "2024-01-01",
+      userRole: viewerRoleId,
+      temporaryPassword: "TestPass123!",
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
 // ── POST /employees — salary hidden in 201 response without view_payroll ──────
 describe("POST /api/employees — salary hidden in 201 response without view_payroll", () => {
   // Track employees created by these tests so afterAll can clean them up
@@ -212,8 +231,8 @@ describe("POST /api/employees — salary hidden in 201 response without view_pay
     expect(res.body.salary).toBeNull();
   });
 
-  it("view_payroll user creates an employee and sees the salary value in the 201 response", async () => {
-    const api = buildApp(router, payrollUserId);
+  it("sysadmin user (has view_payroll implicitly) creates an employee and sees the salary value in the 201 response", async () => {
+    const api = buildApp(router, sysadminUserId);
     const res = await api.post("/api/employees").send({
       firstName: "PostSalary",
       lastName: "VisibleTest",

@@ -89,7 +89,7 @@ router.get("/employees", async (req, res): Promise<void> => {
   res.json(ListEmployeesResponse.parse(rows));
 });
 
-router.post("/employees", async (req, res): Promise<void> => {
+router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
   const parsed = CreateEmployeeBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

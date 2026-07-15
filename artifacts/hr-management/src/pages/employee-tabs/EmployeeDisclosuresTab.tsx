@@ -521,6 +521,7 @@ function DisclosureCard({
   canEdit,
   canSignOff,
   canHRSignOff,
+  isSysAdmin,
   onEdit,
   onDelete,
   onInvalidate,
@@ -530,6 +531,7 @@ function DisclosureCard({
   canEdit: boolean;
   canSignOff: boolean;
   canHRSignOff: boolean;
+  isSysAdmin: boolean;
   onEdit: (d: EmployeeDisclosure) => void;
   onDelete: (id: number) => void;
   onInvalidate: () => void;
@@ -586,9 +588,11 @@ function DisclosureCard({
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(disclosure)}>
               <Pencil className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(disclosure.id)}>
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
+            {(!review?.signedOffAt || isSysAdmin) && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(disclosure.id)}>
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -701,6 +705,8 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
   const canSignOff = hasPermission("review_disclosures") || hasPermission("sysadmin");
   // Sign-off (non-conviction): HR Manager can sign off directly
   const canHRSignOff = hasPermission("view_disclosures") || hasPermission("edit_employees") || hasPermission("sysadmin");
+  // Sysadmin: can delete approved disclosures
+  const isSysAdmin = hasPermission("sysadmin");
 
   const { data: disclosures, isLoading, isError, refetch } = useListEmployeeDisclosures(employeeId);
   const createDisclosure = useCreateEmployeeDisclosure();
@@ -853,6 +859,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
             canEdit={canEdit}
             canSignOff={canSignOff}
             canHRSignOff={canHRSignOff}
+            isSysAdmin={isSysAdmin}
             onEdit={openEdit}
             onDelete={(id) => setDeletingId(id)}
             onInvalidate={invalidateList}

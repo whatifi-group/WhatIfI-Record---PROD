@@ -259,6 +259,7 @@ router.patch(
 
 // ---------------------------------------------------------------------------
 // DELETE /employees/:id/disclosures/:disclosureId — write: edit_employees
+// Signed-off (approved) disclosures may only be deleted by a sysadmin.
 // ---------------------------------------------------------------------------
 router.delete(
   "/employees/:id/disclosures/:disclosureId",
@@ -268,6 +269,29 @@ router.delete(
     if (!params.success) {
       res.status(400).json({ error: params.error.message });
       return;
+    }
+
+    const userId = req.session?.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    // If the disclosure has been signed off, only a sysadmin may delete it.
+    const [existingReview] = await db
+      .select({ signedOffAt: employeeDisclosureReviewsTable.signedOffAt })
+      .from(employeeDisclosureReviewsTable)
+      .where(eq(employeeDisclosureReviewsTable.disclosureId, params.data.disclosureId))
+      .limit(1);
+
+    if (existingReview?.signedOffAt) {
+      const perms = await getEffectivePermissions(userId);
+      if (!perms.has("sysadmin")) {
+        res.status(403).json({
+          error: "Approved disclosures can only be deleted by a system administrator",
+        });
+        return;
+      }
     }
 
     const [deleted] = await db

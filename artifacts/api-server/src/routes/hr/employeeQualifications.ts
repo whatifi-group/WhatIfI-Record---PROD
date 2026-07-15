@@ -9,6 +9,9 @@ import {
   employeesTable,
 } from "@workspace/db";
 import { z } from "zod";
+import { ObjectStorageService, ObjectNotFoundError } from "../../lib/objectStorage";
+
+export const objectStorageService = new ObjectStorageService();
 
 const router: IRouter = Router({ mergeParams: true });
 
@@ -488,6 +491,21 @@ router.delete(
       res.status(404).json({ error: "Certificate not found" });
       return;
     }
+
+    // Clean up the stored object when the fileUrl is an internal object path.
+    // Legacy records with full https:// URLs are skipped — delete still succeeds.
+    if (deleted.fileUrl?.startsWith("/objects/")) {
+      try {
+        const file = await objectStorageService.getObjectEntityFile(deleted.fileUrl);
+        await file.delete();
+      } catch (err) {
+        if (!(err instanceof ObjectNotFoundError)) {
+          console.error("Failed to delete certificate object from storage:", err);
+        }
+        // Either way, the DB row is already gone — respond 204.
+      }
+    }
+
     res.sendStatus(204);
   },
 );

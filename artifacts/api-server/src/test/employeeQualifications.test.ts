@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import router from "../routes/hr/employeeQualifications";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import router, { objectStorageService } from "../routes/hr/employeeQualifications";
 import {
   buildApp,
   cleanupEmployee,
@@ -8,6 +8,7 @@ import {
   createTestQualification,
   createTestQualType,
 } from "./helpers";
+import { ObjectNotFoundError } from "../lib/objectStorage";
 
 const api = buildApp(router);
 
@@ -154,6 +155,113 @@ describe("Employee Qualifications", () => {
     it("returns 404 when qualId does not exist", async () => {
       const res = await api.delete(
         `/api/employees/${empId}/qualifications/999999`,
+      );
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── Certificate DELETE — storage cleanup ─────────────────────────────────
+
+  describe("DELETE /api/employees/:id/qualifications/:qualId/certificates/:certId", () => {
+    it("deletes the GCS object when fileUrl is an /objects/ path", async () => {
+      const qualRes = await api
+        .post(`/api/employees/${empId}/qualifications`)
+        .send({ qualificationTypeId: qtId, dateAchieved: "2023-01-01" });
+      const qualId = qualRes.body.id as number;
+
+      const certRes = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({
+          fileName: "cert.pdf",
+          fileUrl: "/objects/uploads/test-uuid-1234",
+          mimeType: "application/pdf",
+        });
+      expect(certRes.status).toBe(201);
+      const certId = certRes.body.id as number;
+
+      // Mock the storage service to capture calls
+      const mockDelete = vi.fn().mockResolvedValue(undefined);
+      const mockFile = { delete: mockDelete } as never;
+      const getFileSpy = vi
+        .spyOn(objectStorageService, "getObjectEntityFile")
+        .mockResolvedValue(mockFile);
+
+      const del = await api.delete(
+        `/api/employees/${empId}/qualifications/${qualId}/certificates/${certId}`,
+      );
+
+      expect(del.status).toBe(204);
+      expect(getFileSpy).toHaveBeenCalledWith("/objects/uploads/test-uuid-1234");
+      expect(mockDelete).toHaveBeenCalledTimes(1);
+
+      getFileSpy.mockRestore();
+    });
+
+    it("skips storage deletion and still returns 204 when fileUrl is a legacy https:// URL", async () => {
+      const qualRes = await api
+        .post(`/api/employees/${empId}/qualifications`)
+        .send({ qualificationTypeId: qtId, dateAchieved: "2023-02-01" });
+      const qualId = qualRes.body.id as number;
+
+      const certRes = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({
+          fileName: "legacy.pdf",
+          fileUrl: "https://example.com/files/legacy.pdf",
+          mimeType: "application/pdf",
+        });
+      expect(certRes.status).toBe(201);
+      const certId = certRes.body.id as number;
+
+      const getFileSpy = vi.spyOn(objectStorageService, "getObjectEntityFile");
+
+      const del = await api.delete(
+        `/api/employees/${empId}/qualifications/${qualId}/certificates/${certId}`,
+      );
+
+      expect(del.status).toBe(204);
+      expect(getFileSpy).not.toHaveBeenCalled();
+
+      getFileSpy.mockRestore();
+    });
+
+    it("still returns 204 when the GCS object is already gone (ObjectNotFoundError)", async () => {
+      const qualRes = await api
+        .post(`/api/employees/${empId}/qualifications`)
+        .send({ qualificationTypeId: qtId, dateAchieved: "2023-03-01" });
+      const qualId = qualRes.body.id as number;
+
+      const certRes = await api
+        .post(`/api/employees/${empId}/qualifications/${qualId}/certificates`)
+        .send({
+          fileName: "missing.pdf",
+          fileUrl: "/objects/uploads/already-gone-uuid",
+          mimeType: "application/pdf",
+        });
+      expect(certRes.status).toBe(201);
+      const certId = certRes.body.id as number;
+
+      const getFileSpy = vi
+        .spyOn(objectStorageService, "getObjectEntityFile")
+        .mockRejectedValue(new ObjectNotFoundError());
+
+      const del = await api.delete(
+        `/api/employees/${empId}/qualifications/${qualId}/certificates/${certId}`,
+      );
+
+      expect(del.status).toBe(204);
+
+      getFileSpy.mockRestore();
+    });
+
+    it("returns 404 when the certificate does not exist", async () => {
+      const qualRes = await api
+        .post(`/api/employees/${empId}/qualifications`)
+        .send({ qualificationTypeId: qtId, dateAchieved: "2023-04-01" });
+      const qualId = qualRes.body.id as number;
+
+      const res = await api.delete(
+        `/api/employees/${empId}/qualifications/${qualId}/certificates/999999`,
       );
       expect(res.status).toBe(404);
     });

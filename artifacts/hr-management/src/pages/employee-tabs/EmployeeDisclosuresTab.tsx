@@ -520,6 +520,7 @@ function DisclosureCard({
   disclosure,
   canEdit,
   canSignOff,
+  canHRSignOff,
   onEdit,
   onDelete,
   onInvalidate,
@@ -528,13 +529,34 @@ function DisclosureCard({
   disclosure: EmployeeDisclosure;
   canEdit: boolean;
   canSignOff: boolean;
+  canHRSignOff: boolean;
   onEdit: (d: EmployeeDisclosure) => void;
   onDelete: (id: number) => void;
   onInvalidate: () => void;
 }) {
+  const { toast } = useToast();
+  const signOff = useSignOffDisclosureReview();
   const [expanded, setExpanded] = useState(false);
+  const [hrSignOffOpen, setHrSignOffOpen] = useState(false);
   const review = (disclosure as any).review as DisclosureReview | null;
   const hasConviction = !!disclosure.convictionDetails;
+
+  const handleHRSignOff = () => {
+    signOff.mutate(
+      { id: employeeId, disclosureId: disclosure.id },
+      {
+        onSuccess: () => {
+          toast({ title: "Disclosure signed off" });
+          setHrSignOffOpen(false);
+          onInvalidate();
+        },
+        onError: (err: any) => {
+          const msg = err?.response?.data?.error ?? "Failed to sign off";
+          toast({ title: msg, variant: "destructive" });
+        },
+      },
+    );
+  };
 
   return (
     <div className={`border rounded-xl p-4 space-y-2 bg-card shadow-sm ${hasConviction ? "border-amber-300/60 dark:border-amber-700/40" : "border-border/50"}`}>
@@ -557,7 +579,7 @@ function DisclosureCard({
           </span>
         )}
 
-        {hasConviction && review && <ReviewStatusBadge review={review} />}
+        {review && <ReviewStatusBadge review={review} />}
 
         {canEdit && (
           <div className="ml-auto flex items-center gap-1 shrink-0">
@@ -581,6 +603,28 @@ function DisclosureCard({
 
       {disclosure.notes && (
         <p className="text-xs text-muted-foreground italic">{disclosure.notes}</p>
+      )}
+
+      {/* HR sign-off section — shown on all non-conviction disclosures */}
+      {!hasConviction && (
+        <div className="pt-2 border-t border-border/30 flex items-center gap-2">
+          {review?.signedOffAt ? (
+            <p className="text-[10px] text-muted-foreground">
+              Signed off by {(review as any).signedOffByName ?? "Workflow Process"} on {formatDateTime(review.signedOffAt)}
+            </p>
+          ) : canHRSignOff ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs gap-1"
+              onClick={() => setHrSignOffOpen(true)}
+            >
+              <ShieldCheck className="w-3 h-3" /> Sign Off
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Awaiting HR sign-off</span>
+          )}
+        </div>
       )}
 
       {/* Expandable sections */}
@@ -614,6 +658,31 @@ function DisclosureCard({
           )}
         </div>
       )}
+
+      {/* HR sign-off confirmation dialog */}
+      {!hasConviction && (
+        <AlertDialog open={hrSignOffOpen} onOpenChange={setHrSignOffOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign off this disclosure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This confirms the disclosure has been reviewed and is in order. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={signOff.isPending}
+                onClick={(e) => { e.preventDefault(); handleHRSignOff(); }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {signOff.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Confirm Sign Off
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
@@ -628,8 +697,10 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
   const { hasPermission } = useAuth();
   // Write access: create/update/delete disclosures and update checks
   const canEdit = hasPermission("edit_employees") || hasPermission("sysadmin");
-  // Sign-off: senior manager only
+  // Sign-off (conviction): senior manager only
   const canSignOff = hasPermission("review_disclosures") || hasPermission("sysadmin");
+  // Sign-off (non-conviction): HR Manager can sign off directly
+  const canHRSignOff = hasPermission("view_disclosures") || hasPermission("edit_employees") || hasPermission("sysadmin");
 
   const { data: disclosures, isLoading, isError, refetch } = useListEmployeeDisclosures(employeeId);
   const createDisclosure = useCreateEmployeeDisclosure();
@@ -781,6 +852,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
             disclosure={d}
             canEdit={canEdit}
             canSignOff={canSignOff}
+            canHRSignOff={canHRSignOff}
             onEdit={openEdit}
             onDelete={(id) => setDeletingId(id)}
             onInvalidate={invalidateList}

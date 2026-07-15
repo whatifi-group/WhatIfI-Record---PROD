@@ -9,7 +9,7 @@ import {
   usersTable,
 } from "@workspace/db";
 import { z } from "zod";
-import { requirePermission } from "../../middlewares/requirePermission";
+import { requirePermission, getEffectivePermissions } from "../../middlewares/requirePermission";
 
 const router: IRouter = Router({ mergeParams: true });
 
@@ -19,8 +19,11 @@ const canView = requirePermission(["view_disclosures", "sysadmin"]);
 const canWrite = requirePermission(["edit_employees", "sysadmin"]);
 // Review submit: view_disclosures or sysadmin (HR Managers can submit reviews)
 const canSubmitReview = requirePermission(["view_disclosures", "sysadmin"]);
-// Sign-off: review_disclosures or sysadmin (Senior Manager only)
+// Sign-off (conviction): review_disclosures or sysadmin (Senior Manager only)
 const canSignOff = requirePermission(["review_disclosures", "sysadmin"]);
+// Sign-off (any): HR Managers can sign off non-conviction disclosures directly.
+// Conviction sign-offs still require senior manager, enforced inside the handler.
+const canSignOffAny = requirePermission(["view_disclosures", "review_disclosures", "sysadmin"]);
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const DisclosureParam = z.object({
@@ -548,9 +551,14 @@ router.get(
 // ---------------------------------------------------------------------------
 // POST /employees/:id/disclosures/:disclosureId/review/sign-off
 // ---------------------------------------------------------------------------
+// All disclosures require HR sign-off. Non-conviction disclosures are signed
+// off directly by an HR Manager (view_disclosures) — a review record is
+// auto-created with recommendation "approved" in that case.
+// Conviction disclosures require a pre-existing review and only a Senior
+// Manager (review_disclosures) can sign them off.
 router.post(
   "/employees/:id/disclosures/:disclosureId/review/sign-off",
-  canSignOff,
+  canSignOffAny,
   async (req, res): Promise<void> => {
     const params = DisclosureParam.safeParse(req.params);
     if (!params.success) {
@@ -574,34 +582,70 @@ router.post(
       return;
     }
 
-    const [review] = await db
+    // Fetch the disclosure to determine conviction status
+    const [disclosure] = await db
       .select()
-      .from(employeeDisclosureReviewsTable)
-      .where(
-        eq(
-          employeeDisclosureReviewsTable.disclosureId,
-          params.data.disclosureId,
-        ),
-      )
+      .from(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.id, params.data.disclosureId))
       .limit(1);
 
-    if (!review) {
-      res.status(404).json({ error: "Review not found" });
+    if (!disclosure) {
+      res.status(404).json({ error: "Disclosure not found" });
       return;
     }
 
-    if (review.signedOffAt) {
+    const hasConviction = !!disclosure.convictionDetails;
+
+    // Conviction sign-offs require Senior Manager permissions
+    if (hasConviction) {
+      const perms = await getEffectivePermissions(userId);
+      if (!perms.has("review_disclosures") && !perms.has("sysadmin")) {
+        res
+          .status(403)
+          .json({ error: "Only senior managers can sign off conviction disclosures" });
+        return;
+      }
+    }
+
+    const [review] = await db
+      .select()
+      .from(employeeDisclosureReviewsTable)
+      .where(eq(employeeDisclosureReviewsTable.disclosureId, params.data.disclosureId))
+      .limit(1);
+
+    if (review?.signedOffAt) {
       res.status(409).json({ error: "Review has already been signed off" });
       return;
     }
 
-    await db
-      .update(employeeDisclosureReviewsTable)
-      .set({
-        signedOffByUserId: userId,
-        signedOffAt: new Date(),
-      })
-      .where(eq(employeeDisclosureReviewsTable.id, review.id));
+    const now = new Date();
+    let reviewId: number;
+
+    if (!review) {
+      // Non-conviction: auto-create an "approved" review and sign off in one step
+      if (hasConviction) {
+        res.status(404).json({ error: "A review must be submitted before sign-off for conviction disclosures" });
+        return;
+      }
+      const today = now.toISOString().split("T")[0];
+      const [created] = await db
+        .insert(employeeDisclosureReviewsTable)
+        .values({
+          disclosureId: params.data.disclosureId,
+          recommendation: "approved",
+          reviewDate: today,
+          signedOffByUserId: userId,
+          signedOffAt: now,
+        })
+        .returning({ id: employeeDisclosureReviewsTable.id });
+      reviewId = created.id;
+    } else {
+      await db
+        .update(employeeDisclosureReviewsTable)
+        .set({ signedOffByUserId: userId, signedOffAt: now })
+        .where(eq(employeeDisclosureReviewsTable.id, review.id));
+      reviewId = review.id;
+    }
 
     const [updated] = await db
       .select({
@@ -620,7 +664,7 @@ router.post(
         usersTable,
         eq(employeeDisclosureReviewsTable.signedOffByUserId, usersTable.id),
       )
-      .where(eq(employeeDisclosureReviewsTable.id, review.id))
+      .where(eq(employeeDisclosureReviewsTable.id, reviewId))
       .limit(1);
 
     res.json(updated);

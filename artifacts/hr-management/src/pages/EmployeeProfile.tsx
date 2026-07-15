@@ -22,7 +22,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert, LogOut } from "lucide-react";
+import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert, LogOut, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -69,6 +69,7 @@ export default function EmployeeProfile() {
 
   const [isEditing, setIsEditing] = useState(canEdit);
   const [isMarkingLeaver, setIsMarkingLeaver] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   const { data: employee, isLoading, isError } = useGetEmployee(employeeId, { 
     query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) } 
@@ -249,6 +250,53 @@ export default function EmployeeProfile() {
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2">
+            {/* Re-activate — edit_employees on leaver employees */}
+            {canEdit && employee.status === EmployeeStatus.leaver && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                    <RotateCcw className="w-4 h-4 mr-2" /> Re-activate Employee
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Re-activate {employee.firstName}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will restore {employee.firstName} {employee.lastName} to active status and clear their leaver date and reason. You can mark them as a leaver again at any time.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={isReactivating}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setIsReactivating(true);
+                        updateEmployee.mutate(
+                          { id: employeeId, data: { status: EmployeeStatus.active, leaverReason: null, leaverDate: null } },
+                          {
+                            onSuccess: (updatedData) => {
+                              toast({ title: "Employee re-activated", description: `${employee.firstName} ${employee.lastName} is now active.` });
+                              queryClient.setQueryData(getGetEmployeeQueryKey(employeeId), updatedData);
+                              queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+                            },
+                            onError: () => {
+                              toast({ title: "Re-activation failed", description: "Could not restore the employee. Please try again.", variant: "destructive" });
+                            },
+                            onSettled: () => setIsReactivating(false),
+                          }
+                        );
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {isReactivating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Re-activate
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+
             {/* Mark as Leaver — edit_employees on active/on_leave employees */}
             {canEdit && (employee.status === EmployeeStatus.active || employee.status === EmployeeStatus.on_leave) && (
               <Button

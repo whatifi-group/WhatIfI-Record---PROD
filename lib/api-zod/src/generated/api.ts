@@ -1721,3 +1721,25 @@ export const DeleteQualificationTypeParams = zod.object({
 export const DeleteQualificationTypeResponse = zod.void()
 
 
+/**
+ * @summary Global permission-aware search
+ */
+export const searchQueryQMin = 2;
+
+
+
+export const SearchQueryParams = zod.object({
+  "q": zod.coerce.string().min(searchQueryQMin).describe('Search query (minimum 2 characters)')
+})
+
+export const SearchResponse = zod.object({
+  "results": zod.array(zod.object({
+  "type": zod.enum(['employee', 'department', 'leave_request', 'user', 'qualification_type']),
+  "id": zod.number(),
+  "label": zod.string(),
+  "sublabel": zod.string().nullish(),
+  "href": zod.string()
+}))
+})
+
+

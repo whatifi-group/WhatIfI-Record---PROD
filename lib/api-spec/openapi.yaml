@@ -24,6 +24,8 @@ tags:
     description: Extended employee record sections (addresses, payroll, attachments, medical, dietary, next of kin, qualifications, work records)
   - name: Storage
     description: Object storage upload and serving endpoints.
+  - name: search
+    description: Global permission-aware search
 
 paths:
   # ── Storage ───────────────────────────────────────────────────────────────
@@ -1734,8 +1736,62 @@ paths:
         "404":
           description: Not found
 
+  # ── Search ────────────────────────────────────────────────────────────────
+
+  /search:
+    get:
+      operationId: search
+      tags: [search]
+      summary: Global permission-aware search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search query (minimum 2 characters)
+      responses:
+        "200":
+          description: Search results grouped by entity type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
+    SearchResult:
+      type: object
+      required: [type, id, label, href]
+      properties:
+        type:
+          type: string
+          enum: [employee, department, leave_request, user, qualification_type]
+        id:
+          type: integer
+        label:
+          type: string
+        sublabel:
+          type: ["string", "null"]
+        href:
+          type: string
+
+    SearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+
     ErrorResponse:
       type: object
       required: [error]

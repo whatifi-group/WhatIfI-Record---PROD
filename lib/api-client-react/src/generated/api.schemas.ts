@@ -5,6 +5,30 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SearchResultType = typeof SearchResultType[keyof typeof SearchResultType];
+
+
+export const SearchResultType = {
+  employee: 'employee',
+  department: 'department',
+  leave_request: 'leave_request',
+  user: 'user',
+  qualification_type: 'qualification_type',
+} as const;
+
+export interface SearchResult {
+  type: SearchResultType;
+  id: number;
+  label: string;
+  /** @nullable */
+  sublabel?: string | null;
+  href: string;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -752,5 +776,13 @@ export type ListUsersParams = {
 search?: string;
 status?: UserStatus;
 roleId?: number;
+};
+
+export type SearchParams = {
+/**
+ * Search query (minimum 2 characters)
+ * @minLength 2
+ */
+q: string;
 };
 

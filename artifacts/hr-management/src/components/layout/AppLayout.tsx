@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Home, Users, Building2, Calendar, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle } from "lucide-react";
+import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
 import { useHealthCheck, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
@@ -196,14 +197,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <header className="h-16 flex items-center px-6 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10 shrink-0">
-            <SidebarTrigger className="mr-4 lg:hidden" />
-            <div className="flex-1" />
-            <div className="flex items-center gap-4">
-               {/* Header actions could go here */}
-               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                 {initials}
-               </div>
+          <header className="h-16 flex items-center px-6 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10 shrink-0 gap-4">
+            <SidebarTrigger className="shrink-0 lg:hidden" />
+            <div className="flex-1 flex justify-center">
+              <GlobalSearch />
+            </div>
+            <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+              {initials}
             </div>
           </header>
           <div className="flex-1 overflow-auto p-6 md:p-8">

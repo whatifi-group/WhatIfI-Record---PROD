@@ -3,9 +3,11 @@
  * Inserts any missing system LOV items; safe to re-run on every boot.
  *
  * IMPORTANT — schema-backed categories:
- *   `employee_status` and `employment_type` entries are auto-derived from the
- *   DB schema constants (`employeeStatusValues` / `employmentTypeValues`).
- *   Adding a value to either constant is sufficient — no manual seed update.
+ *   `employee_status`, `employment_type`, and `shift_type` entries are
+ *   auto-derived from DB schema constants (`employeeStatusValues`,
+ *   `employmentTypeValues`, `shiftTypeValues`).
+ *   Adding a value to any of those constants is sufficient — no manual
+ *   seed update required.
  *   All other categories are maintained in the `MANUAL_ITEMS` list below.
  */
 import {
@@ -13,6 +15,7 @@ import {
   lovItemsTable,
   employeeStatusValues,
   employmentTypeValues,
+  shiftTypeValues,
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 
@@ -45,6 +48,7 @@ interface SeedItem {
 export const SCHEMA_BACKED_CATEGORIES = {
   employee_status: employeeStatusValues as readonly string[],
   employment_type: employmentTypeValues as readonly string[],
+  shift_type: shiftTypeValues as readonly string[],
 } satisfies Record<string, readonly string[]>;
 
 const schemaBackedItems: SeedItem[] = Object.entries(
@@ -84,13 +88,6 @@ const MANUAL_ITEMS: SeedItem[] = [
   { category: "dietary_requirement", value: "dairy_free",  label: "Dairy Free",  sortOrder: 5 },
   { category: "dietary_requirement", value: "halal",       label: "Halal",       sortOrder: 6 },
   { category: "dietary_requirement", value: "kosher",      label: "Kosher",      sortOrder: 7 },
-  // shift_type
-  { category: "shift_type", value: "standard",     label: "Standard",     sortOrder: 1 },
-  { category: "shift_type", value: "overtime",     label: "Overtime",     sortOrder: 2 },
-  { category: "shift_type", value: "night_shift",  label: "Night Shift",  sortOrder: 3 },
-  { category: "shift_type", value: "weekend",      label: "Weekend",      sortOrder: 4 },
-  { category: "shift_type", value: "bank_holiday", label: "Bank Holiday", sortOrder: 5 },
-  { category: "shift_type", value: "on_call",      label: "On-Call",      sortOrder: 6 },
 ];
 
 const SEED_ITEMS: SeedItem[] = [...schemaBackedItems, ...MANUAL_ITEMS];

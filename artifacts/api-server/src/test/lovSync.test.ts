@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { employeeStatusValues, employmentTypeValues } from "@workspace/db";
+import { employeeStatusValues, employmentTypeValues, shiftTypeValues } from "@workspace/db";
 import { assertLovSync, SCHEMA_BACKED_CATEGORIES, seedLov } from "../lib/seedLov";
 
 // Ensure the LOV table is seeded before running assertions.
@@ -42,6 +42,23 @@ describe("SCHEMA_BACKED_CATEGORIES mapping", () => {
       expect(
         schemaSet.has(v),
         `"${v}" is in the seed mapping but not in employmentTypeValues — remove it`,
+      ).toBe(true);
+    }
+  });
+
+  it("shift_type entry covers every value in shiftTypeValues", () => {
+    const seeded = SCHEMA_BACKED_CATEGORIES.shift_type;
+    for (const v of shiftTypeValues) {
+      expect(seeded, `"${v}" missing from shift_type mapping`).toContain(v);
+    }
+  });
+
+  it("shift_type mapping has no values absent from the schema constant", () => {
+    const schemaSet = new Set<string>(shiftTypeValues);
+    for (const v of SCHEMA_BACKED_CATEGORIES.shift_type) {
+      expect(
+        schemaSet.has(v),
+        `"${v}" is in the seed mapping but not in shiftTypeValues — remove it`,
       ).toBe(true);
     }
   });

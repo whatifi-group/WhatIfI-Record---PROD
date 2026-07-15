@@ -10,6 +10,21 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { employeesTable } from "./employees";
 
+/**
+ * Canonical list of shift type values — the single source of truth for the
+ * `shift_type` LOV category.  Adding a value here is sufficient: seedLov.ts
+ * derives its entries from this constant automatically.
+ */
+export const shiftTypeValues = [
+  "standard",
+  "overtime",
+  "night_shift",
+  "weekend",
+  "bank_holiday",
+  "on_call",
+] as const;
+export type ShiftType = (typeof shiftTypeValues)[number];
+
 export const employeePayRatesTable = pgTable("employee_pay_rates", {
   id: serial("id").primaryKey(),
   employeeId: integer("employee_id")

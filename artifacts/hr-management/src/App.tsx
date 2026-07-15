@@ -11,7 +11,6 @@ import CompanyDashboard from '@/pages/CompanyDashboard';
 import EmployeesList from '@/pages/EmployeesList';
 import EmployeeProfile from '@/pages/EmployeeProfile';
 import DepartmentsList from '@/pages/DepartmentsList';
-import LeaveRequestsList from '@/pages/LeaveRequestsList';
 import SysadminDashboard from '@/pages/sysadmin/SysadminDashboard';
 import UsersList from '@/pages/sysadmin/UsersList';
 import RolesList from '@/pages/sysadmin/RolesList';
@@ -122,9 +121,6 @@ function MainRoutes() {
         </Route>
         <Route path="/departments">
           {() => <AdminRoute component={DepartmentsList} />}
-        </Route>
-        <Route path="/leave">
-          {() => <HrRoute component={LeaveRequestsList} />}
         </Route>
         <Route path="/past-employees">
           {() => <PastEmployeesRoute component={PastEmployeesList} />}

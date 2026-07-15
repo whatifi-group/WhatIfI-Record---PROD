@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import departmentsRouter from "./departments";
 import employeesRouter from "./employees";
-import leaveRequestsRouter from "./leaveRequests";
 import employeeAddressesRouter from "./employeeAddresses";
 import employeePayrollRouter from "./employeePayroll";
 import employeeAttachmentsRouter from "./employeeAttachments";
@@ -33,7 +32,6 @@ router.use(salaryRedactionMiddleware);
 
 router.use(departmentsRouter);
 router.use(employeesRouter);
-router.use(leaveRequestsRouter);
 router.use(employeeAddressesRouter);
 router.use(employeePayrollRouter);
 router.use(employeeAttachmentsRouter);

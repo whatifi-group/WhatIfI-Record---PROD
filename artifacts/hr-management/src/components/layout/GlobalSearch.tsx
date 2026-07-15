@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Search, Loader2, Users, Building2, Calendar, UserCog, GraduationCap, X } from "lucide-react";
+import { Search, Loader2, Users, Building2, UserCog, GraduationCap, X } from "lucide-react";
 import { useSearch, getSearchQueryKey, type SearchResult } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
   employee: Users,
   department: Building2,
-  leave_request: Calendar,
   user: UserCog,
   qualification_type: GraduationCap,
 };
@@ -15,12 +14,11 @@ const TYPE_ICONS: Record<string, React.ElementType> = {
 const TYPE_LABELS: Record<string, string> = {
   employee: "Employees",
   department: "Departments",
-  leave_request: "Leave Requests",
   user: "Users",
   qualification_type: "Qualification Types",
 };
 
-const TYPE_ORDER = ["employee", "department", "leave_request", "user", "qualification_type"];
+const TYPE_ORDER = ["employee", "department", "user", "qualification_type"];
 
 function groupResults(results: SearchResult[]): Record<string, SearchResult[]> {
   const groups: Record<string, SearchResult[]> = {};

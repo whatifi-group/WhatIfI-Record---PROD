@@ -31,9 +31,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, Copy, Check, AlertCircle, Info, Settings, Link } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, Check, AlertCircle, Settings, Link } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useLocation } from "wouter";
+import ProfileCompletionModal from "@/components/ProfileCompletionModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ export default function OnboardingQueue() {
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveError, setApproveError] = useState("");
   const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [approvedEmployeeId, setApprovedEmployeeId] = useState<number | null>(null);
 
   // Reject dialog
   const [rejectId, setRejectId] = useState<number | null>(null);
@@ -226,7 +227,7 @@ export default function OnboardingQueue() {
     setApproveNotes("");
     setApproveError("");
     setTempPassword(null);
-    setCopiedPassword(false);
+    setApprovedEmployeeId(null);
   }
 
   async function handleApprove() {
@@ -249,6 +250,9 @@ export default function OnboardingQueue() {
         return;
       }
       const result = await res.json();
+      // Close the approve dialog and open the profile completion modal
+      setApproveId(null);
+      setApprovedEmployeeId(result.employeeId);
       setTempPassword(result.temporaryPassword);
       fetchSubmissions();
     } catch {
@@ -258,17 +262,18 @@ export default function OnboardingQueue() {
     }
   }
 
-  function copyPassword() {
-    if (!tempPassword) return;
-    navigator.clipboard.writeText(tempPassword).then(() => {
-      setCopiedPassword(true);
-      setTimeout(() => setCopiedPassword(false), 2000);
-    });
-  }
-
   function closeApprove() {
     setApproveId(null);
     setTempPassword(null);
+    setApprovedEmployeeId(null);
+  }
+
+  function handleProfileModalClose(navigateToProfile: boolean) {
+    const empId = approvedEmployeeId;
+    closeApprove();
+    if (navigateToProfile && empId) {
+      setLocation(`/employees/${empId}`);
+    }
   }
 
   // ── Reject ───────────────────────────────────────────────────────────────
@@ -646,81 +651,49 @@ export default function OnboardingQueue() {
               This will create a WhatIfI Record account for the candidate.
             </DialogDescription>
           </DialogHeader>
-
-          {tempPassword ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
-                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
-                <p>The account has been created successfully.</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Temporary Password</Label>
-                <p className="text-xs text-muted-foreground">
-                  Share this password securely with the new employee. They will be prompted to change it on first login.
-                </p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 font-mono text-sm bg-muted rounded px-3 py-2 border border-border">
-                    {tempPassword}
-                  </code>
-                  <Button size="sm" variant="outline" onClick={copyPassword} className="shrink-0">
-                    {copiedPassword ? (
-                      <Check className="w-4 h-4 text-emerald-600" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-                <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                <p>
-                  Pay rates are not set during onboarding — visit this employee's{" "}
-                  <strong>Payroll tab</strong> in the Employee Directory to configure them.
-                </p>
-              </div>
-
-              <DialogFooter>
-                <Button onClick={closeApprove} className="w-full">Done</Button>
-              </DialogFooter>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="approve-notes">Review Notes (optional)</Label>
+              <Textarea
+                id="approve-notes"
+                value={approveNotes}
+                onChange={(e) => setApproveNotes(e.target.value)}
+                placeholder="Any notes for the record…"
+                rows={3}
+              />
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="approve-notes">Review Notes (optional)</Label>
-                <Textarea
-                  id="approve-notes"
-                  value={approveNotes}
-                  onChange={(e) => setApproveNotes(e.target.value)}
-                  placeholder="Any notes for the record…"
-                  rows={3}
-                />
-              </div>
-              {approveError && (
-                <p className="text-sm text-destructive">{approveError}</p>
-              )}
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={closeApprove} disabled={approveLoading}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleApprove}
-                  disabled={approveLoading}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  {approveLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                  )}
-                  Approve & Create Account
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
+            {approveError && (
+              <p className="text-sm text-destructive">{approveError}</p>
+            )}
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeApprove} disabled={approveLoading}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApprove}
+                disabled={approveLoading}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {approveLoading ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                )}
+                Approve & Create Account
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Profile Completion Modal (post-approval) ─────────────────────── */}
+      {approvedEmployeeId !== null && tempPassword !== null && (
+        <ProfileCompletionModal
+          employeeId={approvedEmployeeId}
+          tempPassword={tempPassword}
+          onClose={handleProfileModalClose}
+        />
+      )}
 
       {/* ── Reject Dialog ────────────────────────────────────────────────── */}
       <Dialog open={rejectId !== null} onOpenChange={(open) => { if (!open) setRejectId(null); }}>

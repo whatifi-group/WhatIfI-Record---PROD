@@ -54,7 +54,21 @@ function canViewPayroll(perms: Set<string>): boolean {
   return perms.has("view_payroll") || perms.has("sysadmin");
 }
 
-/** Strip salary from an employee row if the caller lacks payroll permission. */
+/**
+ * Strip salary from an employee row if the caller lacks payroll permission.
+ *
+ * ⚠️  IMPORTANT — future endpoint authors:
+ * Every route that returns employee data MUST call redactSalary() (or an
+ * equivalent guard) before sending the response.  Failing to do so will
+ * silently leak payroll data to unpermissioned callers.  The pattern is:
+ *
+ *   const perms = req.effectivePermissions ??
+ *     (userId ? await getEffectivePermissions(userId) : new Set<string>());
+ *   res.json(SomeResponse.parse(redactSalary(row, canViewPayroll(perms))));
+ *
+ * Integration tests in src/test/employeeSalaryVisibility.test.ts verify this
+ * for every existing endpoint — add a new test block when you add a new route.
+ */
 function redactSalary<T extends { salary?: number | null }>(
   row: T,
   allowed: boolean,

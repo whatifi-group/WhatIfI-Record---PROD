@@ -105,6 +105,39 @@ describe("GET /api/employees — salary visibility", () => {
   });
 });
 
+// ── GET /employees?search=… — salary still hidden with query params ───────────
+describe("GET /api/employees?search — salary visibility with search filter", () => {
+  it("hides salary from a view_employees-only user when a search query matches", async () => {
+    const api = buildApp(router, viewerUserId);
+    // "Salary" matches the employee's firstName created in beforeAll
+    const res = await api.get("/api/employees?search=Salary");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.salary).toBeNull();
+  });
+
+  it("hides salary from an edit_employees-only user when a status filter is applied", async () => {
+    const api = buildApp(router, hrManagerUserId);
+    const res = await api.get("/api/employees?status=active");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    // Employee may or may not appear depending on default status; if present, salary must be null
+    if (emp) {
+      expect(emp.salary).toBeNull();
+    }
+  });
+
+  it("returns salary to a view_payroll user when a search query matches", async () => {
+    const api = buildApp(router, payrollUserId);
+    const res = await api.get("/api/employees?search=TestEmp");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.salary).toBe(75000);
+  });
+});
+
 // ── GET /employees/:id — salary visibility ────────────────────────────────────
 describe("GET /api/employees/:id — salary visibility", () => {
   it("hides salary (null) from a view_employees-only user", async () => {

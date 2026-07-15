@@ -1095,16 +1095,26 @@ export const CopyEmployeePayRatesResponse = zod.object({
  * All parameters are optional — omitting them returns all records.
  * @summary List work records across all employees in a single call
  */
+export const listWorkRecordsQueryPageDefault = 1;
+
+export const listWorkRecordsQueryPageSizeDefault = 50;
+export const listWorkRecordsQueryPageSizeMax = 200;
+
+
+
 export const ListWorkRecordsQueryParams = zod.object({
   "from": zod.date().optional().describe('Inclusive lower bound on shiftDate (YYYY-MM-DD)'),
   "to": zod.date().optional().describe('Inclusive upper bound on shiftDate (YYYY-MM-DD)'),
   "shiftType": zod.coerce.string().optional().describe('Filter to a specific shift type value'),
   "departmentId": zod.coerce.number().optional().describe('Filter to a specific department'),
   "employeeStatus": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional().describe('Filter to employees with this status (omit for all statuses)'),
-  "search": zod.coerce.string().optional().describe('Full-name or email substring search across employees')
+  "search": zod.coerce.string().optional().describe('Full-name or email substring search across employees'),
+  "page": zod.coerce.number().min(1).default(listWorkRecordsQueryPageDefault).describe('1-based page number'),
+  "pageSize": zod.coerce.number().min(1).max(listWorkRecordsQueryPageSizeMax).default(listWorkRecordsQueryPageSizeDefault).describe('Number of records per page (max 200)')
 })
 
-export const ListWorkRecordsResponseItem = zod.object({
+export const ListWorkRecordsResponse = zod.object({
+  "rows": zod.array(zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "shiftDate": zod.coerce.date(),
@@ -1121,8 +1131,12 @@ export const ListWorkRecordsResponseItem = zod.object({
   "employeeDepartmentId": zod.number().nullish(),
   "employeeDepartmentName": zod.string().nullish(),
   "employeeAvatarUrl": zod.string().nullish()
+})),
+  "total": zod.number().describe('Total number of matching records across all pages'),
+  "page": zod.number().describe('Current 1-based page number'),
+  "pageSize": zod.number().describe('Number of records per page'),
+  "totalPages": zod.number().describe('Total number of pages (ceil(total \/ pageSize))')
 })
-export const ListWorkRecordsResponse = zod.array(ListWorkRecordsResponseItem)
 
 
 /**

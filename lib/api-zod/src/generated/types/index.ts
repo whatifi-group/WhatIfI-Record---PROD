@@ -89,3 +89,4 @@ export * from './userLinkedEmployee';
 export * from './userStatus';
 export * from './userUpdate';
 export * from './workRecordRow';
+export * from './workRecordsPage';

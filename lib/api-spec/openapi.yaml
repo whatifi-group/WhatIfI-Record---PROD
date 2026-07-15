@@ -1186,15 +1186,30 @@ paths:
           schema:
             type: string
           description: Full-name or email substring search across employees
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 1-based page number
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+          description: Number of records per page (max 200)
       responses:
         "200":
-          description: Flat list of work records with embedded employee context
+          description: Paginated work records with embedded employee context
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/WorkRecordRow"
+                $ref: "#/components/schemas/WorkRecordsPage"
 
   /employees/{id}/work-records:
     get:
@@ -3089,6 +3104,27 @@ components:
           description: Shift types skipped because the target employee already has a rate for them
           items:
             type: string
+
+    WorkRecordsPage:
+      type: object
+      required: [rows, total, page, pageSize, totalPages]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkRecordRow"
+        total:
+          type: integer
+          description: Total number of matching records across all pages
+        page:
+          type: integer
+          description: Current 1-based page number
+        pageSize:
+          type: integer
+          description: Number of records per page
+        totalPages:
+          type: integer
+          description: Total number of pages (ceil(total / pageSize))
 
     WorkRecordRow:
       type: object

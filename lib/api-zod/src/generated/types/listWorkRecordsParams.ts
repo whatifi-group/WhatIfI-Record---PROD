@@ -32,4 +32,15 @@ employeeStatus?: EmployeeStatus;
  * Full-name or email substring search across employees
  */
 search?: string;
+/**
+ * 1-based page number
+ * @minimum 1
+ */
+page?: number;
+/**
+ * Number of records per page (max 200)
+ * @minimum 1
+ * @maximum 200
+ */
+pageSize?: number;
 };

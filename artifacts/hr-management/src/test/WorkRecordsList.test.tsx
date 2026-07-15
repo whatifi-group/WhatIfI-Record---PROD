@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import WorkRecordsList from "@/pages/WorkRecordsList";
 
 vi.mock("@workspace/api-client-react", () => ({
-  useListWorkRecords: vi.fn(() => ({ data: [], isLoading: false })),
+  useListWorkRecords: vi.fn(() => ({ data: { rows: [], total: 0, page: 1, pageSize: 50, totalPages: 0 }, isLoading: false })),
   useListDepartments: vi.fn(() => ({ data: [] })),
   useListLovItems: vi.fn(() => ({ data: [] })),
 }));
@@ -64,7 +64,7 @@ describe("WorkRecordsList — former-employee toggle", () => {
     });
     vi.clearAllMocks();
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [],
+      data: { rows: [], total: 0, page: 1, pageSize: 50, totalPages: 0 },
       isLoading: false,
     } as any);
   });
@@ -91,7 +91,7 @@ describe("WorkRecordsList — former-employee toggle", () => {
 
   it("renders a 'Former' badge on rows belonging to non-active employees", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ id: 201, employeeId: 2, employeeFirstName: "Bob", employeeLastName: "Jones", employeeStatus: "leaver" })],
+      data: { rows: [makeRow({ id: 201, employeeId: 2, employeeFirstName: "Bob", employeeLastName: "Jones", employeeStatus: "leaver" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -106,7 +106,7 @@ describe("WorkRecordsList — former-employee toggle", () => {
 
   it("does not render a 'Former' badge for active employees", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ id: 301, employeeId: 3, employeeFirstName: "Carol", employeeLastName: "White", employeeStatus: "active" })],
+      data: { rows: [makeRow({ id: 301, employeeId: 3, employeeFirstName: "Carol", employeeLastName: "White", employeeStatus: "active" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -121,7 +121,7 @@ describe("WorkRecordsList — former-employee toggle", () => {
 
   it("row link navigates to the correct employee profile", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ id: 501, employeeId: 5, employeeFirstName: "Dan", employeeLastName: "Brown", employeeStatus: "leaver" })],
+      data: { rows: [makeRow({ id: 501, employeeId: 5, employeeFirstName: "Dan", employeeLastName: "Brown", employeeStatus: "leaver" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -147,7 +147,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("shows the Hours by Employee sidebar card when there are work records", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 1, employeeFirstName: "Alice", employeeLastName: "Smith", hoursWorked: 8, employeeStatus: "active" })],
+      data: { rows: [makeRow({ employeeId: 1, employeeFirstName: "Alice", employeeLastName: "Smith", hoursWorked: 8, employeeStatus: "active" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -158,7 +158,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("renders the (Former) label next to former employees in the sidebar", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 2, employeeFirstName: "Bob", employeeLastName: "Left", hoursWorked: 6, employeeStatus: "leaver" })],
+      data: { rows: [makeRow({ employeeId: 2, employeeFirstName: "Bob", employeeLastName: "Left", hoursWorked: 6, employeeStatus: "leaver" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -170,7 +170,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("does NOT render a (Former) label for active employees in the sidebar", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 3, employeeFirstName: "Carol", employeeLastName: "Active", hoursWorked: 7, employeeStatus: "active" })],
+      data: { rows: [makeRow({ employeeId: 3, employeeFirstName: "Carol", employeeLastName: "Active", hoursWorked: 7, employeeStatus: "active" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -181,7 +181,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("applies muted styling to former employees in the sidebar", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 4, employeeFirstName: "Eve", employeeLastName: "Gone", hoursWorked: 4, employeeStatus: "leaver" })],
+      data: { rows: [makeRow({ employeeId: 4, employeeFirstName: "Eve", employeeLastName: "Gone", hoursWorked: 4, employeeStatus: "leaver" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -204,7 +204,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("sidebar link points to the correct employee profile for a former employee", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 7, employeeFirstName: "Fred", employeeLastName: "Past", hoursWorked: 5, employeeStatus: "leaver" })],
+      data: { rows: [makeRow({ employeeId: 7, employeeFirstName: "Fred", employeeLastName: "Past", hoursWorked: 5, employeeStatus: "leaver" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -219,7 +219,7 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
 
   it("sidebar link points to the correct employee profile for an active employee", () => {
     vi.mocked(useListWorkRecords).mockReturnValue({
-      data: [makeRow({ employeeId: 8, employeeFirstName: "Gina", employeeLastName: "Here", hoursWorked: 9, employeeStatus: "active" })],
+      data: { rows: [makeRow({ employeeId: 8, employeeFirstName: "Gina", employeeLastName: "Here", hoursWorked: 9, employeeStatus: "active" })], total: 1, page: 1, pageSize: 50, totalPages: 1 },
       isLoading: false,
     } as any);
 
@@ -229,6 +229,99 @@ describe("WorkRecordsList — hours sidebar (former employee rendering)", () => 
       name: (name) => name.includes("Gina") && name.includes("Here"),
     });
     expect(link).toHaveAttribute("href", "/employees/8?tab=work-record");
+  });
+});
+
+// ─── Pagination controls ──────────────────────────────────────────────────────
+
+describe("WorkRecordsList — pagination controls", () => {
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.clearAllMocks();
+  });
+
+  it("does NOT render pagination controls when there is only one page", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 1, page: 1, pageSize: 50, totalPages: 1 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.queryByRole("button", { name: /prev/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /next/i })).not.toBeInTheDocument();
+  });
+
+  it("renders Prev and Next buttons when there are multiple pages", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 75, page: 1, pageSize: 50, totalPages: 2 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.getByRole("button", { name: /prev/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeInTheDocument();
+  });
+
+  it("disables the Prev button on the first page", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 75, page: 1, pageSize: 50, totalPages: 2 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    expect(screen.getByRole("button", { name: /prev/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /next/i })).not.toBeDisabled();
+  });
+
+  it("disables the Next button after clicking to the last page", async () => {
+    // Mock always returns totalPages: 2 — clicking Next advances internal page to 2
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 75, page: 1, pageSize: 50, totalPages: 2 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    // Advance to page 2
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("button", { name: /next/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /prev/i })).not.toBeDisabled();
+  });
+
+  it("shows page X of Y and total entries count when paginated", () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 120, page: 1, pageSize: 50, totalPages: 3 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    // The footer text reads "Page 1 of 3 · 120 total entries"
+    expect(screen.getByText(/page/i)).toBeInTheDocument();
+    expect(screen.getByText(/total entries/i)).toBeInTheDocument();
+    expect(screen.getByText("120")).toBeInTheDocument();
+  });
+
+  it("advances to page 2 when Next is clicked and passes page=2 to the hook", async () => {
+    vi.mocked(useListWorkRecords).mockReturnValue({
+      data: { rows: [makeRow()], total: 75, page: 1, pageSize: 50, totalPages: 2 },
+      isLoading: false,
+    } as any);
+
+    render(<WorkRecordsList />, { wrapper: Wrapper });
+
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    // The hook should have been called with page: 2
+    const calls = vi.mocked(useListWorkRecords).mock.calls;
+    const lastCall = calls[calls.length - 1][0] as Record<string, unknown>;
+    expect(lastCall.page).toBe(2);
   });
 });
 

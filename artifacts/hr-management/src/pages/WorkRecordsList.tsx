@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useListWorkRecords, useListDepartments, useListLovItems } from "@workspace/api-client-react";
 import type { WorkRecordRow } from "@workspace/api-client-react";
 import { Link } from "wouter";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download } from "lucide-react";
+import { Loader2, Clock, ExternalLink, Users, TrendingUp, Calendar, Search, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { buildCsv, workRecordsCsvFilename } from "@/lib/csvUtils";
 
@@ -34,6 +34,12 @@ export default function WorkRecordsList() {
   const [shiftTypeFilter, setShiftTypeFilter] = useState("all");
   const [departmentFilter, setDepartmentFilter] = useState("all");
   const [includeFormer, setIncludeFormer] = useState(false);
+  const [page, setPage] = useState(1);
+
+  // Reset to page 1 whenever any server-side filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo, shiftTypeFilter, departmentFilter, includeFormer]);
 
   const { data: departments } = useListDepartments();
   const { data: shiftTypes } = useListLovItems("shift_type");
@@ -41,13 +47,17 @@ export default function WorkRecordsList() {
   // Single aggregated request — server applies date-range, shift-type,
   // department, and employee-status filters so the browser never fans out
   // one request per employee.
-  const { data: rows = [], isLoading } = useListWorkRecords({
+  const { data, isLoading } = useListWorkRecords({
     from: dateFrom || undefined,
     to: dateTo || undefined,
     shiftType: shiftTypeFilter !== "all" ? shiftTypeFilter : undefined,
     departmentId: departmentFilter !== "all" ? Number(departmentFilter) : undefined,
     employeeStatus: !includeFormer ? "active" : undefined,
+    page,
+    pageSize: 50,
   });
+
+  const rows = data?.rows ?? [];
 
   // Client-side text search (fast in-memory, no debounce needed)
   const filteredRows = useMemo<WorkRecordRow[]>(() => {
@@ -371,11 +381,48 @@ export default function WorkRecordsList() {
                   ))}
                 </TableBody>
               </Table>
-              <div className="px-4 py-3 border-t border-border/50 bg-muted/20 flex justify-end">
+              <div className="px-4 py-3 border-t border-border/50 bg-muted/20 flex items-center justify-between gap-4 flex-wrap">
                 <span className="text-sm text-muted-foreground">
-                  Showing <span className="font-semibold text-foreground">{sortedRows.length}</span> entries ·
-                  Total <span className="font-semibold text-foreground">{totalHours.toFixed(1)}</span> h
+                  {data && data.totalPages > 1 ? (
+                    <>
+                      Page{" "}
+                      <span className="font-semibold text-foreground">{page}</span>
+                      {" "}of{" "}
+                      <span className="font-semibold text-foreground">{data.totalPages}</span>
+                      {" "}·{" "}
+                      <span className="font-semibold text-foreground">{data.total}</span> total entries
+                    </>
+                  ) : (
+                    <>
+                      Showing <span className="font-semibold text-foreground">{sortedRows.length}</span> entries ·
+                      Total <span className="font-semibold text-foreground">{totalHours.toFixed(1)}</span> h
+                    </>
+                  )}
                 </span>
+                {data && data.totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1"
+                      onClick={() => setPage((p) => p - 1)}
+                      disabled={page <= 1 || isLoading}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Prev
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={page >= data.totalPages || isLoading}
+                    >
+                      Next
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

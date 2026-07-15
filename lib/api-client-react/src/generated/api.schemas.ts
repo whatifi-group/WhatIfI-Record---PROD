@@ -756,6 +756,18 @@ export interface WorkRecordRow {
   employeeAvatarUrl?: string | null;
 }
 
+export interface WorkRecordsPage {
+  rows: WorkRecordRow[];
+  /** Total number of matching records across all pages */
+  total: number;
+  /** Current 1-based page number */
+  page: number;
+  /** Number of records per page */
+  pageSize: number;
+  /** Total number of pages (ceil(total / pageSize)) */
+  totalPages: number;
+}
+
 export interface EmployeeWorkRecord {
   id: number;
   employeeId: number;
@@ -883,6 +895,17 @@ employeeStatus?: EmployeeStatus;
  * Full-name or email substring search across employees
  */
 search?: string;
+/**
+ * 1-based page number
+ * @minimum 1
+ */
+page?: number;
+/**
+ * Number of records per page (max 200)
+ * @minimum 1
+ * @maximum 200
+ */
+pageSize?: number;
 };
 
 export type ListLeaveRequestsParams = {

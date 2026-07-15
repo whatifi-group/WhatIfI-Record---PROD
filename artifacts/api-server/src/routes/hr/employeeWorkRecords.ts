@@ -52,6 +52,8 @@ const ListWorkRecordsQuery = z.object({
   departmentId: z.coerce.number().int().positive().optional(),
   employeeStatus: z.string().optional(),
   search: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 /**
@@ -66,7 +68,7 @@ router.get("/work-records", async (req, res): Promise<void> => {
     return;
   }
 
-  const { from, to, shiftType, departmentId, employeeStatus, search } =
+  const { from, to, shiftType, departmentId, employeeStatus, search, page, pageSize } =
     parsed.data;
 
   const conditions: SQL[] = [];
@@ -102,43 +104,65 @@ router.get("/work-records", async (req, res): Promise<void> => {
     );
   }
 
-  const rows = await db
-    .select({
-      id: employeeWorkRecordsTable.id,
-      employeeId: employeeWorkRecordsTable.employeeId,
-      shiftDate: employeeWorkRecordsTable.shiftDate,
-      startTime: employeeWorkRecordsTable.startTime,
-      endTime: employeeWorkRecordsTable.endTime,
-      hoursWorked:
-        sql<number | null>`${employeeWorkRecordsTable.hoursWorked}::float8`,
-      shiftType: employeeWorkRecordsTable.shiftType,
-      notes: employeeWorkRecordsTable.notes,
-      createdAt: employeeWorkRecordsTable.createdAt,
-      employeeFirstName: employeesTable.firstName,
-      employeeLastName: employeesTable.lastName,
-      employeeEmail: employeesTable.email,
-      employeeStatus: employeesTable.status,
-      employeeDepartmentId: employeesTable.departmentId,
-      employeeDepartmentName: departmentsTable.name,
-      employeeAvatarUrl: employeesTable.avatarUrl,
-    })
-    .from(employeeWorkRecordsTable)
-    .innerJoin(
-      employeesTable,
-      eq(employeeWorkRecordsTable.employeeId, employeesTable.id),
-    )
-    .leftJoin(
-      departmentsTable,
-      eq(employeesTable.departmentId, departmentsTable.id),
-    )
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(
-      employeeWorkRecordsTable.shiftDate,
-      employeesTable.lastName,
-      employeesTable.firstName,
-    );
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  res.json(rows);
+  // Run count and paginated rows as concurrent queries
+  const [countResult, rows] = await Promise.all([
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(employeeWorkRecordsTable)
+      .innerJoin(
+        employeesTable,
+        eq(employeeWorkRecordsTable.employeeId, employeesTable.id),
+      )
+      .leftJoin(
+        departmentsTable,
+        eq(employeesTable.departmentId, departmentsTable.id),
+      )
+      .where(whereClause),
+    db
+      .select({
+        id: employeeWorkRecordsTable.id,
+        employeeId: employeeWorkRecordsTable.employeeId,
+        shiftDate: employeeWorkRecordsTable.shiftDate,
+        startTime: employeeWorkRecordsTable.startTime,
+        endTime: employeeWorkRecordsTable.endTime,
+        hoursWorked:
+          sql<number | null>`${employeeWorkRecordsTable.hoursWorked}::float8`,
+        shiftType: employeeWorkRecordsTable.shiftType,
+        notes: employeeWorkRecordsTable.notes,
+        createdAt: employeeWorkRecordsTable.createdAt,
+        employeeFirstName: employeesTable.firstName,
+        employeeLastName: employeesTable.lastName,
+        employeeEmail: employeesTable.email,
+        employeeStatus: employeesTable.status,
+        employeeDepartmentId: employeesTable.departmentId,
+        employeeDepartmentName: departmentsTable.name,
+        employeeAvatarUrl: employeesTable.avatarUrl,
+      })
+      .from(employeeWorkRecordsTable)
+      .innerJoin(
+        employeesTable,
+        eq(employeeWorkRecordsTable.employeeId, employeesTable.id),
+      )
+      .leftJoin(
+        departmentsTable,
+        eq(employeesTable.departmentId, departmentsTable.id),
+      )
+      .where(whereClause)
+      .orderBy(
+        employeeWorkRecordsTable.shiftDate,
+        employeesTable.lastName,
+        employeesTable.firstName,
+      )
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+  ]);
+
+  const total = countResult[0]?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  res.json({ rows, total, page, pageSize, totalPages });
 });
 
 router.get(

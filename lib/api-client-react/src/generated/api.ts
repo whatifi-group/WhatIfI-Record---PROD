@@ -89,7 +89,7 @@ import type {
   User,
   UserInput,
   UserUpdate,
-  WorkRecordRow
+  WorkRecordsPage
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3806,9 +3806,9 @@ export const getListWorkRecordsUrl = (params?: ListWorkRecordsParams,) => {
  * All parameters are optional — omitting them returns all records.
  * @summary List work records across all employees in a single call
  */
-export const listWorkRecords = async (params?: ListWorkRecordsParams, options?: RequestInit): Promise<WorkRecordRow[]> => {
+export const listWorkRecords = async (params?: ListWorkRecordsParams, options?: RequestInit): Promise<WorkRecordsPage> => {
 
-  return customFetch<WorkRecordRow[]>(getListWorkRecordsUrl(params),
+  return customFetch<WorkRecordsPage>(getListWorkRecordsUrl(params),
   {
     ...options,
     method: 'GET'

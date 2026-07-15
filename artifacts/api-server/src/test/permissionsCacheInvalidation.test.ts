@@ -20,7 +20,7 @@ import {
   createTestUser,
   cleanupUser,
 } from "./helpers";
-import { db, usersTable, employeesTable } from "@workspace/db";
+import { db, rolesTable, usersTable, employeesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "../lib/password";
 import {
@@ -251,6 +251,75 @@ describe("Permission cache — deleted user loses route access", () => {
     } finally {
       await cleanupRole(roleId);
       // User is already deleted.
+    }
+  });
+});
+
+// ── Test 6: name-only role update does NOT evict cache ────────────────────────
+//
+// The PATCH /sysadmin/roles/:id handler only runs eviction when `permissions`
+// is present in the request body.  These two tests pin that conditional: one
+// confirms the cache stays warm on a name-only patch; the other confirms
+// eviction fires when permissions ARE included (the positive anchor).
+
+describe("Permission cache — name-only role update skips eviction", () => {
+  it("leaves cached permissions intact when only the role name is patched", async () => {
+    const roleId = await createTestRole(["view_payroll"], "Original Name");
+    const userId = await createTestUser(roleId);
+
+    try {
+      // Start with a clean cache, then prime it for this user.
+      clearPermissionsCache();
+      const primed = await getEffectivePermissions(userId);
+      expect(primed.has("view_payroll")).toBe(true);
+
+      // Mutate permissions directly in DB — bypasses the API so no eviction fires.
+      await db
+        .update(rolesTable)
+        .set({ permissions: ["edit_employees"] as never })
+        .where(eq(rolesTable.id, roleId));
+
+      // PATCH only the name; `permissions` is absent from the body, so eviction
+      // must NOT be triggered.
+      const res = await buildApp(sysadminRouter, sysadminUserId)
+        .patch(`/api/sysadmin/roles/${roleId}`)
+        .send({ name: "Updated Name" });
+      expect(res.status).toBe(200);
+
+      // Cache was not evicted: getEffectivePermissions returns the stale cached
+      // set (view_payroll) rather than the value now in DB (edit_employees).
+      const after = await getEffectivePermissions(userId);
+      expect(after.has("view_payroll")).toBe(true);    // stale — still in cache
+      expect(after.has("edit_employees")).toBe(false); // DB value, not yet seen
+    } finally {
+      await cleanupUser(userId);
+      await cleanupRole(roleId);
+    }
+  });
+
+  it("evicts cached permissions when the permissions field is included in the PATCH", async () => {
+    const roleId = await createTestRole(["view_payroll"], "Eviction Anchor Role");
+    const userId = await createTestUser(roleId);
+
+    try {
+      // Prime the cache.
+      clearPermissionsCache();
+      const primed = await getEffectivePermissions(userId);
+      expect(primed.has("view_payroll")).toBe(true);
+
+      // PATCH with a permissions field — eviction must fire for this user.
+      const res = await buildApp(sysadminRouter, sysadminUserId)
+        .patch(`/api/sysadmin/roles/${roleId}`)
+        .send({ permissions: ["edit_employees"] });
+      expect(res.status).toBe(200);
+
+      // Cache was evicted: next lookup hits DB and returns the updated permissions.
+      const after = await getEffectivePermissions(userId);
+      expect(after.has("edit_employees")).toBe(true);
+      expect(after.has("view_payroll")).toBe(false);
+    } finally {
+      await cleanupUser(userId);
+      await cleanupRole(roleId);
     }
   });
 });

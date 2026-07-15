@@ -162,6 +162,28 @@ describe("GET /api/employees/:id — salary visibility", () => {
   });
 });
 
+// ── Unauthenticated callers — salary always hidden ────────────────────────────
+describe("GET /api/employees — unauthenticated request (no session)", () => {
+  it("hides salary (null) from a request with no session at all", async () => {
+    // buildApp without a userId → no req.session, no userId, no permissions
+    const api = buildApp(router);
+    const res = await api.get("/api/employees");
+    expect(res.status).toBe(200);
+    const emp = res.body.find((e: { id: number }) => e.id === empId);
+    expect(emp).toBeDefined();
+    expect(emp.salary).toBeNull();
+  });
+});
+
+describe("GET /api/employees/:id — unauthenticated request (no session)", () => {
+  it("hides salary (null) from a request with no session at all", async () => {
+    const api = buildApp(router);
+    const res = await api.get(`/api/employees/${empId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.salary).toBeNull();
+  });
+});
+
 // ── PATCH /employees/:id — salary hidden in response without view_payroll ─────
 describe("PATCH /api/employees/:id — salary hidden in response without view_payroll", () => {
   it("edit_employees user can update employee but sees null salary in response", async () => {

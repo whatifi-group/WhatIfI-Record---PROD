@@ -6,6 +6,7 @@ import {
   getEffectivePermissions,
   invalidatePermissionsCache,
 } from "../../middlewares/requirePermission";
+import { canViewPayroll, redactSalary } from "../../lib/salaryGuard";
 import { hashPassword } from "../../lib/password";
 import {
   CreateEmployeeBody,
@@ -53,32 +54,31 @@ function employeeSelection() {
     );
 }
 
-/** True when the given permission set allows viewing payroll-sensitive fields. */
-function canViewPayroll(perms: Set<string>): boolean {
-  return perms.has("view_payroll") || perms.has("sysadmin");
-}
-
 /**
- * Strip salary from an employee row if the caller lacks payroll permission.
- *
  * ⚠️  IMPORTANT — future endpoint authors:
- * Every route that returns employee data MUST call redactSalary() (or an
- * equivalent guard) before sending the response.  Failing to do so will
- * silently leak payroll data to unpermissioned callers.  The pattern is:
- *
- *   const perms = req.effectivePermissions ??
- *     (userId ? await getEffectivePermissions(userId) : new Set<string>());
- *   res.json(SomeResponse.parse(redactSalary(row, canViewPayroll(perms))));
+ * Every route that returns employee data MUST call redactSalary() before
+ * sending the response.  `canViewPayroll` and `redactSalary` are exported
+ * from `../../lib/salaryGuard` — import them there.  The middleware
+ * `payrollVisibilityMiddleware` (mounted on the HR router) pre-computes
+ * `req.canViewPayroll`; use the helper below which falls back to a fresh
+ * computation for direct-mounted routers (e.g. unit tests).
  *
  * Integration tests in src/test/employeeSalaryVisibility.test.ts verify this
  * for every existing endpoint — add a new test block when you add a new route.
  */
-function redactSalary<T extends { salary?: number | null }>(
-  row: T,
-  allowed: boolean,
-): T {
-  if (allowed) return row;
-  return { ...row, salary: null };
+
+/**
+ * Returns whether the current request may see salary data.
+ * Uses the pre-computed value from `payrollVisibilityMiddleware` when
+ * available, computing fresh when the middleware was not mounted (e.g. tests).
+ */
+async function resolveShowSalary(req: import("express").Request): Promise<boolean> {
+  if (req.canViewPayroll !== undefined) return req.canViewPayroll;
+  const userId = req.session?.userId;
+  const perms =
+    req.effectivePermissions ??
+    (userId ? await getEffectivePermissions(userId) : new Set<string>());
+  return canViewPayroll(perms);
 }
 
 router.get("/employees", async (req, res): Promise<void> => {
@@ -113,14 +113,7 @@ router.get("/employees", async (req, res): Promise<void> => {
     : base
   ).orderBy(employeesTable.lastName, employeesTable.firstName);
 
-  // Salary is payroll-sensitive — only expose it to users with view_payroll or sysadmin.
-  // req.effectivePermissions is pre-loaded by requireAuth; fall back for safety.
-  const userId = req.session?.userId;
-  const perms =
-    req.effectivePermissions ??
-    (userId ? await getEffectivePermissions(userId) : new Set<string>());
-  const showSalary = canViewPayroll(perms);
-
+  const showSalary = await resolveShowSalary(req);
   res.json(ListEmployeesResponse.parse(rows.map((r) => redactSalary(r, showSalary))));
 });
 
@@ -202,11 +195,7 @@ router.get("/employees/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const userId = req.session?.userId;
-  const perms =
-    req.effectivePermissions ??
-    (userId ? await getEffectivePermissions(userId) : new Set<string>());
-  res.json(GetEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
+  res.json(GetEmployeeResponse.parse(redactSalary(row, await resolveShowSalary(req))));
 });
 
 router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
@@ -270,11 +259,7 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     eq(employeesTable.id, updated.id),
   );
 
-  const userId = req.session?.userId;
-  const perms =
-    req.effectivePermissions ??
-    (userId ? await getEffectivePermissions(userId) : new Set<string>());
-  res.json(UpdateEmployeeResponse.parse(redactSalary(row, canViewPayroll(perms))));
+  res.json(UpdateEmployeeResponse.parse(redactSalary(row, await resolveShowSalary(req))));
 });
 
 router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {

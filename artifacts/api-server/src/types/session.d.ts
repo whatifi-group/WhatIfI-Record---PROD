@@ -18,6 +18,12 @@ declare global {
        * Undefined on public routes where `requireAuth` skips the DB call.
        */
       effectivePermissions?: Set<string>;
+      /**
+       * Whether the current caller may view payroll-sensitive fields (salary).
+       * Set once per request by `payrollVisibilityMiddleware` on the HR router.
+       * Defaults to `false` — treat absent as hidden.
+       */
+      canViewPayroll?: boolean;
     }
   }
 }

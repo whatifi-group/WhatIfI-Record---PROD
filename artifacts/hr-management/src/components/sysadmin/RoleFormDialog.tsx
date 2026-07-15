@@ -43,6 +43,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   view_leave: "View Leave Requests",
   manage_leave: "Approve/Reject Leave",
   view_reports: "View HR Reports",
+  view_payroll: "View Payroll & Pay Rates",
 };
 
 const roleSchema = z.object({

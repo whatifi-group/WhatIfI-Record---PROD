@@ -51,6 +51,7 @@ const PERMISSION_LABELS: Record<Permission, string> = {
   view_leave: "View Leave",
   manage_leave: "Manage Leave",
   view_reports: "View Reports",
+  view_payroll: "View Payroll & Pay Rates",
 };
 
 const userSchema = z.object({

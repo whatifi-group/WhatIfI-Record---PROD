@@ -22,6 +22,7 @@ export const permissionValues = [
   "view_leave",
   "manage_leave",
   "view_reports",
+  "view_payroll",
 ] as const;
 
 export type Permission = (typeof permissionValues)[number];

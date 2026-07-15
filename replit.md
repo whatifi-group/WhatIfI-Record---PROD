@@ -44,6 +44,18 @@ Schema changes are applied via `lib/db/scripts/safe-push.mjs`, a thin wrapper ar
 
 Never leave one-off raw-SQL migration scripts in the repo.
 
+## Pre-commit hook
+
+A git pre-commit hook at `scripts/git-hooks/pre-commit` (tracked in the repo) blocks commits that accidentally include generated build artefacts:
+
+- `dist/` directories (compiled output)
+- `*.tsbuildinfo` files (TypeScript incremental build info)
+- `src/generated/` directories (Orval-generated API client / Zod schemas)
+
+These are already listed in `.gitignore`; the hook is a second line of defence against `git add -f` accidents.
+
+**Installation** — the hook is installed automatically by `pnpm install` via the root `prepare` script. After a fresh clone, run `pnpm install` once and the hook will be active. To install it manually without a full install: `pnpm run prepare`.
+
 ## User preferences
 - Brand identity from the uploaded logo: navy/red/green compass motif.
 - Keep the tone professional throughout — no playful/thematic renaming of standard HR terms (e.g. use "Employee"/"Department", not invented nicknames).

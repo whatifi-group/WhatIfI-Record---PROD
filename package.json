@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "prepare": "cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test": "pnpm --filter @workspace/api-server run test",
     "typecheck:libs": "tsc --build",

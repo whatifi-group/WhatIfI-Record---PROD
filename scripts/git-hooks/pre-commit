@@ -1,0 +1,41 @@
+#!/bin/bash
+# Pre-commit guard: fail if any generated build artefacts are staged.
+#
+# Catches accidental `git add -f` of:
+#   - dist/          (compiled output)
+#   - *.tsbuildinfo  (TypeScript incremental build info)
+#   - src/generated/ (Orval-generated API client / Zod schemas)
+#
+# These files are gitignored for good reason; committing them bloats the repo
+# and causes misleading diffs.  If you genuinely need to commit a file that
+# lives under one of these paths, update .gitignore with a targeted negation
+# and document the reason.
+
+set -euo pipefail
+
+# Collect staged paths that match the forbidden patterns.
+forbidden=$(git diff --cached --name-only --diff-filter=ACMRT | grep -E \
+  '(^|/)dist/|\.tsbuildinfo$|(^|/)src/generated/' \
+  || true)
+
+if [[ -n "$forbidden" ]]; then
+  echo ""
+  echo "╔══════════════════════════════════════════════════════════════════╗"
+  echo "║  pre-commit: generated / build artefacts are staged — aborting  ║"
+  echo "╚══════════════════════════════════════════════════════════════════╝"
+  echo ""
+  echo "The following files must not be committed:"
+  echo ""
+  while IFS= read -r f; do
+    echo "  ✗  $f"
+  done <<< "$forbidden"
+  echo ""
+  echo "These paths are already in .gitignore.  Remove them from the index:"
+  echo ""
+  echo "  git restore --staged <file>"
+  echo ""
+  echo "If you intentionally need to track one of these files, add a"
+  echo "targeted negation to .gitignore and document the reason there."
+  echo ""
+  exit 1
+fi

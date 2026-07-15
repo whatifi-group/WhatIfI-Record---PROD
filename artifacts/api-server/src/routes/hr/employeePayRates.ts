@@ -362,9 +362,14 @@ router.post(
       .filter((r) => r.effectiveTo && r.effectiveTo < today)
       .map((r) => r.shiftType);
 
-    // Fetch active target rates for conflict detection
+    // Fetch active target rates for conflict detection; include dates for overlap re-checking
     const existingRows = await db
-      .select({ id: employeePayRatesTable.id, shiftType: employeePayRatesTable.shiftType })
+      .select({
+        id: employeePayRatesTable.id,
+        shiftType: employeePayRatesTable.shiftType,
+        effectiveFrom: employeePayRatesTable.effectiveFrom,
+        effectiveTo: employeePayRatesTable.effectiveTo,
+      })
       .from(employeePayRatesTable)
       .where(
         and(
@@ -373,7 +378,9 @@ router.post(
         ),
       );
 
-    const existingByShiftType = new Map(existingRows.map((r) => [r.shiftType, r.id]));
+    const existingByShiftType = new Map(
+      existingRows.map((r) => [r.shiftType, r]),
+    );
 
     // Fetch active shift types from the LOV so we don't copy orphaned values
     const activeRows = await db
@@ -395,32 +402,54 @@ router.post(
         continue;
       }
 
-      const existingId = existingByShiftType.get(rate.shiftType);
+      const existingRow = existingByShiftType.get(rate.shiftType);
 
-      if (existingId !== undefined) {
+      if (existingRow !== undefined) {
         if (!overwrite) {
           // Default behaviour: skip conflicts
           skipped.push(rate.shiftType);
           continue;
         }
 
-        // overwrite=true: update the target's existing rate with the source values
+        // overwrite=true: verify that the existing rate's current date range doesn't
+        // overlap a THIRD rate on the target (excluding itself).  This guards against
+        // corrupting data when the target already has an overlapping pair.
+        if (
+          await hasOverlappingRate(
+            targetId,
+            rate.shiftType,
+            existingRow.effectiveFrom,
+            existingRow.effectiveTo,
+            existingRow.id,
+          )
+        ) {
+          skipped.push(rate.shiftType);
+          continue;
+        }
+
+        // Safe to update — only overwrite rate/unit/notes, keep target's date range
         await db
           .update(employeePayRatesTable)
           .set({
             rate: String(rate.rate),
             rateUnit: rate.rateUnit,
             notes: rate.notes ?? null,
-            // Don't copy source date range — keep target's existing effectiveFrom
           })
-          .where(eq(employeePayRatesTable.id, existingId));
+          .where(eq(employeePayRatesTable.id, existingRow.id));
 
         const [updated] = await payRateSelection().where(
-          eq(employeePayRatesTable.id, existingId),
+          eq(employeePayRatesTable.id, existingRow.id),
         );
         copied.push(updated);
       } else {
-        // No conflict: insert new rate on target; start from today, not source's date
+        // No active conflict: insert new rate on target starting today.
+        // Run the full overlap guard in case a non-active rate (e.g. effectiveTo exactly
+        // today) would still overlap the new open-ended range.
+        if (await hasOverlappingRate(targetId, rate.shiftType, today, null)) {
+          skipped.push(rate.shiftType);
+          continue;
+        }
+
         const [inserted] = await db
           .insert(employeePayRatesTable)
           .values({

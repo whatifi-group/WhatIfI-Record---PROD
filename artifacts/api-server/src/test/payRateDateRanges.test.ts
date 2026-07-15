@@ -593,3 +593,89 @@ describe("LOV shift_type deactivation — edge cases", () => {
     }
   });
 });
+
+// ── 9. copy-from overlap guard — overwrite=true with a third conflicting rate ──
+
+describe("POST copy-from — overwrite=true skips when updating would create overlap", () => {
+  let source: number;
+  let target: number;
+
+  beforeEach(async () => {
+    source = await createTestEmployee();
+    target = await createTestEmployee();
+  });
+  afterEach(async () => {
+    await cleanupEmployee(source);
+    await cleanupEmployee(target);
+  });
+
+  it("skips the shift type when the target has two overlapping active rates (third-rate conflict)", async () => {
+    // Set up target with two active "standard" rates that already overlap each other.
+    // Rate B: still-active closed range (effectiveTo in the future)
+    await db.insert(employeePayRatesTable).values({
+      employeeId: target,
+      shiftType: "standard",
+      rate: "15",
+      rateUnit: "hourly",
+      effectiveFrom: "2025-01-01",
+      effectiveTo: "2025-12-31", // >= today (2025-07-15) — active
+    });
+    // Rate A: open-ended rate that overlaps Rate B
+    await db.insert(employeePayRatesTable).values({
+      employeeId: target,
+      shiftType: "standard",
+      rate: "20",
+      rateUnit: "hourly",
+      effectiveFrom: "2025-08-01", // active, overlaps Rate B
+    });
+
+    // Source has an active "standard" rate
+    await db.insert(employeePayRatesTable).values({
+      employeeId: source,
+      shiftType: "standard",
+      rate: "25",
+      rateUnit: "hourly",
+      effectiveFrom: "2024-01-01",
+    });
+
+    const res = await buildApp(payRatesRouter, payrollUserId)
+      .post(`/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`);
+
+    expect(res.status).toBe(200);
+    // Must skip rather than corrupt — the target has an overlapping pair
+    expect(res.body.skipped).toContain("standard");
+    expect(res.body.copied).toHaveLength(0);
+  });
+
+  it("copies successfully when overwrite=true and no third-rate conflict exists", async () => {
+    const today = new Date().toISOString().split("T")[0];
+
+    // Target has one clean active "overtime" rate
+    await db.insert(employeePayRatesTable).values({
+      employeeId: target,
+      shiftType: "overtime",
+      rate: "20",
+      rateUnit: "hourly",
+      effectiveFrom: "2025-01-01",
+    });
+
+    // Source also has "overtime"
+    await db.insert(employeePayRatesTable).values({
+      employeeId: source,
+      shiftType: "overtime",
+      rate: "30",
+      rateUnit: "hourly",
+      effectiveFrom: "2024-01-01",
+    });
+
+    const res = await buildApp(payRatesRouter, payrollUserId)
+      .post(`/api/employees/${target}/pay-rates/copy-from/${source}?overwrite=true`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(1);
+    expect(res.body.copied[0].shiftType).toBe("overtime");
+    // Rate was updated — value reflects source
+    expect(res.body.copied[0].rate).toBeCloseTo(30);
+    expect(res.body.skipped).not.toContain("overtime");
+  });
+});

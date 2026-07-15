@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { db, departmentsTable, employeePayRatesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
 import {
   requirePermission,
   invalidatePermissionsCache,
@@ -248,7 +248,8 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     return;
   }
 
-  // When marking as leaver: suspend user account + close open service period
+  // When marking as leaver: suspend user account, close open service period,
+  // and close all open pay rates with effectiveTo = leaving date.
   if (parsed.data.status === "leaver") {
     await db
       .update(usersTable)
@@ -267,6 +268,22 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
         and(
           eq(employeeServicePeriodsTable.employeeId, updated.id),
           isNull(employeeServicePeriodsTable.endDate),
+        ),
+      );
+
+    // Close open pay rates that have already started (effectiveFrom <= closingDate).
+    // Future-dated rates (effectiveFrom > closingDate) are left untouched — setting
+    // effectiveTo = closingDate on them would produce effectiveTo < effectiveFrom,
+    // violating the pay-rate date invariant.
+    // Re-hire does NOT auto-reopen closed rates — HR must create new ones manually.
+    await db
+      .update(employeePayRatesTable)
+      .set({ effectiveTo: closingDate })
+      .where(
+        and(
+          eq(employeePayRatesTable.employeeId, updated.id),
+          isNull(employeePayRatesTable.effectiveTo),
+          lte(employeePayRatesTable.effectiveFrom, closingDate),
         ),
       );
   }

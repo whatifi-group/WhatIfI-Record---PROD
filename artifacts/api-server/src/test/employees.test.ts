@@ -9,6 +9,8 @@ import {
   createTestRole,
   createTestUser,
 } from "./helpers";
+import { db, employeePayRatesTable } from "@workspace/db";
+import { eq, isNull } from "drizzle-orm";
 
 // ── Shared auth fixtures ──────────────────────────────────────────────────────
 // Three roles/users created once for the whole suite:
@@ -216,5 +218,130 @@ describe("PATCH /api/employees/:id — leaver status validation", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("active");
+  });
+});
+
+// ── Auto-close pay rates on leaver ────────────────────────────────────────────
+
+describe("PATCH /api/employees/:id — auto-close open pay rates on leaver", () => {
+  let empId: number;
+  let api: ReturnType<typeof buildApp>;
+
+  beforeEach(async () => {
+    empId = await createTestEmployee();
+    api = buildApp(router, hrManagerUserId);
+  });
+  afterEach(async () => { await cleanupEmployee(empId); });
+
+  it("closes all open (effectiveTo IS NULL) pay rates with effectiveTo = leaverDate", async () => {
+    const leaverDate = new Date();
+    leaverDate.setDate(leaverDate.getDate() - 1); // yesterday — within the 30-day window
+    const leaverDateStr = leaverDate.toISOString().slice(0, 10);
+
+    // Insert two open pay rates for this employee
+    await db.insert(employeePayRatesTable).values([
+      { employeeId: empId, shiftType: "standard", rate: "15", rateUnit: "hourly", effectiveFrom: "2024-01-01" },
+      { employeeId: empId, shiftType: "overtime", rate: "25", rateUnit: "hourly", effectiveFrom: "2024-01-01" },
+    ]);
+
+    const res = await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "resignation", leaverDate: leaverDateStr });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("leaver");
+
+    // Both open rates must now be closed with effectiveTo = leaverDate
+    const rates = await db
+      .select({ shiftType: employeePayRatesTable.shiftType, effectiveTo: employeePayRatesTable.effectiveTo })
+      .from(employeePayRatesTable)
+      .where(eq(employeePayRatesTable.employeeId, empId));
+
+    expect(rates).toHaveLength(2);
+    for (const rate of rates) {
+      expect(rate.effectiveTo).toMatch(new RegExp(`^${leaverDateStr}`));
+    }
+  });
+
+  it("does not overwrite a rate that already has effectiveTo set", async () => {
+    const leaverDate = new Date().toISOString().slice(0, 10);
+
+    // One already-closed rate and one open rate
+    const [closedRate] = await db
+      .insert(employeePayRatesTable)
+      .values({ employeeId: empId, shiftType: "standard", rate: "15", rateUnit: "hourly", effectiveFrom: "2024-01-01", effectiveTo: "2024-06-30" })
+      .returning({ id: employeePayRatesTable.id });
+
+    await db.insert(employeePayRatesTable).values({
+      employeeId: empId, shiftType: "overtime", rate: "25", rateUnit: "hourly", effectiveFrom: "2024-01-01",
+    });
+
+    await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "redundancy", leaverDate });
+
+    // The already-closed rate must keep its original effectiveTo
+    const [unchanged] = await db
+      .select({ effectiveTo: employeePayRatesTable.effectiveTo })
+      .from(employeePayRatesTable)
+      .where(eq(employeePayRatesTable.id, closedRate.id));
+
+    expect(unchanged.effectiveTo).toMatch(/^2024-06-30/);
+  });
+
+  it("does not close a future-dated open rate (effectiveFrom > leaverDate) — avoids invalid date range", async () => {
+    const leaverDate = new Date().toISOString().slice(0, 10);
+
+    // A rate starting tomorrow — must not be closed, as effectiveTo = leaverDate
+    // would make effectiveTo < effectiveFrom (invalid).
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+    await db.insert(employeePayRatesTable).values({
+      employeeId: empId, shiftType: "standard", rate: "20", rateUnit: "hourly", effectiveFrom: tomorrowStr,
+    });
+
+    await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "resignation", leaverDate });
+
+    const [rate] = await db
+      .select({ effectiveTo: employeePayRatesTable.effectiveTo })
+      .from(employeePayRatesTable)
+      .where(eq(employeePayRatesTable.employeeId, empId));
+
+    // effectiveTo must still be NULL — the future rate was not touched
+    expect(rate.effectiveTo).toBeNull();
+  });
+
+  it("re-hiring does NOT auto-reopen closed pay rates", async () => {
+    const leaverDate = new Date().toISOString().slice(0, 10);
+
+    // Insert open rate, mark as leaver (closes it), then re-hire
+    await db.insert(employeePayRatesTable).values({
+      employeeId: empId, shiftType: "standard", rate: "15", rateUnit: "hourly", effectiveFrom: "2024-01-01",
+    });
+
+    await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "leaver", leaverReason: "resignation", leaverDate });
+
+    const rehire = await api
+      .patch(`/api/employees/${empId}`)
+      .send({ status: "active" });
+
+    expect(rehire.status).toBe(200);
+    expect(rehire.body.status).toBe("active");
+
+    // The rate must still be closed — re-hire does not reopen it
+    const rates = await db
+      .select({ effectiveTo: employeePayRatesTable.effectiveTo })
+      .from(employeePayRatesTable)
+      .where(eq(employeePayRatesTable.employeeId, empId));
+
+    expect(rates).toHaveLength(1);
+    expect(rates[0].effectiveTo).not.toBeNull();
+    expect(rates[0].effectiveTo).toMatch(new RegExp(`^${leaverDate}`));
   });
 });

@@ -34,6 +34,8 @@ import {
 
 const PERMISSION_LABELS: Record<Permission, string> = {
   sysadmin: "System Administrator (Full Access)",
+  "hr:access": "HR Access",
+  "hr:past_employees": "View Past Employees",
   hr_admin: "HR Administrator (Department/Employee Settings)",
   view_employees: "View Employee Directory",
   edit_employees: "Edit Employee Records",

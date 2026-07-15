@@ -16,6 +16,8 @@ import {
   GetUserResponse,
   CreateUserResponse,
   UpdateUserResponse,
+  ResetUserPasswordBody,
+  ResetUserPasswordParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -185,6 +187,44 @@ router.patch("/sysadmin/users/:id", async (req, res): Promise<void> => {
 
   const [row] = await userSelection().where(eq(usersTable.id, params.data.id));
   res.json(UpdateUserResponse.parse(row));
+});
+
+router.post("/sysadmin/users/:id/reset-password", async (req, res): Promise<void> => {
+  const params = ResetUserPasswordParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const parsed = ResetUserPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [existing] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.id, params.data.id))
+    .limit(1);
+
+  if (!existing) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const passwordHash = hashPassword(parsed.data.password);
+
+  await db
+    .update(usersTable)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(usersTable.id, params.data.id));
+
+  // Invalidate session cache so the user is forced to re-authenticate with
+  // the new password on their next request.
+  invalidatePermissionsCache(params.data.id);
+
+  res.sendStatus(204);
 });
 
 router.delete("/sysadmin/users/:id", async (req, res): Promise<void> => {

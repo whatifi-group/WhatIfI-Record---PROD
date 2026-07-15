@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useListUsers, useDeleteUser, getListUsersQueryKey, User, UserStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert, Server } from "lucide-react";
+import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert, Server, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { UserFormDialog } from "@/components/sysadmin/UserFormDialog";
+import { ResetPasswordDialog } from "@/components/sysadmin/ResetPasswordDialog";
 
 export default function UsersList() {
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [resettingUser, setResettingUser] = useState<User | null>(null);
 
   const { data: users, isLoading } = useListUsers({ search: search || undefined });
   const deleteUser = useDeleteUser();
@@ -161,6 +163,9 @@ export default function UsersList() {
                           <DropdownMenuItem onClick={() => handleEdit(user)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit User
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setResettingUser(user)}>
+                            <KeyRound className="mr-2 h-4 w-4" /> Reset Password
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             className="text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -192,6 +197,15 @@ export default function UsersList() {
         onOpenChange={setIsFormOpen}
         user={editingUser}
       />
+
+      {resettingUser && (
+        <ResetPasswordDialog
+          open={!!resettingUser}
+          onOpenChange={(open) => !open && setResettingUser(null)}
+          userId={resettingUser.id}
+          userName={resettingUser.name}
+        />
+      )}
 
       <AlertDialog open={!!deletingUserId} onOpenChange={(open) => !open && setDeletingUserId(null)}>
         <AlertDialogContent>

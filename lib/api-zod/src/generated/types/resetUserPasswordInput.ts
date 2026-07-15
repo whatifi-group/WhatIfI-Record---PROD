@@ -6,9 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LovItemUpdate {
-  /** @minLength 1 */
-  label?: string;
-  sortOrder?: number;
-  isActive?: boolean;
+export interface ResetUserPasswordInput {
+  /** @minLength 8 */
+  password: string;
 }

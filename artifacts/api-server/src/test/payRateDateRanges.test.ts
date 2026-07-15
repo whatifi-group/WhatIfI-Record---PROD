@@ -297,7 +297,9 @@ describe("POST copy-from — skips source rates that are closed (inactive)", () 
 
     expect(res.status).toBe(200);
     expect(res.body.copied).toHaveLength(0);
-    expect(res.body.skipped).toContain("standard");
+    expect(res.body.skipped).toHaveLength(1);
+    expect(res.body.skipped[0].shiftType).toBe("standard");
+    expect(res.body.skipped[0].reason).toBe("source_closed");
   });
 
   it("copies an active source rate and sets effectiveFrom to today", async () => {
@@ -584,9 +586,13 @@ describe("LOV shift_type deactivation — edge cases", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.copied).toHaveLength(0);
-      // Both closed shift types appear in skipped
-      expect(res.body.skipped).toContain("standard");
-      expect(res.body.skipped).toContain("overtime");
+      // Both closed shift types appear in skipped with the source_closed reason code
+      const skippedTypes = res.body.skipped.map((s: { shiftType: string }) => s.shiftType);
+      expect(skippedTypes).toContain("standard");
+      expect(skippedTypes).toContain("overtime");
+      expect(
+        res.body.skipped.every((s: { reason: string }) => s.reason === "source_closed"),
+      ).toBe(true);
     } finally {
       await cleanupEmployee(source);
       await cleanupEmployee(target);
@@ -643,7 +649,9 @@ describe("POST copy-from — overwrite=true skips when updating would create ove
 
     expect(res.status).toBe(200);
     // Must skip rather than corrupt — the target has an overlapping pair
-    expect(res.body.skipped).toContain("standard");
+    expect(res.body.skipped).toHaveLength(1);
+    expect(res.body.skipped[0].shiftType).toBe("standard");
+    expect(res.body.skipped[0].reason).toBe("overlap_on_target");
     expect(res.body.copied).toHaveLength(0);
   });
 
@@ -676,6 +684,68 @@ describe("POST copy-from — overwrite=true skips when updating would create ove
     expect(res.body.copied[0].shiftType).toBe("overtime");
     // Rate was updated — value reflects source
     expect(res.body.copied[0].rate).toBeCloseTo(30);
-    expect(res.body.skipped).not.toContain("overtime");
+    expect(res.body.skipped.map((s: { shiftType: string }) => s.shiftType)).not.toContain("overtime");
+  });
+});
+
+// ── 10. copy-from skip reason codes ──────────────────────────────────────────
+
+describe("POST copy-from — skipped reason codes cover all four cases", () => {
+  let source: number;
+  let target: number;
+
+  beforeEach(async () => {
+    source = await createTestEmployee();
+    target = await createTestEmployee();
+  });
+  afterEach(async () => {
+    await cleanupEmployee(source);
+    await cleanupEmployee(target);
+  });
+
+  it('reason = "conflict" when target already has an active rate and overwrite is not set', async () => {
+    // Source has an active "standard" rate
+    await db.insert(employeePayRatesTable).values({
+      employeeId: source, shiftType: "standard", rate: "20", rateUnit: "hourly", effectiveFrom: "2024-01-01",
+    });
+    // Target also has an active "standard" rate → conflict
+    await db.insert(employeePayRatesTable).values({
+      employeeId: target, shiftType: "standard", rate: "15", rateUnit: "hourly", effectiveFrom: "2024-06-01",
+    });
+
+    const res = await buildApp(payRatesRouter, payrollUserId)
+      .post(`/api/employees/${target}/pay-rates/copy-from/${source}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.copied).toHaveLength(0);
+    expect(res.body.skipped).toHaveLength(1);
+    expect(res.body.skipped[0].shiftType).toBe("standard");
+    expect(res.body.skipped[0].reason).toBe("conflict");
+  });
+
+  it('reason = "lov_inactive" when the source rate\'s shift type has been deactivated', async () => {
+    // Insert a custom LOV entry and then deactivate it
+    const [lovRow] = await db
+      .insert(lovItemsTable)
+      .values({ category: "shift_type", value: "test_inactive_lov_cp", label: "Inactive LOV CP", isActive: false, isSystem: false })
+      .returning({ id: lovItemsTable.id });
+
+    // Source has an active-dated rate for the (now-inactive) shift type
+    await db.insert(employeePayRatesTable).values({
+      employeeId: source, shiftType: "test_inactive_lov_cp", rate: "20", rateUnit: "hourly", effectiveFrom: "2024-01-01",
+    });
+
+    try {
+      const res = await buildApp(payRatesRouter, payrollUserId)
+        .post(`/api/employees/${target}/pay-rates/copy-from/${source}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.copied).toHaveLength(0);
+      expect(res.body.skipped).toHaveLength(1);
+      expect(res.body.skipped[0].shiftType).toBe("test_inactive_lov_cp");
+      expect(res.body.skipped[0].reason).toBe("lov_inactive");
+    } finally {
+      await db.delete(lovItemsTable).where(eq(lovItemsTable.id, lovRow.id));
+    }
   });
 });

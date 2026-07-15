@@ -391,14 +391,20 @@ router.post(
       );
     const activeLovValues = new Set(activeRows.map((r) => r.value));
 
+    type SkipReason = "source_closed" | "lov_inactive" | "conflict" | "overlap_on_target";
+    type SkippedEntry = { shiftType: string; reason: SkipReason };
+
     const copied = [];
     // Closed source rates are reported as skipped so the caller knows they were intentionally excluded
-    const skipped: string[] = [...closedShiftTypes];
+    const skipped: SkippedEntry[] = closedShiftTypes.map((st) => ({
+      shiftType: st,
+      reason: "source_closed" as const,
+    }));
 
     for (const rate of sourceRates) {
       // Skip rates for inactive LOV entries regardless of overwrite flag
       if (!activeLovValues.has(rate.shiftType)) {
-        skipped.push(rate.shiftType);
+        skipped.push({ shiftType: rate.shiftType, reason: "lov_inactive" });
         continue;
       }
 
@@ -407,7 +413,7 @@ router.post(
       if (existingRow !== undefined) {
         if (!overwrite) {
           // Default behaviour: skip conflicts
-          skipped.push(rate.shiftType);
+          skipped.push({ shiftType: rate.shiftType, reason: "conflict" });
           continue;
         }
 
@@ -423,7 +429,7 @@ router.post(
             existingRow.id,
           )
         ) {
-          skipped.push(rate.shiftType);
+          skipped.push({ shiftType: rate.shiftType, reason: "overlap_on_target" });
           continue;
         }
 
@@ -446,7 +452,7 @@ router.post(
         // Run the full overlap guard in case a non-active rate (e.g. effectiveTo exactly
         // today) would still overlap the new open-ended range.
         if (await hasOverlappingRate(targetId, rate.shiftType, today, null)) {
-          skipped.push(rate.shiftType);
+          skipped.push({ shiftType: rate.shiftType, reason: "overlap_on_target" });
           continue;
         }
 

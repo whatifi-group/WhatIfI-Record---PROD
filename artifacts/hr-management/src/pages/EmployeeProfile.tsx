@@ -524,7 +524,7 @@ export default function EmployeeProfile() {
               <TabsContent value="payroll">
                 <Card className="border-border/50 shadow-sm">
                   <CardContent className="pt-6">
-                    <EmployeePayrollTab employeeId={employeeId} />
+                    <EmployeePayrollTab employeeId={employeeId} employeeStatus={employee?.status} />
                   </CardContent>
                 </Card>
               </TabsContent>

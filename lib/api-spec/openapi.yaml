@@ -3091,6 +3091,22 @@ components:
           type: string
           format: date
 
+    CopyPayRateSkip:
+      type: object
+      required: [shiftType, reason]
+      properties:
+        shiftType:
+          type: string
+        reason:
+          type: string
+          enum: [source_closed, lov_inactive, conflict, overlap_on_target]
+          description: >
+            Why this shift type was skipped:
+            source_closed — the source rate has already ended;
+            lov_inactive — the shift type is deactivated;
+            conflict — target already has an active rate and overwrite was not requested;
+            overlap_on_target — an overwrite would create an invalid overlap on the target.
+
     CopyPayRatesResult:
       type: object
       required: [copied, skipped]
@@ -3101,9 +3117,9 @@ components:
             $ref: "#/components/schemas/EmployeePayRate"
         skipped:
           type: array
-          description: Shift types skipped because the target employee already has a rate for them
+          description: Rates that were not copied, each with a machine-readable reason code
           items:
-            type: string
+            $ref: "#/components/schemas/CopyPayRateSkip"
 
     WorkRecordsPage:
       type: object

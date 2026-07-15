@@ -25,7 +25,7 @@ vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
-import { useGetEmployeePayroll } from "@workspace/api-client-react";
+import { useGetEmployeePayroll, useListEmployeePayRates } from "@workspace/api-client-react";
 
 let queryClient: QueryClient;
 
@@ -115,5 +115,70 @@ describe("EmployeePayrollTab — error state", () => {
     render(<EmployeePayrollTab employeeId={1} />, { wrapper: Wrapper });
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+// ── Re-hire banner ─────────────────────────────────────────────────────────────
+
+describe("EmployeePayrollTab — re-hire banner", () => {
+  const closedRates = [
+    { id: 1, employeeId: 1, shiftType: "standard", rate: 15, rateUnit: "hourly", notes: null, effectiveFrom: "2024-01-01", effectiveTo: "2024-06-30", createdAt: new Date().toISOString() },
+  ];
+  const openRates = [
+    { id: 2, employeeId: 1, shiftType: "standard", rate: 15, rateUnit: "hourly", notes: null, effectiveFrom: "2025-01-01", effectiveTo: null, createdAt: new Date().toISOString() },
+  ];
+
+  beforeEach(() => {
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.clearAllMocks();
+    // Default: payroll loads fine
+    vi.mocked(useGetEmployeePayroll).mockReturnValue({
+      data: undefined, isLoading: false, isError: true, error: { status: 404 }, refetch: vi.fn(),
+    } as any);
+  });
+
+  it("shows banner when employeeStatus is 'active' and all rates are closed", () => {
+    vi.mocked(useListEmployeePayRates).mockReturnValue({ data: closedRates, isLoading: false } as any);
+
+    render(<EmployeePayrollTab employeeId={1} employeeStatus="active" />, { wrapper: Wrapper });
+
+    expect(screen.getByText(/no active pay rates/i)).toBeInTheDocument();
+    expect(screen.getByText(/all pay rates for this employee are closed/i)).toBeInTheDocument();
+  });
+
+  it("does not show banner when employeeStatus is 'leaver'", () => {
+    vi.mocked(useListEmployeePayRates).mockReturnValue({ data: closedRates, isLoading: false } as any);
+
+    render(<EmployeePayrollTab employeeId={1} employeeStatus="leaver" />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/no active pay rates/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show banner when the employee has at least one open rate", () => {
+    vi.mocked(useListEmployeePayRates).mockReturnValue({ data: openRates, isLoading: false } as any);
+
+    render(<EmployeePayrollTab employeeId={1} employeeStatus="active" />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/no active pay rates/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show banner when there are no rates at all (new employee — empty state handles it)", () => {
+    vi.mocked(useListEmployeePayRates).mockReturnValue({ data: [], isLoading: false } as any);
+
+    render(<EmployeePayrollTab employeeId={1} employeeStatus="active" />, { wrapper: Wrapper });
+
+    expect(screen.queryByText(/no active pay rates/i)).not.toBeInTheDocument();
+  });
+
+  it("hides banner when the dismiss button is clicked", async () => {
+    vi.mocked(useListEmployeePayRates).mockReturnValue({ data: closedRates, isLoading: false } as any);
+
+    render(<EmployeePayrollTab employeeId={1} employeeStatus="active" />, { wrapper: Wrapper });
+
+    expect(screen.getByText(/no active pay rates/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /dismiss/i }));
+
+    expect(screen.queryByText(/no active pay rates/i)).not.toBeInTheDocument();
   });
 });

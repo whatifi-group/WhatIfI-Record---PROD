@@ -244,7 +244,9 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId â€” edge cases",
 
     expect(res.status).toBe(200);
     expect(res.body.copied).toHaveLength(2);
-    expect(res.body.skipped).toEqual(["standard"]);
+    expect(res.body.skipped).toHaveLength(1);
+    expect(res.body.skipped[0].shiftType).toBe("standard");
+    expect(res.body.skipped[0].reason).toBe("conflict");
 
     const copiedTypes = res.body.copied.map((r: { shiftType: string }) => r.shiftType);
     expect(copiedTypes).toContain("weekend");
@@ -266,8 +268,10 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId â€” edge cases",
     expect(res.status).toBe(200);
     expect(res.body.copied).toEqual([]);
     expect(res.body.skipped).toHaveLength(2);
-    expect(res.body.skipped).toContain("standard");
-    expect(res.body.skipped).toContain("weekend");
+    const skippedTypes = res.body.skipped.map((s: { shiftType: string }) => s.shiftType);
+    expect(skippedTypes).toContain("standard");
+    expect(skippedTypes).toContain("weekend");
+    expect(res.body.skipped.every((s: { reason: string }) => s.reason === "conflict")).toBe(true);
   });
 
   it("does not modify the source employee's rates", async () => {
@@ -354,7 +358,7 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId?overwrite=true â
     const resNoOverwrite = await api.post(
       `/api/employees/${target}/pay-rates/copy-from/${source}`,
     );
-    expect(resNoOverwrite.body.skipped).toContain("standard");
+    expect(resNoOverwrite.body.skipped.map((s: { shiftType: string }) => s.shiftType)).toContain("standard");
 
     // With overwrite: standard should now be in copied
     const resOverwrite = await api.post(
@@ -440,6 +444,6 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId?overwrite=true â
 
     expect(res.status).toBe(200);
     expect(res.body.copied).toEqual([]);
-    expect(res.body.skipped).toContain("standard");
+    expect(res.body.skipped.map((s: { shiftType: string }) => s.shiftType)).toContain("standard");
   });
 });

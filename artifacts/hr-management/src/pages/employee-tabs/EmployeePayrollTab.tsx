@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
+  AlertTriangle,
   Loader2,
   Pencil,
   Save,
@@ -40,6 +41,8 @@ import CopyPayRatesDialog from "./CopyPayRatesDialog";
 
 interface Props {
   employeeId: number;
+  /** Passed from EmployeeProfile; drives the re-hire banner logic. */
+  employeeStatus?: string;
 }
 
 interface FormData {
@@ -129,6 +132,7 @@ const RATE_UNIT_LABELS: Record<string, string> = {
 
 interface PayRatesCardProps {
   employeeId: number;
+  employeeStatus?: string;
 }
 
 /** Inline edit form shared between add and edit modes */
@@ -214,7 +218,7 @@ function PayRateFormFields({
   );
 }
 
-function PayRatesCard({ employeeId }: PayRatesCardProps) {
+function PayRatesCard({ employeeId, employeeStatus }: PayRatesCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -225,11 +229,18 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
   const [editForm, setEditForm] = useState<PayRateForm>(defaultPayRateFormWithDate);
   // Track which shift-type groups have their history expanded
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+  // Re-hire banner dismissed state (session-only; auto-clears when an open rate is added)
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const { data: rates = [], isLoading: ratesLoading } =
     useListEmployeePayRates(employeeId, {
       query: { queryKey: getListEmployeePayRatesQueryKey(employeeId) },
     });
+
+  // Show re-hire banner when the employee is active but has only closed historical rates
+  // (the typical state after a leaver is re-hired). Auto-hides once an open rate exists.
+  const hasNoOpenRates = rates.length > 0 && !rates.some((r) => !r.effectiveTo);
+  const showRehireBanner = employeeStatus === "active" && hasNoOpenRates && !bannerDismissed;
 
   const { data: shiftTypes = [] } = useListLovItems("shift_type");
 
@@ -473,6 +484,36 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
         )}
       </div>
 
+      {/* Re-hire banner — active employee with no open pay rates */}
+      {showRehireBanner && (
+        <div className="mx-4 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3 text-sm">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-amber-800">No active pay rates</p>
+            <p className="text-amber-700 mt-0.5 text-xs">
+              All pay rates for this employee are closed. Add a new rate before the next payroll run.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+              onClick={() => { setShowAddForm(true); setBannerDismissed(true); }}
+            >
+              Add Rate
+            </Button>
+            <button
+              aria-label="Dismiss"
+              className="text-amber-400 hover:text-amber-600 transition-colors"
+              onClick={() => setBannerDismissed(true)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add form */}
       {showAddForm && (
         <div className="px-5 py-4 border-b border-border/50 bg-muted/30">
@@ -568,7 +609,7 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
 
 // ── Main tab ──────────────────────────────────────────────────────────────────
 
-export default function EmployeePayrollTab({ employeeId }: Props) {
+export default function EmployeePayrollTab({ employeeId, employeeStatus }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
@@ -838,7 +879,7 @@ export default function EmployeePayrollTab({ employeeId }: Props) {
         <h3 className="text-base font-semibold text-foreground mb-3">
           Pay Rates
         </h3>
-        <PayRatesCard employeeId={employeeId} />
+        <PayRatesCard employeeId={employeeId} employeeStatus={employeeStatus} />
       </div>
     </div>
   );

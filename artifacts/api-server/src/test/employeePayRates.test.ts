@@ -242,7 +242,8 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — inactive shi
 
     expect(res.status).toBe(200);
     expect(res.body.copied).toEqual([]);
-    expect(res.body.skipped).toContain("test_inactive_copy");
+    expect(res.body.skipped[0].shiftType).toBe("test_inactive_copy");
+    expect(res.body.skipped[0].reason).toBe("lov_inactive");
 
     // Confirm nothing was written to the target
     const targetRates = await db
@@ -281,6 +282,7 @@ describe("POST /api/employees/:id/pay-rates/copy-from/:sourceId — inactive shi
     expect(res.status).toBe(200);
     expect(res.body.copied).toHaveLength(1);
     expect(res.body.copied[0].shiftType).toBe("standard");
-    expect(res.body.skipped).toContain("test_inactive_copy");
+    expect(res.body.skipped.map((s: { shiftType: string }) => s.shiftType)).toContain("test_inactive_copy");
+    expect(res.body.skipped[0].reason).toBe("lov_inactive");
   });
 });

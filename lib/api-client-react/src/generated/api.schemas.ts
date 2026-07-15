@@ -724,10 +724,18 @@ export interface EmployeePayRateInput {
   effectiveTo?: string;
 }
 
+export type CopyPayRateSkipReason = 'source_closed' | 'lov_inactive' | 'conflict' | 'overlap_on_target';
+
+export interface CopyPayRateSkip {
+  shiftType: string;
+  /** Why this shift type was skipped */
+  reason: CopyPayRateSkipReason;
+}
+
 export interface CopyPayRatesResult {
   copied: EmployeePayRate[];
-  /** Shift types skipped because the target employee already has a rate for them */
-  skipped: string[];
+  /** Rates that were not copied, each with a machine-readable reason code */
+  skipped: CopyPayRateSkip[];
 }
 
 export interface WorkRecordRow {

@@ -52,8 +52,9 @@ app.use(
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "user_sessions",
-      // Create the table automatically if it doesn't exist in the target DB.
-      createTableIfMissing: true,
+      // Table is created by DB migration 0004_user_sessions.sql —
+      // do NOT use createTableIfMissing here because it reads a bundled
+      // table.sql that esbuild does not copy into dist/.
     }),
     secret: process.env.SESSION_SECRET,
     resave: false,

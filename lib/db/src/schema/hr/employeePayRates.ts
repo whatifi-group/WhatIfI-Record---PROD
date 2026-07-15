@@ -5,7 +5,9 @@ import {
   integer,
   numeric,
   timestamp,
+  date,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { employeesTable } from "./employees";
@@ -34,6 +36,12 @@ export const employeePayRatesTable = pgTable("employee_pay_rates", {
   rate: numeric("rate", { precision: 10, scale: 2 }).notNull(),
   rateUnit: text("rate_unit").notNull().default("hourly"), // hourly | daily | flat
   notes: text("notes"),
+  /** When this rate came into effect. Required on create; backfilled from createdAt for historical rows. */
+  effectiveFrom: date("effective_from", { mode: "string" })
+    .notNull()
+    .default(sql`CURRENT_DATE`),
+  /** When this rate ceased to apply. Null means the rate is currently active. */
+  effectiveTo: date("effective_to", { mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -3013,7 +3013,7 @@ components:
 
     EmployeePayRate:
       type: object
-      required: [id, employeeId, shiftType, rate, rateUnit, createdAt]
+      required: [id, employeeId, shiftType, rate, rateUnit, effectiveFrom, createdAt]
       properties:
         id:
           type: integer
@@ -3028,13 +3028,19 @@ components:
           enum: [hourly, daily, flat]
         notes:
           type: ["string", "null"]
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: ["string", "null"]
+          format: date
         createdAt:
           type: string
           format: date-time
 
     EmployeePayRateInput:
       type: object
-      required: [shiftType, rate, rateUnit]
+      required: [shiftType, rate, rateUnit, effectiveFrom]
       properties:
         shiftType:
           type: string
@@ -3047,6 +3053,12 @@ components:
           enum: [hourly, daily, flat]
         notes:
           type: string
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: string
+          format: date
 
     CopyPayRatesResult:
       type: object

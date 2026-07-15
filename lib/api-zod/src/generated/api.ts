@@ -967,6 +967,8 @@ export const ListEmployeePayRatesResponseItem = zod.object({
   "rate": zod.number(),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
   "notes": zod.string().nullish(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListEmployeePayRatesResponse = zod.array(ListEmployeePayRatesResponseItem)
@@ -988,7 +990,9 @@ export const CreateEmployeePayRateBody = zod.object({
   "shiftType": zod.string().min(1),
   "rate": zod.number().min(createEmployeePayRateBodyRateMin),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().optional()
 })
 
 export const CreateEmployeePayRateResponse = zod.object({
@@ -998,6 +1002,8 @@ export const CreateEmployeePayRateResponse = zod.object({
   "rate": zod.number(),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
   "notes": zod.string().nullish(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1019,7 +1025,9 @@ export const UpdateEmployeePayRateBody = zod.object({
   "shiftType": zod.string().min(1),
   "rate": zod.number().min(updateEmployeePayRateBodyRateMin),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().optional()
 })
 
 export const UpdateEmployeePayRateResponse = zod.object({
@@ -1029,6 +1037,8 @@ export const UpdateEmployeePayRateResponse = zod.object({
   "rate": zod.number(),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
   "notes": zod.string().nullish(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1060,6 +1070,8 @@ export const CopyEmployeePayRatesResponse = zod.object({
   "rate": zod.number(),
   "rateUnit": zod.enum(['hourly', 'daily', 'flat']),
   "notes": zod.string().nullish(),
+  "effectiveFrom": zod.coerce.date(),
+  "effectiveTo": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "skipped": zod.array(zod.string()).describe('Shift types skipped because the target employee already has a rate for them')

@@ -74,7 +74,7 @@ describe("POST /api/employees/:id/pay-rates — shiftType validation", () => {
     const api = buildApp(router, payrollUserId);
     const res = await api
       .post(`/api/employees/${empId}/pay-rates`)
-      .send({ shiftType: "standard", rate: 15, rateUnit: "hourly" });
+      .send({ shiftType: "standard", rate: 15, rateUnit: "hourly", effectiveFrom: "2025-01-01" });
 
     expect(res.status).toBe(201);
     expect(res.body.shiftType).toBe("standard");
@@ -85,7 +85,7 @@ describe("POST /api/employees/:id/pay-rates — shiftType validation", () => {
     const api = buildApp(router, payrollUserId);
     const res = await api
       .post(`/api/employees/${empId}/pay-rates`)
-      .send({ shiftType: "completely_made_up_type", rate: 10 });
+      .send({ shiftType: "completely_made_up_type", rate: 10, rateUnit: "hourly", effectiveFrom: "2025-01-01" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/invalid shift type/i);
@@ -108,7 +108,7 @@ describe("POST /api/employees/:id/pay-rates — shiftType validation", () => {
       const api = buildApp(router, payrollUserId);
       const res = await api
         .post(`/api/employees/${empId}/pay-rates`)
-        .send({ shiftType: "test_inactive_shift", rate: 20 });
+        .send({ shiftType: "test_inactive_shift", rate: 20, rateUnit: "hourly", effectiveFrom: "2025-01-01" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toMatch(/invalid shift type/i);

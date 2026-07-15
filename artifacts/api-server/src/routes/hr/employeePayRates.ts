@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, or, gte, sql } from "drizzle-orm";
 import { db, employeePayRatesTable, lovItemsTable } from "@workspace/db";
 import { z } from "zod";
 import { requirePermission } from "../../middlewares/requirePermission";
@@ -17,11 +17,23 @@ const CopyFromParams = z.object({
   sourceId: z.coerce.number().int().positive(),
 });
 
+/**
+ * Accepts "YYYY-MM-DD" or a full ISO datetime (e.g. "2025-07-15T00:00:00.000Z"
+ * as serialised by JSON.stringify(new Date(...))).  Normalises to "YYYY-MM-DD".
+ */
+const DateString = z
+  .string()
+  .min(10, "Must be a date in YYYY-MM-DD format")
+  .transform((s) => s.slice(0, 10))
+  .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be a valid date in YYYY-MM-DD format"));
+
 const PayRateInput = z.object({
   shiftType: z.string().min(1),
   rate: z.number().min(0),
   rateUnit: z.enum(["hourly", "daily", "flat"]).default("hourly"),
   notes: z.string().optional().nullable(),
+  effectiveFrom: DateString,
+  effectiveTo: DateString.optional().nullable(),
 });
 
 const PayRateUpdate = z.object({
@@ -29,6 +41,8 @@ const PayRateUpdate = z.object({
   rate: z.number().min(0).optional(),
   rateUnit: z.enum(["hourly", "daily", "flat"]).optional(),
   notes: z.string().optional().nullable(),
+  effectiveFrom: DateString.optional(),
+  effectiveTo: DateString.optional().nullable(),
 });
 
 /** Returns true if the given shiftType is an active entry in the shift_type LOV category. */
@@ -47,6 +61,17 @@ async function isValidShiftType(shiftType: string): Promise<boolean> {
   return row !== undefined;
 }
 
+/** Validate that effectiveTo is not before effectiveFrom when both are provided. */
+function validateDateRange(
+  effectiveFrom: string | undefined,
+  effectiveTo: string | null | undefined,
+): string | null {
+  if (effectiveFrom && effectiveTo && effectiveTo < effectiveFrom) {
+    return "effectiveTo cannot be before effectiveFrom";
+  }
+  return null;
+}
+
 /** Select all columns, casting rate numeric → JS number to match the OpenAPI contract. */
 function payRateSelection() {
   return db
@@ -57,9 +82,21 @@ function payRateSelection() {
       rate: sql<number>`${employeePayRatesTable.rate}::float8`,
       rateUnit: employeePayRatesTable.rateUnit,
       notes: employeePayRatesTable.notes,
+      effectiveFrom: employeePayRatesTable.effectiveFrom,
+      effectiveTo: employeePayRatesTable.effectiveTo,
       createdAt: employeePayRatesTable.createdAt,
     })
     .from(employeePayRatesTable);
+}
+
+/** Returns a Drizzle condition that matches currently-active pay rates
+ *  (effectiveTo IS NULL or effectiveTo >= today). */
+function activeRateCondition() {
+  const today = new Date().toISOString().split("T")[0];
+  return or(
+    isNull(employeePayRatesTable.effectiveTo),
+    gte(employeePayRatesTable.effectiveTo, today),
+  )!;
 }
 
 router.get(
@@ -73,7 +110,7 @@ router.get(
     }
     const rows = await payRateSelection()
       .where(eq(employeePayRatesTable.employeeId, params.data.id))
-      .orderBy(employeePayRatesTable.createdAt);
+      .orderBy(employeePayRatesTable.effectiveFrom, employeePayRatesTable.createdAt);
     res.json(rows);
   },
 );
@@ -90,6 +127,11 @@ router.post(
     const parsed = PayRateInput.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const dateError = validateDateRange(parsed.data.effectiveFrom, parsed.data.effectiveTo);
+    if (dateError) {
+      res.status(400).json({ error: dateError });
       return;
     }
     if (!(await isValidShiftType(parsed.data.shiftType))) {
@@ -126,6 +168,38 @@ router.put(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+
+    // If both dates are supplied, check ordering
+    if (parsed.data.effectiveFrom !== undefined || parsed.data.effectiveTo !== undefined) {
+      // Fetch the existing row so we can fill in whichever date is missing
+      const [existing] = await db
+        .select({ effectiveFrom: employeePayRatesTable.effectiveFrom, effectiveTo: employeePayRatesTable.effectiveTo })
+        .from(employeePayRatesTable)
+        .where(
+          and(
+            eq(employeePayRatesTable.id, params.data.rateId),
+            eq(employeePayRatesTable.employeeId, params.data.id),
+          ),
+        )
+        .limit(1);
+
+      if (!existing) {
+        res.status(404).json({ error: "Pay rate not found" });
+        return;
+      }
+
+      const mergedFrom = parsed.data.effectiveFrom ?? existing.effectiveFrom;
+      const mergedTo = parsed.data.effectiveTo !== undefined
+        ? parsed.data.effectiveTo
+        : existing.effectiveTo;
+
+      const dateError = validateDateRange(mergedFrom, mergedTo);
+      if (dateError) {
+        res.status(400).json({ error: dateError });
+        return;
+      }
+    }
+
     if (parsed.data.shiftType !== undefined && !(await isValidShiftType(parsed.data.shiftType))) {
       res.status(400).json({ error: `Invalid shift type: "${parsed.data.shiftType}"` });
       return;
@@ -190,16 +264,32 @@ router.post(
       return;
     }
 
-    // Fetch source rates
-    const sourceRates = await payRateSelection().where(
+    const today = new Date().toISOString().split("T")[0];
+
+    // Fetch ALL source rates so we can report closed ones in `skipped`
+    const allSourceRates = await payRateSelection().where(
       eq(employeePayRatesTable.employeeId, sourceId),
     );
 
-    // Fetch existing target rates to detect conflicts
+    // Partition into active (copyable) and closed (effectiveTo already in past)
+    // effectiveTo is a YYYY-MM-DD string from Drizzle so string comparison is valid
+    const sourceRates = allSourceRates.filter(
+      (r) => !r.effectiveTo || r.effectiveTo >= today,
+    );
+    const closedShiftTypes = allSourceRates
+      .filter((r) => r.effectiveTo && r.effectiveTo < today)
+      .map((r) => r.shiftType);
+
+    // Fetch active target rates for conflict detection
     const existingRows = await db
       .select({ id: employeePayRatesTable.id, shiftType: employeePayRatesTable.shiftType })
       .from(employeePayRatesTable)
-      .where(eq(employeePayRatesTable.employeeId, targetId));
+      .where(
+        and(
+          eq(employeePayRatesTable.employeeId, targetId),
+          activeRateCondition(),
+        ),
+      );
 
     const existingByShiftType = new Map(existingRows.map((r) => [r.shiftType, r.id]));
 
@@ -213,7 +303,8 @@ router.post(
     const activeLovValues = new Set(activeRows.map((r) => r.value));
 
     const copied = [];
-    const skipped: string[] = [];
+    // Closed source rates are reported as skipped so the caller knows they were intentionally excluded
+    const skipped: string[] = [...closedShiftTypes];
 
     for (const rate of sourceRates) {
       // Skip rates for inactive LOV entries regardless of overwrite flag
@@ -238,6 +329,7 @@ router.post(
             rate: String(rate.rate),
             rateUnit: rate.rateUnit,
             notes: rate.notes ?? null,
+            // Don't copy source date range — keep target's existing effectiveFrom
           })
           .where(eq(employeePayRatesTable.id, existingId));
 
@@ -246,7 +338,7 @@ router.post(
         );
         copied.push(updated);
       } else {
-        // No conflict: insert new rate on target
+        // No conflict: insert new rate on target; start from today, not source's date
         const [inserted] = await db
           .insert(employeePayRatesTable)
           .values({
@@ -255,6 +347,7 @@ router.post(
             rate: String(rate.rate),
             rateUnit: rate.rateUnit,
             notes: rate.notes ?? null,
+            effectiveFrom: today,
           })
           .returning({ id: employeePayRatesTable.id });
 

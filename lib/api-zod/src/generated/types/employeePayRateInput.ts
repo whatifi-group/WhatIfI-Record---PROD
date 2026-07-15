@@ -14,4 +14,6 @@ export interface EmployeePayRateInput {
   rate: number;
   rateUnit: EmployeePayRateInputRateUnit;
   notes?: string;
+  effectiveFrom: Date;
+  effectiveTo?: Date;
 }

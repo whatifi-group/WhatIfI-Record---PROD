@@ -698,6 +698,9 @@ export interface EmployeePayRate {
   rateUnit: EmployeePayRateRateUnit;
   /** @nullable */
   notes?: string | null;
+  effectiveFrom: string;
+  /** @nullable */
+  effectiveTo?: string | null;
   createdAt: string;
 }
 
@@ -717,6 +720,8 @@ export interface EmployeePayRateInput {
   rate: number;
   rateUnit: EmployeePayRateInputRateUnit;
   notes?: string;
+  effectiveFrom: string;
+  effectiveTo?: string;
 }
 
 export interface CopyPayRatesResult {

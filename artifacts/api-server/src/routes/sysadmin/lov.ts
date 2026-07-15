@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq } from "drizzle-orm";
-import { db, lovItemsTable } from "@workspace/db";
+import { and, eq, isNull } from "drizzle-orm";
+import { db, lovItemsTable, employeePayRatesTable } from "@workspace/db";
 import {
   CreateLovItemBody,
   UpdateLovItemBody,
@@ -139,6 +139,22 @@ router.patch("/sysadmin/lov/:category/:id", async (req, res): Promise<void> => {
     .set(parsed.data)
     .where(eq(lovItemsTable.id, params.data.id))
     .returning();
+
+  // When a shift_type LOV entry is deactivated, close every open pay rate that
+  // references its value by setting effective_to = today.  This prevents
+  // orphaned "active" pay rates for a shift type that no longer exists.
+  if (params.data.category === "shift_type" && parsed.data.isActive === false) {
+    const today = new Date().toISOString().split("T")[0];
+    await db
+      .update(employeePayRatesTable)
+      .set({ effectiveTo: today })
+      .where(
+        and(
+          eq(employeePayRatesTable.shiftType, existing[0].value),
+          isNull(employeePayRatesTable.effectiveTo),
+        ),
+      );
+  }
 
   res.json(UpdateLovItemResponse.parse(updated));
 });

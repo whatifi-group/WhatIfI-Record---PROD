@@ -62,6 +62,43 @@ interface PayRateForm {
   rate: string;
   rateUnit: EmployeePayRateInputRateUnit;
   notes: string;
+  effectiveFrom: string; // YYYY-MM-DD
+  effectiveTo: string;   // YYYY-MM-DD or "" = open
+}
+
+/**
+ * Normalise a date value to a YYYY-MM-DD string for display and form inputs.
+ * Accepts Date objects (UTC midnight), ISO datetime strings, plain date strings,
+ * null, or undefined.  Returns "" when the value is absent.
+ */
+function dateToIso(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  if (typeof d === "string") return d.slice(0, 10);
+  return [
+    d.getUTCFullYear(),
+    String(d.getUTCMonth() + 1).padStart(2, "0"),
+    String(d.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/** Today as YYYY-MM-DD (local time). */
+function todayIso(): string {
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/** A pay rate is active when effectiveTo is absent or not yet in the past. */
+function isRateActive(rate: EmployeePayRate): boolean {
+  if (!rate.effectiveTo) return true;
+  return dateToIso(rate.effectiveTo) >= todayIso();
+}
+
+function defaultPayRateFormWithDate(): PayRateForm {
+  return { shiftType: "", rate: "", rateUnit: "hourly", notes: "", effectiveFrom: todayIso(), effectiveTo: "" };
 }
 
 const defaultPayRateForm: PayRateForm = {
@@ -69,6 +106,8 @@ const defaultPayRateForm: PayRateForm = {
   rate: "",
   rateUnit: "hourly",
   notes: "",
+  effectiveFrom: "",
+  effectiveTo: "",
 };
 
 function maskValue(value: string | null | undefined, showLastN = 4): string {
@@ -95,9 +134,9 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
-  const [addForm, setAddForm] = useState<PayRateForm>(defaultPayRateForm);
+  const [addForm, setAddForm] = useState<PayRateForm>(defaultPayRateFormWithDate);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<PayRateForm>(defaultPayRateForm);
+  const [editForm, setEditForm] = useState<PayRateForm>(defaultPayRateFormWithDate);
 
   const { data: rates = [], isLoading: ratesLoading } =
     useListEmployeePayRates(employeeId, {
@@ -123,18 +162,25 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
       toast({ title: "Shift type and rate are required", variant: "destructive" });
       return;
     }
+    if (!addForm.effectiveFrom) {
+      toast({ title: "Effective from date is required", variant: "destructive" });
+      return;
+    }
     const payload: EmployeePayRateInput = {
       shiftType: addForm.shiftType,
       rate: parseFloat(addForm.rate),
       rateUnit: addForm.rateUnit,
       notes: addForm.notes || undefined,
+      // api-client-react generates date fields as string (useDates is zod-only)
+      effectiveFrom: addForm.effectiveFrom as string & Date,
+      effectiveTo: (addForm.effectiveTo || undefined) as (string & Date) | undefined,
     };
     createMutation.mutate(
       { id: employeeId, data: payload },
       {
         onSuccess: () => {
           toast({ title: "Pay rate added" });
-          setAddForm(defaultPayRateForm);
+          setAddForm(defaultPayRateFormWithDate());
           setShowAddForm(false);
           invalidateRates();
         },
@@ -151,6 +197,8 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
       rate: String(rate.rate),
       rateUnit: rate.rateUnit as EmployeePayRateInputRateUnit,
       notes: rate.notes ?? "",
+      effectiveFrom: dateToIso(rate.effectiveFrom),
+      effectiveTo: dateToIso(rate.effectiveTo),
     });
   };
 
@@ -164,6 +212,8 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
       rate: parseFloat(editForm.rate),
       rateUnit: editForm.rateUnit,
       notes: editForm.notes || undefined,
+      effectiveFrom: editForm.effectiveFrom as string & Date,
+      effectiveTo: (editForm.effectiveTo || undefined) as (string & Date) | undefined,
     };
     updateMutation.mutate(
       { id: employeeId, rateId, data: payload },
@@ -276,6 +326,28 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
                 }
               />
             </div>
+            <div>
+              <Label className="text-xs">Effective From <span className="text-destructive">*</span></Label>
+              <Input
+                className="mt-1"
+                type="date"
+                value={addForm.effectiveFrom}
+                onChange={(e) =>
+                  setAddForm((f) => ({ ...f, effectiveFrom: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Effective To (optional)</Label>
+              <Input
+                className="mt-1"
+                type="date"
+                value={addForm.effectiveTo}
+                onChange={(e) =>
+                  setAddForm((f) => ({ ...f, effectiveTo: e.target.value }))
+                }
+              />
+            </div>
           </div>
           <div className="flex gap-2 mt-3">
             <Button
@@ -295,7 +367,7 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
               variant="ghost"
               onClick={() => {
                 setShowAddForm(false);
-                setAddForm(defaultPayRateForm);
+                setAddForm(defaultPayRateFormWithDate());
               }}
             >
               <X className="w-4 h-4 mr-1" /> Cancel
@@ -381,6 +453,28 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
                       }
                     />
                   </div>
+                  <div>
+                    <Label className="text-xs">Effective From</Label>
+                    <Input
+                      className="mt-1"
+                      type="date"
+                      value={editForm.effectiveFrom}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, effectiveFrom: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Effective To (leave blank = open)</Label>
+                    <Input
+                      className="mt-1"
+                      type="date"
+                      value={editForm.effectiveTo}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, effectiveTo: e.target.value }))
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-3">
                   <Button
@@ -408,23 +502,38 @@ function PayRatesCard({ employeeId }: PayRatesCardProps) {
               /* read row */
               <div
                 key={rate.id}
-                className="px-5 py-3 flex items-center justify-between gap-4"
+                className={`px-5 py-3 flex items-center justify-between gap-4 ${!isRateActive(rate) ? "opacity-60" : ""}`}
               >
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="text-sm font-medium text-foreground whitespace-nowrap">
-                    {shiftTypeLabel(rate.shiftType)}
-                  </span>
-                  <span className="text-sm text-foreground font-mono">
-                    £{Number(rate.rate).toFixed(2)}
-                    <span className="ml-1 text-xs text-muted-foreground font-sans">
-                      / {RATE_UNIT_LABELS[rate.rateUnit] ?? rate.rateUnit}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-sm font-medium whitespace-nowrap ${!isRateActive(rate) ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                      {shiftTypeLabel(rate.shiftType)}
                     </span>
-                  </span>
-                  {rate.notes && (
-                    <span className="text-xs text-muted-foreground truncate">
-                      {rate.notes}
+                    {!isRateActive(rate) && (
+                      <span className="text-[10px] font-medium bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                        Inactive
+                      </span>
+                    )}
+                    <span className="text-sm text-foreground font-mono">
+                      £{Number(rate.rate).toFixed(2)}
+                      <span className="ml-1 text-xs text-muted-foreground font-sans">
+                        / {RATE_UNIT_LABELS[rate.rateUnit] ?? rate.rateUnit}
+                      </span>
                     </span>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-muted-foreground">
+                      {dateToIso(rate.effectiveFrom)}
+                      {rate.effectiveTo
+                        ? ` → ${dateToIso(rate.effectiveTo)}`
+                        : " → present"}
+                    </span>
+                    {rate.notes && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        · {rate.notes}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <Button

@@ -15,5 +15,8 @@ export interface EmployeePayRate {
   rateUnit: EmployeePayRateRateUnit;
   /** @nullable */
   notes?: string | null;
+  effectiveFrom: Date;
+  /** @nullable */
+  effectiveTo?: Date | null;
   createdAt: Date;
 }

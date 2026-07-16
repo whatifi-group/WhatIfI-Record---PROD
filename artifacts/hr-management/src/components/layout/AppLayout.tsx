@@ -107,13 +107,11 @@ const modules: Module[] = [
 ];
 
 function AppSidebar() {
-  const [location, setLocation] = useLocation();
+  const [location] = useLocation();
   const { setOpenMobile, state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
   const { data: health } = useHealthCheck();
-  const { user, hasPermission } = useAuth();
-  const logout = useLogout();
-  const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
 
   // Pending onboarding count — only fetched for HR/SysAdmin users
   const [pendingCount, setPendingCount] = useState(0);
@@ -144,15 +142,6 @@ function AppSidebar() {
     (mod.subSections ?? []).some((ss) =>
       ss.pages.some((page) => location === page.href || location.startsWith(page.href)),
     );
-
-  const handleLogout = () => {
-    logout.mutate(undefined, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        setLocation('/login');
-      }
-    });
-  };
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-border bg-sidebar">
@@ -289,63 +278,38 @@ function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-3 space-y-2 border-t border-border/50">
-        {isCollapsed ? (
-          /* Collapsed: just the API status dot + logout icon */
-          <div className="flex flex-col items-center gap-2">
-            {health && (
-              <div title={`API: ${health.status.toUpperCase()}`} className="flex justify-center">
-                <div className={`w-2 h-2 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
-              </div>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-              disabled={logout.isPending}
-              title="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          /* Expanded: full user card + API status */
-          <>
-            {health && (
-              <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground bg-muted/50 rounded-md py-1.5 px-3 w-fit mx-auto border border-border/30">
-                <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
-                <span>API: {health.status.toUpperCase()}</span>
-              </div>
-            )}
-            {user && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border shadow-sm">
-                <div className="flex flex-col min-w-0 pr-2">
-                  <span className="text-sm font-semibold truncate text-foreground">{user.name}</span>
-                  <span className="text-xs text-muted-foreground truncate">{user.roleName}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleLogout}
-                  className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  disabled={logout.isPending}
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </SidebarFooter>
+      {health && (
+        <SidebarFooter className="p-3 border-t border-border/50">
+          {isCollapsed ? (
+            <div title={`API: ${health.status.toUpperCase()}`} className="flex justify-center py-1">
+              <div className={`w-2 h-2 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground bg-muted/50 rounded-md py-1.5 px-3 w-fit mx-auto border border-border/30">
+              <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
+              <span>API: {health.status.toUpperCase()}</span>
+            </div>
+          )}
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const initials = user?.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'HR';
+  const logout = useLogout();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  const handleHeaderLogout = () => {
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        setLocation('/login');
+      },
+    });
+  };
 
   return (
     <SidebarProvider>
@@ -357,9 +321,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex-1 flex justify-center">
               <GlobalSearch />
             </div>
-            <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-              {initials}
-            </div>
+            {user && (
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="flex flex-col items-end leading-tight">
+                  <span className="text-sm font-semibold text-foreground truncate max-w-[180px]">{user.name}</span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[180px]">{user.roleName}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleHeaderLogout}
+                  disabled={logout.isPending}
+                  title="Sign out"
+                  className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </header>
           <div className="flex-1 overflow-auto p-6 md:p-8">
             <div className="max-w-6xl mx-auto w-full h-full">

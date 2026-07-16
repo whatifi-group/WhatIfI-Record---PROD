@@ -529,12 +529,21 @@ export interface EmployeeNextOfKin {
   phones?: PhoneSummary[];
 }
 
+export interface KinPhoneInput {
+  /** @minLength 1 */
+  number: string;
+  label?: PhoneLabel;
+  isPrimary?: boolean;
+}
+
 export interface EmployeeNextOfKinInput {
   /** @minLength 1 */
   name: string;
   relationship?: string;
   email?: string;
   address?: string;
+  /** Phone numbers to create atomically with the kin record */
+  phones?: KinPhoneInput[];
 }
 
 export interface EmployeeNextOfKinUpdate {

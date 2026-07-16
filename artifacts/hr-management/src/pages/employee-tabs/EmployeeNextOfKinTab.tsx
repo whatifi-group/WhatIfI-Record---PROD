@@ -5,7 +5,6 @@ import {
   useUpdateEmployeeNextOfKin,
   useDeleteEmployeeNextOfKin,
   getListEmployeeNextOfKinQueryKey,
-  useCreateKinPhone,
   useListKinPhones,
 } from "@workspace/api-client-react";
 import type { EmployeeNextOfKin, PhoneLabel } from "@workspace/api-client-react";
@@ -66,14 +65,11 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const [form, setForm] = useState<FormData>(defaultForm);
   // Draft phones for the Add flow only
   const [draftPhones, setDraftPhones] = useState<DraftPhone[]>([]);
-  // Track whether we're in the "posting phones" phase after kin creation
-  const [postingPhones, setPostingPhones] = useState(false);
 
   const { data: records, isLoading, isError, refetch } = useListEmployeeNextOfKin(employeeId);
   const createNok = useCreateEmployeeNextOfKin();
   const updateNok = useUpdateEmployeeNextOfKin();
   const deleteNok = useDeleteEmployeeNextOfKin();
-  const createKinPhone = useCreateKinPhone();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListEmployeeNextOfKinQueryKey(employeeId) });
 
@@ -140,7 +136,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
         }
       );
     } else {
-      // Add flow — create kin, then POST draft phones sequentially
+      // Add flow — create kin and phones atomically in a single request
       createNok.mutate(
         {
           id: employeeId,
@@ -149,42 +145,14 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
             relationship: form.relationship || undefined,
             email: form.email || undefined,
             address: form.address || undefined,
+            phones: draftPhones,
           },
         },
         {
-          onSuccess: async (created) => {
-            if (draftPhones.length === 0) {
-              toast({ title: "Next of kin added" });
-              invalidate();
-              setDialogOpen(false);
-              return;
-            }
-
-            // Post each draft phone sequentially
-            setPostingPhones(true);
-            try {
-              for (const phone of draftPhones) {
-                await new Promise<void>((resolve, reject) => {
-                  createKinPhone.mutate(
-                    { id: employeeId, kinId: created.id, data: phone },
-                    { onSuccess: () => resolve(), onError: reject }
-                  );
-                });
-              }
-              toast({ title: "Next of kin added" });
-              invalidate();
-              setDialogOpen(false);
-            } catch {
-              toast({
-                title: "Next of kin created, but some phone numbers failed to save",
-                description: "Open the record's Edit dialog to add phones.",
-                variant: "destructive",
-              });
-              invalidate();
-              setDialogOpen(false);
-            } finally {
-              setPostingPhones(false);
-            }
+          onSuccess: () => {
+            toast({ title: "Next of kin added" });
+            invalidate();
+            setDialogOpen(false);
           },
           onError: () => toast({ title: "Failed to add", variant: "destructive" }),
         }
@@ -202,7 +170,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
     );
   };
 
-  const isSaving = createNok.isPending || updateNok.isPending || postingPhones;
+  const isSaving = createNok.isPending || updateNok.isPending;
 
   if (isLoading) {
     return (

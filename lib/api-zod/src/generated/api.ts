@@ -719,11 +719,17 @@ export const CreateEmployeeNextOfKinParams = zod.object({
 
 
 
+
 export const CreateEmployeeNextOfKinBody = zod.object({
   "name": zod.string().min(1),
   "relationship": zod.string().optional(),
   "email": zod.string().optional(),
-  "address": zod.string().optional()
+  "address": zod.string().optional(),
+  "phones": zod.array(zod.object({
+  "number": zod.string().min(1),
+  "label": zod.enum(['Mobile', 'Home', 'Work', 'Other']).optional(),
+  "isPrimary": zod.boolean().optional()
+})).optional().describe('Phone numbers to create atomically with the kin record')
 })
 
 export const CreateEmployeeNextOfKinResponse = zod.object({

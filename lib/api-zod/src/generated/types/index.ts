@@ -70,6 +70,7 @@ export * from './errorResponse';
 export * from './expiringQualification';
 export * from './healthStatus';
 export * from './kinPhoneEntry';
+export * from './kinPhoneInput';
 export * from './leaveRequest';
 export * from './leaveRequestInput';
 export * from './leaveRequestUpdate';

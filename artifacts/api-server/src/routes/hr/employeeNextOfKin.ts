@@ -3,6 +3,14 @@ import { and, eq } from "drizzle-orm";
 import { db, employeeNextOfKinTable, employeeNextOfKinPhonesTable } from "@workspace/db";
 import { z } from "zod";
 
+const PhoneLabelEnum = z.enum(["Mobile", "Home", "Work", "Other"]);
+
+const KinPhoneInput = z.object({
+  number: z.string().min(1),
+  label: PhoneLabelEnum.optional().default("Mobile"),
+  isPrimary: z.boolean().optional().default(false),
+});
+
 const router: IRouter = Router({ mergeParams: true });
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
@@ -16,6 +24,7 @@ const NextOfKinInput = z.object({
   relationship: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
+  phones: z.array(KinPhoneInput).optional().default([]),
 });
 
 const NextOfKinUpdate = z.object({
@@ -72,11 +81,35 @@ router.post("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const [created] = await db
-    .insert(employeeNextOfKinTable)
-    .values({ ...parsed.data, employeeId: params.data.id })
-    .returning();
-  res.status(201).json({ ...created, phones: [] });
+
+  const { phones, ...kinFields } = parsed.data;
+
+  const { kin, insertedPhones } = await db.transaction(async (tx) => {
+    const [kin] = await tx
+      .insert(employeeNextOfKinTable)
+      .values({ ...kinFields, employeeId: params.data.id })
+      .returning();
+
+    let insertedPhones: typeof employeeNextOfKinPhonesTable.$inferSelect[] = [];
+    if (phones.length > 0) {
+      insertedPhones = await tx
+        .insert(employeeNextOfKinPhonesTable)
+        .values(phones.map((p) => ({ kinId: kin.id, ...p })))
+        .returning();
+    }
+
+    return { kin, insertedPhones };
+  });
+
+  res.status(201).json({
+    ...kin,
+    phones: insertedPhones.map((p) => ({
+      id: p.id,
+      number: p.number,
+      label: p.label,
+      isPrimary: p.isPrimary,
+    })),
+  });
 });
 
 router.patch(

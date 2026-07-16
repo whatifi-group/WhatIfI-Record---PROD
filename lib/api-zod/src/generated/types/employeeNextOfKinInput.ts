@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { KinPhoneInput } from './kinPhoneInput';
 
 export interface EmployeeNextOfKinInput {
   /** @minLength 1 */
@@ -12,4 +13,6 @@ export interface EmployeeNextOfKinInput {
   relationship?: string;
   email?: string;
   address?: string;
+  /** Phone numbers to create atomically with the kin record */
+  phones?: KinPhoneInput[];
 }

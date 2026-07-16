@@ -108,7 +108,8 @@ const modules: Module[] = [
 
 function AppSidebar() {
   const [location, setLocation] = useLocation();
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, state: sidebarState } = useSidebar();
+  const isCollapsed = sidebarState === "collapsed";
   const { data: health } = useHealthCheck();
   const { user, hasPermission } = useAuth();
   const logout = useLogout();
@@ -154,13 +155,20 @@ function AppSidebar() {
   };
 
   return (
-    <Sidebar variant="sidebar" className="border-r border-border bg-sidebar">
-      <SidebarHeader className="p-6">
-        <Link href="/" onClick={() => setOpenMobile(false)} className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-shadow">
-          <img src={logoUrl} alt="WhatIfI Group Ltd" className="w-10 h-10 object-contain" />
-          <div className="flex flex-col">
+    <Sidebar variant="sidebar" collapsible="icon" className="border-r border-border bg-sidebar">
+      <SidebarHeader className={isCollapsed ? "p-3" : "p-4"}>
+        <Link
+          href="/"
+          onClick={() => setOpenMobile(false)}
+          className={[
+            "flex items-center bg-white rounded-xl shadow-sm border border-border/50 hover:shadow-md transition-all",
+            isCollapsed ? "justify-center p-2" : "gap-3 p-2",
+          ].join(" ")}
+        >
+          <img src={logoUrl} alt="WhatIfI Group Ltd" className={isCollapsed ? "w-7 h-7 object-contain" : "w-9 h-9 object-contain shrink-0"} />
+          {!isCollapsed && (
             <span className="font-display font-bold text-sm text-foreground leading-tight">WhatIfI Record</span>
-          </div>
+          )}
         </Link>
       </SidebarHeader>
       <SidebarContent className="px-4 py-2">
@@ -281,31 +289,54 @@ function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4 space-y-4 border-t border-border/50">
-        {health && (
-          <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground bg-muted/50 rounded-md py-1.5 px-3 w-fit mx-auto border border-border/30">
-            <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
-            <span>API: {health.status.toUpperCase()}</span>
-          </div>
-        )}
-        
-        {user && (
-          <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border shadow-sm">
-            <div className="flex flex-col min-w-0 pr-2">
-              <span className="text-sm font-semibold truncate text-foreground">{user.name}</span>
-              <span className="text-xs text-muted-foreground truncate">{user.roleName}</span>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleLogout} 
-              className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
+      <SidebarFooter className="p-3 space-y-2 border-t border-border/50">
+        {isCollapsed ? (
+          /* Collapsed: just the API status dot + logout icon */
+          <div className="flex flex-col items-center gap-2">
+            {health && (
+              <div title={`API: ${health.status.toUpperCase()}`} className="flex justify-center">
+                <div className={`w-2 h-2 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
               disabled={logout.isPending}
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
+        ) : (
+          /* Expanded: full user card + API status */
+          <>
+            {health && (
+              <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground bg-muted/50 rounded-md py-1.5 px-3 w-fit mx-auto border border-border/30">
+                <div className={`w-1.5 h-1.5 rounded-full ${health.status === 'ok' ? 'bg-secondary' : 'bg-destructive'}`} />
+                <span>API: {health.status.toUpperCase()}</span>
+              </div>
+            )}
+            {user && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-card border border-border shadow-sm">
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="text-sm font-semibold truncate text-foreground">{user.name}</span>
+                  <span className="text-xs text-muted-foreground truncate">{user.roleName}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  disabled={logout.isPending}
+                  title="Sign out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </SidebarFooter>
     </Sidebar>
@@ -322,7 +353,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <header className="h-16 flex items-center px-6 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10 shrink-0 gap-4">
-            <SidebarTrigger className="shrink-0 lg:hidden" />
+            <SidebarTrigger className="shrink-0" />
             <div className="flex-1 flex justify-center">
               <GlobalSearch />
             </div>

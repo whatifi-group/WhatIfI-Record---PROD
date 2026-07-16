@@ -24,6 +24,7 @@ import {
   cleanupUser,
   createTestEmployee,
   cleanupEmployee,
+  safeCleanup,
 } from "./helpers";
 
 // ── test app ─────────────────────────────────────────────────────────────────
@@ -63,27 +64,32 @@ const employeeIdsToClean: number[] = [];
 const userIdsToClean: number[] = [];
 
 beforeAll(async () => {
-  employeeRoleId = await createTestRole([], "Employee Role (link test)");
-  sysadminRoleId = await createTestRole(["sysadmin"], "Sysadmin (link test)");
+  // No explicit name — createTestRole appends a unique timestamp+counter suffix
+  // so parallel/repeated runs never collide on the roles_name_unique constraint.
+  employeeRoleId = await createTestRole([]);
+  sysadminRoleId = await createTestRole(["sysadmin"]);
   sysadminUserId = await createTestUser(sysadminRoleId);
-  editorRoleId = await createTestRole(["edit_employees"], "Editor (link test)");
+  editorRoleId = await createTestRole(["edit_employees"]);
   editorUserId = await createTestUser(editorRoleId);
 });
 
 afterAll(async () => {
+  // safeCleanup swallows errors so that a partially-failed beforeAll cannot
+  // prevent the remaining teardown steps from running.
+
   // Employees first (cascade-deletes linked users created via POST /employees)
   for (const id of employeeIdsToClean) {
-    await cleanupEmployee(id).catch(() => {/* may already be deleted by a test */});
+    await safeCleanup(() => cleanupEmployee(id));
   }
   // Explicitly-created user rows not tied to employees
   for (const id of userIdsToClean) {
-    await cleanupUser(id).catch(() => {/* may already be gone */});
+    await safeCleanup(() => cleanupUser(id));
   }
-  await cleanupUser(editorUserId);
-  await cleanupRole(editorRoleId);
-  await cleanupUser(sysadminUserId);
-  await cleanupRole(sysadminRoleId);
-  await cleanupRole(employeeRoleId);
+  await safeCleanup(() => cleanupUser(editorUserId));
+  await safeCleanup(() => cleanupRole(editorRoleId));
+  await safeCleanup(() => cleanupUser(sysadminUserId));
+  await safeCleanup(() => cleanupRole(sysadminRoleId));
+  await safeCleanup(() => cleanupRole(employeeRoleId));
 });
 
 // ── helpers ───────────────────────────────────────────────────────────────────

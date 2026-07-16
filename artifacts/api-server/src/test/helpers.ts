@@ -141,3 +141,18 @@ export async function createTestUser(roleId: number): Promise<number> {
 export async function cleanupUser(id: number): Promise<void> {
   await db.delete(usersTable).where(eq(usersTable.id, id));
 }
+
+/**
+ * Runs a cleanup function and swallows any error.
+ *
+ * Use inside `afterAll` blocks so that one cleanup failure (or an undefined id
+ * left behind by a partially-failed `beforeAll`) cannot prevent the remaining
+ * cleanups from executing.
+ */
+export async function safeCleanup(fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch {
+    // intentionally swallowed — cleanup is best-effort
+  }
+}

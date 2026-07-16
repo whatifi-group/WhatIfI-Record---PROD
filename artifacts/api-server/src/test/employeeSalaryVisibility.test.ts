@@ -14,6 +14,7 @@ import {
   cleanupUser,
   createTestRole,
   createTestUser,
+  safeCleanup,
 } from "./helpers";
 import { db, employeesTable } from "@workspace/db";
 
@@ -58,15 +59,18 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await cleanupEmployee(empId);
-  await cleanupUser(viewerUserId);
-  await cleanupRole(viewerRoleId);
-  await cleanupUser(hrManagerUserId);
-  await cleanupRole(hrManagerRoleId);
-  await cleanupUser(payrollUserId);
-  await cleanupRole(payrollRoleId);
-  await cleanupUser(sysadminUserId);
-  await cleanupRole(sysadminRoleId);
+  // safeCleanup swallows errors so that a partially-failed beforeAll (which
+  // leaves some ids as undefined) cannot prevent the remaining teardown steps
+  // from running, avoiding stale rows that would break subsequent test runs.
+  await safeCleanup(() => cleanupEmployee(empId));
+  await safeCleanup(() => cleanupUser(viewerUserId));
+  await safeCleanup(() => cleanupRole(viewerRoleId));
+  await safeCleanup(() => cleanupUser(hrManagerUserId));
+  await safeCleanup(() => cleanupRole(hrManagerRoleId));
+  await safeCleanup(() => cleanupUser(payrollUserId));
+  await safeCleanup(() => cleanupRole(payrollRoleId));
+  await safeCleanup(() => cleanupUser(sysadminUserId));
+  await safeCleanup(() => cleanupRole(sysadminRoleId));
 });
 
 // ── GET /employees — salary visibility ───────────────────────────────────────

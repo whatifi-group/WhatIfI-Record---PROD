@@ -95,6 +95,24 @@ export default function ProfileCompletionModal({
 
   const { data: departments = [] } = useListDepartments();
 
+  // Pre-fill employment fields from the newly created employee record.
+  // The employee was just inserted from the onboarding submission, so these
+  // values reflect what HR reviewed during approval.
+  useEffect(() => {
+    fetch(`/api/hr/employees/${employeeId}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { jobTitle?: string; departmentId?: number | null; employmentType?: string } | null) => {
+        if (!data) return;
+        const isPlaceholder = data.jobTitle === "To be confirmed";
+        setEmployment({
+          jobTitle: isPlaceholder ? "" : (data.jobTitle ?? ""),
+          departmentId: data.departmentId != null ? String(data.departmentId) : "",
+          employmentType: data.employmentType ?? "",
+        });
+      })
+      .catch(() => {});
+  }, [employeeId]);
+
   function copyPassword() {
     navigator.clipboard.writeText(tempPassword).then(() => {
       setCopiedPassword(true);

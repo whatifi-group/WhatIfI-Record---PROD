@@ -1,5 +1,6 @@
 /**
- * Onboarding endpoint — payroll guard tests + self-service directory access.
+ * Onboarding endpoint — payroll guard tests + self-service directory access
+ * + approval data-copy integration tests.
  *
  * Verifies:
  * 1. POST /onboarding/submit strips payroll-adjacent keys (salary, payRate, etc.)
@@ -10,6 +11,10 @@
  * 4. After approving an onboarding submission, the created employee user can
  *    call GET /api/directory (200) and the response contains no payroll fields.
  * 5. GET /api/directory returns 403 for a user without view_employee_directory.
+ * 6. copySubmissionExtendedData copies address, next-of-kin, medical, disclosure,
+ *    and Update Service consent rows into employee tables on approval.
+ * 7. Partial submissions (e.g. no disclosure section) complete without error
+ *    and leave the corresponding employee tables empty.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import onboardingRouter from "../routes/onboarding";
@@ -26,7 +31,18 @@ import {
   db,
   lovItemsTable,
   onboardingSubmissionsTable,
+  onboardingAddressesTable,
+  onboardingNextOfKinTable,
+  onboardingNextOfKinPhonesTable,
+  onboardingMedicalTable,
+  onboardingDisclosuresTable,
   employeePayRatesTable,
+  employeeAddressesTable,
+  employeeNextOfKinTable,
+  employeeNextOfKinPhonesTable,
+  employeeMedicalSelectionsTable,
+  employeeDisclosuresTable,
+  employeeDisclosureConsentsTable,
   rolesTable,
   usersTable,
 } from "@workspace/db";
@@ -411,5 +427,260 @@ describe("Onboarding passphrase endpoints — auth guard", () => {
       .patch("/api/onboarding/passphrase")
       .send({ passphrase: "newpassword123", confirm: "newpassword123" });
     expect(res.status).toBe(403);
+  });
+});
+
+// ── Extended data copy — full submission ──────────────────────────────────────
+// Submits a full wizard payload (address, next-of-kin, medical, disclosure with
+// Update Service consent), approves it, then asserts every row was copied to the
+// appropriate employee table.
+
+describe("copySubmissionExtendedData — full submission with all sections", () => {
+  let submissionId: number;
+  let createdEmployeeId: number | null = null;
+
+  beforeAll(async () => {
+    // Insert a pending submission
+    const [sub] = await db
+      .insert(onboardingSubmissionsTable)
+      .values({
+        firstName: "FullCopy",
+        lastName: `Test${Date.now()}`,
+        email: `full-copy-${Date.now()}@example-test.invalid`,
+        jobTitle: "Tester",
+        employmentType: "full_time",
+        startDate: "2025-06-01",
+        onboardingStatus: "pending",
+      })
+      .returning({ id: onboardingSubmissionsTable.id });
+    submissionId = sub.id;
+
+    // Stage address
+    await db.insert(onboardingAddressesTable).values({
+      submissionId,
+      line1: "123 Test Street",
+      city: "Testville",
+      postcode: "TE1 1ST",
+      country: "GB",
+    });
+
+    // Stage next of kin + phone
+    const [kin] = await db
+      .insert(onboardingNextOfKinTable)
+      .values({
+        submissionId,
+        name: "Jane Doe",
+        relationship: "Spouse",
+      })
+      .returning({ id: onboardingNextOfKinTable.id });
+
+    await db.insert(onboardingNextOfKinPhonesTable).values({
+      kinId: kin.id,
+      number: "07700900000",
+      label: "Mobile",
+      isPrimary: true,
+    });
+
+    // Stage medical
+    await db.insert(onboardingMedicalTable).values({
+      submissionId,
+      medicalSelections: ["diabetes"],
+      medicalNotes: "Type 2",
+      dietarySelections: ["vegetarian"],
+      dietaryNotes: null,
+    });
+
+    // Stage disclosure with Update Service consent
+    await db.insert(onboardingDisclosuresTable).values({
+      submissionId,
+      checkType: "dbs",
+      checkLevel: "enhanced",
+      certificateNumber: "123456789",
+      issueDate: "2024-01-15",
+      onUpdateService: true,
+      updateServiceConsentName: "FullCopy Test",
+    });
+  });
+
+  afterAll(async () => {
+    if (createdEmployeeId) {
+      await cleanupEmployee(createdEmployeeId);
+    } else {
+      await db
+        .delete(onboardingSubmissionsTable)
+        .where(eq(onboardingSubmissionsTable.id, submissionId));
+    }
+  });
+
+  it("approves the submission successfully", async () => {
+    const api = buildApp(onboardingRouter, hrUserId);
+    const res = await api
+      .post(`/api/onboarding/submissions/${submissionId}/approve`)
+      .send({});
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty("employeeId");
+    createdEmployeeId = res.body.employeeId;
+  });
+
+  it("copies the address row into employee_addresses", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeAddressesTable)
+      .where(eq(employeeAddressesTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].line1).toBe("123 Test Street");
+    expect(rows[0].city).toBe("Testville");
+    expect(rows[0].postcode).toBe("TE1 1ST");
+  });
+
+  it("copies the next-of-kin row into employee_next_of_kin", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeNextOfKinTable)
+      .where(eq(employeeNextOfKinTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].name).toBe("Jane Doe");
+    expect(rows[0].relationship).toBe("Spouse");
+  });
+
+  it("copies the next-of-kin phone into employee_next_of_kin_phones", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const [kin] = await db
+      .select({ id: employeeNextOfKinTable.id })
+      .from(employeeNextOfKinTable)
+      .where(eq(employeeNextOfKinTable.employeeId, createdEmployeeId!))
+      .limit(1);
+    expect(kin).toBeDefined();
+
+    const phones = await db
+      .select()
+      .from(employeeNextOfKinPhonesTable)
+      .where(eq(employeeNextOfKinPhonesTable.kinId, kin.id));
+    expect(phones).toHaveLength(1);
+    expect(phones[0].number).toBe("07700900000");
+  });
+
+  it("copies medical selections into employee_medical_selections", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeMedicalSelectionsTable)
+      .where(eq(employeeMedicalSelectionsTable.employeeId, createdEmployeeId!));
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.map((r) => r.lovValue)).toContain("diabetes");
+  });
+
+  it("copies the disclosure row into employee_disclosures", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].checkType).toBe("dbs");
+    expect(rows[0].checkLevel).toBe("enhanced");
+    expect(rows[0].onUpdateService).toBe(true);
+  });
+
+  it("writes an employee_disclosure_update_service_consents row with consent_granted=true", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeDisclosureConsentsTable)
+      .where(eq(employeeDisclosureConsentsTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].consentGranted).toBe(true);
+    expect(rows[0].signatoryName).toBe("FullCopy Test");
+    expect(rows[0].disclosureId).not.toBeNull();
+  });
+});
+
+// ── Extended data copy — partial submission (no disclosure) ───────────────────
+// Verifies that a submission without a disclosure section approves cleanly and
+// leaves the disclosure and consent tables empty for that employee.
+
+describe("copySubmissionExtendedData — partial submission without disclosure", () => {
+  let submissionId: number;
+  let createdEmployeeId: number | null = null;
+
+  beforeAll(async () => {
+    const [sub] = await db
+      .insert(onboardingSubmissionsTable)
+      .values({
+        firstName: "NoDisclosure",
+        lastName: `Test${Date.now()}`,
+        email: `no-disclosure-${Date.now()}@example-test.invalid`,
+        jobTitle: "Tester",
+        employmentType: "part_time",
+        startDate: "2025-07-01",
+        onboardingStatus: "pending",
+      })
+      .returning({ id: onboardingSubmissionsTable.id });
+    submissionId = sub.id;
+
+    // Stage address only — no disclosure, no kin, no medical
+    await db.insert(onboardingAddressesTable).values({
+      submissionId,
+      line1: "99 Partial Lane",
+      city: "Anytown",
+    });
+  });
+
+  afterAll(async () => {
+    if (createdEmployeeId) {
+      await cleanupEmployee(createdEmployeeId);
+    } else {
+      await db
+        .delete(onboardingSubmissionsTable)
+        .where(eq(onboardingSubmissionsTable.id, submissionId));
+    }
+  });
+
+  it("approves the partial submission successfully", async () => {
+    const api = buildApp(onboardingRouter, hrUserId);
+    const res = await api
+      .post(`/api/onboarding/submissions/${submissionId}/approve`)
+      .send({});
+    expect(res.status).toBe(201);
+    createdEmployeeId = res.body.employeeId;
+  });
+
+  it("copies the address row correctly", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeAddressesTable)
+      .where(eq(employeeAddressesTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].line1).toBe("99 Partial Lane");
+  });
+
+  it("has no employee_disclosures rows for this employee", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeDisclosuresTable)
+      .where(eq(employeeDisclosuresTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("has no employee_disclosure_update_service_consents rows for this employee", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeDisclosureConsentsTable)
+      .where(eq(employeeDisclosureConsentsTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("has no employee_next_of_kin rows for this employee", async () => {
+    expect(createdEmployeeId).not.toBeNull();
+    const rows = await db
+      .select()
+      .from(employeeNextOfKinTable)
+      .where(eq(employeeNextOfKinTable.employeeId, createdEmployeeId!));
+    expect(rows).toHaveLength(0);
   });
 });

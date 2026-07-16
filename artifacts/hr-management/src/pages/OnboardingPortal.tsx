@@ -477,11 +477,16 @@ export default function OnboardingPortal() {
 
   // ── Step 6: Disclosure validation ─────────────────────────────────────────
 
+  /** Full name the applicant submitted in step 1 (used for consent name matching). */
+  const expectedConsentName = `${personal.firstName.trim()} ${personal.lastName.trim()}`.trim();
+
   function disclosureNextDisabled(): boolean {
     if (disclosureSkipped) return false;
     if (!disclosure.checkType || !disclosure.checkLevel) return false; // allow skip with empty
-    if (disclosure.onUpdateService && !disclosure.updateServiceConsentName.trim()) {
-      return true;
+    if (disclosure.onUpdateService) {
+      const typed = disclosure.updateServiceConsentName.trim();
+      if (!typed) return true;
+      if (typed.toLowerCase() !== expectedConsentName.toLowerCase()) return true;
     }
     return false;
   }
@@ -1462,13 +1467,26 @@ export default function OnboardingPortal() {
                               }))
                             }
                           />
-                          {disclosure.onUpdateService &&
-                            !disclosure.updateServiceConsentName.trim() && (
-                              <p className="text-xs text-amber-700">
-                                You must type your full name to confirm consent before
-                                proceeding.
-                              </p>
-                            )}
+                          {disclosure.onUpdateService && (() => {
+                            const typed = disclosure.updateServiceConsentName.trim();
+                            if (!typed) {
+                              return (
+                                <p className="text-xs text-amber-700">
+                                  You must type your full name to confirm consent before
+                                  proceeding.
+                                </p>
+                              );
+                            }
+                            if (typed.toLowerCase() !== expectedConsentName.toLowerCase()) {
+                              return (
+                                <p className="text-xs text-destructive">
+                                  Name does not match. Please type exactly:{" "}
+                                  <strong>{expectedConsentName}</strong>
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       </div>
                     )}

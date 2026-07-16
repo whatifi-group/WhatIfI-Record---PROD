@@ -116,7 +116,47 @@ export async function runMigrations(migrationsFolder: string): Promise<void> {
 
     const db = drizzle(pool);
     await migrate(db, { migrationsFolder });
+
+    // Sanity-check: warn if the tracking table is still short of the journal.
+    // This catches the case where a migration file was added to the journal but
+    // never actually applied (e.g. stamped manually without running the SQL).
+    await assertMigrationSync(pool, migrationsFolder);
   } finally {
     await pool.end();
+  }
+}
+
+/**
+ * Emits a console warning when the number of rows recorded in
+ * __drizzle_migrations is less than the number of entries in the migration
+ * journal.  A mismatch means at least one migration was registered in the
+ * journal but never applied through the runner — a common symptom of the
+ * "raw SQL applied by hand" anti-pattern.
+ */
+async function assertMigrationSync(
+  pool: pg.Pool,
+  migrationsFolder: string,
+): Promise<void> {
+  const journalPath = path.join(migrationsFolder, "meta/_journal.json");
+  const journal: Journal = JSON.parse(fs.readFileSync(journalPath, "utf8"));
+  const journalCount = journal.entries.length;
+
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM drizzle."__drizzle_migrations"`,
+    );
+    const appliedCount = parseInt(rows[0].count, 10);
+
+    if (appliedCount < journalCount) {
+      console.warn(
+        `\n⚠  Migration sync warning: __drizzle_migrations has ${appliedCount} ` +
+          `entr${appliedCount === 1 ? "y" : "ies"} but the journal lists ${journalCount}. ` +
+          `${journalCount - appliedCount} migration(s) may not have been applied through the runner.\n` +
+          `   Run: FORCE=1 pnpm --filter @workspace/db push\n`,
+      );
+    }
+  } finally {
+    client.release();
   }
 }

@@ -377,3 +377,39 @@ describe("Employee Self-Service seed role — payroll permission absence", () =>
     expect(perms).toContain("view_own_profile");
   });
 });
+
+// ── Auth guard tests ──────────────────────────────────────────────────────────
+// Verifies that PATCH /onboarding/passphrase and GET /onboarding/passphrase-status
+// return 403 for callers who lack hr:access or sysadmin permissions.
+
+describe("Onboarding passphrase endpoints — auth guard", () => {
+  let nonHrUserId: number;
+  let nonHrRoleId: number;
+
+  beforeAll(async () => {
+    // A role with only self-service access — no hr:access, no sysadmin
+    nonHrRoleId = await createTestRole(["view_own_profile"]);
+    nonHrUserId = await createTestUser(nonHrRoleId);
+  });
+
+  afterAll(async () => {
+    await cleanupUser(nonHrUserId);
+    await cleanupRole(nonHrRoleId);
+  });
+
+  it("GET /api/onboarding/passphrase-status returns 403 for non-HR user", async () => {
+    // buildApp injects nonHrUserId into req.session so requirePermission can
+    // look up permissions — no real login flow needed.
+    const api = buildApp(onboardingRouter, nonHrUserId);
+    const res = await api.get("/api/onboarding/passphrase-status");
+    expect(res.status).toBe(403);
+  });
+
+  it("PATCH /api/onboarding/passphrase returns 403 for non-HR user", async () => {
+    const api = buildApp(onboardingRouter, nonHrUserId);
+    const res = await api
+      .patch("/api/onboarding/passphrase")
+      .send({ passphrase: "newpassword123", confirm: "newpassword123" });
+    expect(res.status).toBe(403);
+  });
+});

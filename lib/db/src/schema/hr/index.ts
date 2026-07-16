@@ -17,3 +17,4 @@ export * from "./employeeServicePeriods";
 export * from "./employeeDisclosures";
 export * from "./employeePhones";
 export * from "./employeeNextOfKinPhones";
+export * from "./employeeDisclosureConsents";

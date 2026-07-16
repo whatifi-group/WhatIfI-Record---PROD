@@ -5,11 +5,14 @@ import {
   employeeDisclosuresTable,
   employeeDisclosureUpdateChecksTable,
   employeeDisclosureReviewsTable,
+  employeeDisclosureConsentsTable,
+  employeeAttachmentsTable,
   employeesTable,
   usersTable,
 } from "@workspace/db";
 import { z } from "zod";
 import { requirePermission, getEffectivePermissions } from "../../middlewares/requirePermission";
+import { objectStorageService } from "../storage";
 
 const router: IRouter = Router({ mergeParams: true });
 
@@ -692,6 +695,66 @@ router.post(
       .limit(1);
 
     res.json(updated);
+  },
+);
+
+// ── GET /employees/:id/disclosure-consents ────────────────────────────────────
+// Read-only. Returns all Update Service consent rows for this employee,
+// including a short-lived signed download URL for the associated PDF (if any).
+
+router.get(
+  "/employees/:id/disclosure-consents",
+  canView,
+  async (req, res): Promise<void> => {
+    const params = IdParam.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+
+    const consents = await db
+      .select({
+        id: employeeDisclosureConsentsTable.id,
+        disclosureId: employeeDisclosureConsentsTable.disclosureId,
+        consentGranted: employeeDisclosureConsentsTable.consentGranted,
+        signatoryName: employeeDisclosureConsentsTable.signatoryName,
+        consentedAt: employeeDisclosureConsentsTable.consentedAt,
+        pdfAttachmentId: employeeDisclosureConsentsTable.pdfAttachmentId,
+        pdfFileName: employeeAttachmentsTable.fileName,
+        pdfFileUrl: employeeAttachmentsTable.fileUrl,
+      })
+      .from(employeeDisclosureConsentsTable)
+      .leftJoin(
+        employeeAttachmentsTable,
+        eq(employeeDisclosureConsentsTable.pdfAttachmentId, employeeAttachmentsTable.id),
+      )
+      .where(eq(employeeDisclosureConsentsTable.employeeId, params.data.id))
+      .orderBy(asc(employeeDisclosureConsentsTable.consentedAt));
+
+    // Generate signed download URLs for PDFs
+    const result = await Promise.all(
+      consents.map(async (c) => {
+        let pdfSignedUrl: string | null = null;
+        if (c.pdfFileUrl) {
+          try {
+            pdfSignedUrl = await objectStorageService.getSignedDownloadUrl(c.pdfFileUrl);
+          } catch {
+            // Non-fatal — URL generation failure just omits the link
+          }
+        }
+        return {
+          id: c.id,
+          disclosureId: c.disclosureId,
+          consentGranted: c.consentGranted,
+          signatoryName: c.signatoryName,
+          consentedAt: c.consentedAt,
+          pdfSignedUrl,
+          pdfFileName: c.pdfFileName,
+        };
+      }),
+    );
+
+    res.json(result);
   },
 );
 

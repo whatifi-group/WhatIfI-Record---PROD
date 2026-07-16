@@ -62,7 +62,7 @@ const modules: Module[] = [
       { name: "Directory", href: "/employees", icon: Users },
       { name: "Work Records", href: "/work-records", icon: ClipboardList },
       { name: "Past Employees", href: "/past-employees", icon: Users, hrPastEmployeesOnly: true },
-      { name: "Onboarding Queue", href: "/onboarding-queue", icon: ClipboardCheck },
+      { name: "Onboarding", href: "/onboarding-queue", icon: ClipboardCheck },
     ],
     subSections: [
       {

@@ -227,6 +227,36 @@ export class ObjectStorageService {
       requestedPermission: requestedPermission ?? ObjectPermission.READ,
     });
   }
+
+  /**
+   * Upload a Buffer directly to private object storage.
+   * Returns the normalised `/objects/...` path for the uploaded file.
+   */
+  async uploadBuffer(buffer: Buffer, contentType: string): Promise<string> {
+    const privateObjectDir = this.getPrivateObjectDir();
+    const objectId = randomUUID();
+    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const bucket = objectStorageClient.bucket(bucketName);
+    const file = bucket.file(objectName);
+    await file.save(buffer, { contentType });
+    // Build the canonical GCS URL and let normalizeObjectEntityPath convert it
+    const rawUrl = `https://storage.googleapis.com/${bucketName}/${objectName}`;
+    return this.normalizeObjectEntityPath(rawUrl);
+  }
+
+  /**
+   * Return a short-lived signed download URL for a private object entity.
+   * @param objectPath  Normalised path like `/objects/uploads/<uuid>`
+   * @param ttlSec      Expiry in seconds (default 15 min)
+   */
+  async getSignedDownloadUrl(objectPath: string, ttlSec = 900): Promise<string> {
+    const file = await this.getObjectEntityFile(objectPath);
+    const { bucketName, objectName } = parseObjectPath(
+      `/${file.bucket.name}/${file.name}`,
+    );
+    return signObjectURL({ bucketName, objectName, method: 'GET', ttlSec });
+  }
 }
 
 function parseObjectPath(path: string): {

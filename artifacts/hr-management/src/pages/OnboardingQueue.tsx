@@ -595,10 +595,18 @@ export default function OnboardingQueue() {
                     <span>{detailSub.phone}</span>
                   </>
                 )}
-                <span className="text-muted-foreground">Job Title</span>
-                <span>{detailSub.jobTitle}</span>
-                <span className="text-muted-foreground">Employment</span>
-                <span className="capitalize">{detailSub.employmentType.replace("_", " ")}</span>
+                {detailSub.jobTitle && (
+                  <>
+                    <span className="text-muted-foreground">Job Title</span>
+                    <span>{detailSub.jobTitle}</span>
+                  </>
+                )}
+                {detailSub.employmentType && (
+                  <>
+                    <span className="text-muted-foreground">Employment</span>
+                    <span className="capitalize">{detailSub.employmentType.replace(/_/g, " ")}</span>
+                  </>
+                )}
                 <span className="text-muted-foreground">Start Date</span>
                 <span>{detailSub.startDate}</span>
                 <span className="text-muted-foreground">Status</span>

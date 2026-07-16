@@ -1,3 +1,4 @@
 - [Orval date/numeric coercion vs Drizzle](orval-zod-drizzle-types.md) — generated Zod schemas coerce OpenAPI date fields to JS `Date` and numeric fields stay typed as `number`; must convert at the DB boundary.
 - [Vite asset extension case sensitivity](vite-asset-extension-case.md) — vite/client.d.ts only declares lowercase `*.png` etc.; uppercase-extension files need a custom module declaration.
 - [connect-pg-simple createTableIfMissing breaks esbuild bundle](connect-pg-simple-bundle.md) — reads a table.sql asset at runtime that esbuild never copies; create user_sessions via DB migration instead.
+- [Drizzle migration tracking bug](drizzle-migration-tracking-bug.md) — drizzle-kit can record a migration as applied without running the DDL; always verify tables exist in DB after migrating.

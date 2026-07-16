@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useListEmployeeDisclosures,
   useCreateEmployeeDisclosure,
@@ -55,6 +55,7 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
+  Paperclip,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -718,6 +719,31 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
   const [form, setForm] = useState<DisclosureForm>(defaultDisclosureForm);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Update Service consent records
+  interface ConsentRecord {
+    id: number;
+    disclosureId: number | null;
+    consentGranted: boolean;
+    signatoryName: string | null;
+    consentedAt: string | null;
+    pdfSignedUrl: string | null;
+    pdfFileName: string | null;
+  }
+  const [consents, setConsents] = useState<ConsentRecord[]>([]);
+  const [consentsLoading, setConsentsLoading] = useState(true);
+  const [consentExpanded, setConsentExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setConsentsLoading(true);
+    fetch(`/api/employees/${employeeId}/disclosure-consents`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => { if (!cancelled) setConsents(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setConsents([]); })
+      .finally(() => { if (!cancelled) setConsentsLoading(false); });
+    return () => { cancelled = true; };
+  }, [employeeId]);
+
   const availableLevels =
     form.checkType ? LEVELS_BY_TYPE[form.checkType as CheckType] : [];
 
@@ -866,6 +892,79 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
           />
         ))}
       </div>
+
+      {/* Update Service Consent records */}
+      {!consentsLoading && consents.length > 0 && (
+        <div className="border border-blue-200/60 dark:border-blue-800/40 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between gap-2 px-4 py-3 bg-blue-50/60 dark:bg-blue-950/20 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors text-left"
+            onClick={() => setConsentExpanded((v) => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                Update Service Consent
+              </span>
+              <span className="text-xs text-blue-600/70 dark:text-blue-400/70">
+                ({consents.length} record{consents.length !== 1 ? "s" : ""})
+              </span>
+            </div>
+            {consentExpanded ? (
+              <ChevronDown className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+            )}
+          </button>
+
+          {consentExpanded && (
+            <div className="divide-y divide-border/30">
+              {consents.map((c) => (
+                <div key={c.id} className="px-4 py-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {c.consentGranted ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800">
+                        <CheckCircle2 className="w-3 h-3" /> Consent Granted
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border">
+                        Not on Update Service
+                      </span>
+                    )}
+                  </div>
+                  {c.consentGranted && (
+                    <div className="text-xs space-y-0.5">
+                      {c.signatoryName && (
+                        <p>
+                          <span className="text-muted-foreground">Signatory: </span>
+                          <span className="font-medium">{c.signatoryName}</span>
+                        </p>
+                      )}
+                      {c.consentedAt && (
+                        <p>
+                          <span className="text-muted-foreground">Consented at: </span>
+                          <span>{formatDateTime(c.consentedAt)}</span>
+                        </p>
+                      )}
+                      {c.pdfSignedUrl && (
+                        <a
+                          href={c.pdfSignedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 mt-1 text-primary hover:underline font-medium"
+                        >
+                          <Paperclip className="w-3 h-3" />
+                          {c.pdfFileName ?? "Download PDF"}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

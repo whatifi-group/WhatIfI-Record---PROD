@@ -24,12 +24,13 @@ export const onboardingSubmissionsTable = pgTable("onboarding_submissions", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
-  jobTitle: text("job_title").notNull(),
+  // These are now optional — HR sets job title and employment type at approval.
+  jobTitle: text("job_title"),
   departmentId: integer("department_id").references(
     () => departmentsTable.id,
     { onDelete: "set null" },
   ),
-  employmentType: text("employment_type").notNull(),
+  employmentType: text("employment_type"),
   startDate: date("start_date", { mode: "string" }).notNull(),
   onboardingStatus: text("onboarding_status", {
     enum: onboardingStatusValues,

@@ -17,6 +17,7 @@ import RolesList from '@/pages/sysadmin/RolesList';
 import ListOfValues from '@/pages/sysadmin/ListOfValues';
 import LovCategoryDetail from '@/pages/sysadmin/LovCategoryDetail';
 import QualificationTypes from '@/pages/sysadmin/QualificationTypes';
+import LeaveRequestsList from '@/pages/LeaveRequestsList';
 import PastEmployeesList from '@/pages/PastEmployeesList';
 import WorkRecordsList from '@/pages/WorkRecordsList';
 import ExpiringQualifications from '@/pages/ExpiringQualifications';
@@ -157,6 +158,9 @@ function MainRoutes() {
         </Route>
         <Route path="/sysadmin/lov">
           {() => <AdminRoute component={ListOfValues} />}
+        </Route>
+        <Route path="/leave-requests">
+          {() => <HrRoute component={LeaveRequestsList} />}
         </Route>
         <Route path="/onboarding-queue">
           {() => <HrRoute component={OnboardingQueue} />}

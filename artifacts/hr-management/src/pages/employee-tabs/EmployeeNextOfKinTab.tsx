@@ -5,16 +5,25 @@ import {
   useUpdateEmployeeNextOfKin,
   useDeleteEmployeeNextOfKin,
   getListEmployeeNextOfKinQueryKey,
+  useCreateKinPhone,
+  useListKinPhones,
 } from "@workspace/api-client-react";
-import type { EmployeeNextOfKin } from "@workspace/api-client-react";
+import type { EmployeeNextOfKin, PhoneLabel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Users, X } from "lucide-react";
 import TabErrorState from "@/components/TabErrorState";
 import { KinPhoneList } from "@/components/PhoneList";
 
@@ -29,7 +38,25 @@ interface FormData {
   address: string;
 }
 
+interface DraftPhone {
+  number: string;
+  label: PhoneLabel;
+  isPrimary: boolean;
+}
+
+const PHONE_LABELS: PhoneLabel[] = ["Mobile", "Home", "Work", "Other"];
+
 const defaultForm: FormData = { name: "", relationship: "", email: "", address: "" };
+
+const blankDraftPhone = (): DraftPhone => ({ number: "", label: "Mobile", isPrimary: false });
+
+// Small component to fetch and display the primary phone for a kin card
+function KinPrimaryPhone({ employeeId, kinId }: { employeeId: number; kinId: number }) {
+  const { data: phones = [] } = useListKinPhones(employeeId, kinId);
+  const primary = phones.find((p) => p.isPrimary) ?? phones[0] ?? null;
+  if (!primary) return null;
+  return <span>📞 {primary.number}</span>;
+}
 
 export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const { toast } = useToast();
@@ -37,23 +64,29 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<EmployeeNextOfKin | null>(null);
   const [form, setForm] = useState<FormData>(defaultForm);
-  const [expandedKinId, setExpandedKinId] = useState<number | null>(null);
+  // Draft phones for the Add flow only
+  const [draftPhones, setDraftPhones] = useState<DraftPhone[]>([]);
+  // Track whether we're in the "posting phones" phase after kin creation
+  const [postingPhones, setPostingPhones] = useState(false);
 
   const { data: records, isLoading, isError, refetch } = useListEmployeeNextOfKin(employeeId);
   const createNok = useCreateEmployeeNextOfKin();
   const updateNok = useUpdateEmployeeNextOfKin();
   const deleteNok = useDeleteEmployeeNextOfKin();
+  const createKinPhone = useCreateKinPhone();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListEmployeeNextOfKinQueryKey(employeeId) });
 
   const openAdd = () => {
     setEditingRecord(null);
     setForm(defaultForm);
+    setDraftPhones([]);
     setDialogOpen(true);
   };
 
   const openEdit = (record: EmployeeNextOfKin) => {
     setEditingRecord(record);
+    setDraftPhones([]); // edit flow doesn't use draft phones
     setForm({
       name: record.name,
       relationship: record.relationship || "",
@@ -63,13 +96,29 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
+  // Add a blank draft phone row
+  const addDraftPhone = () => setDraftPhones((prev) => [...prev, blankDraftPhone()]);
+
+  const updateDraftPhone = (idx: number, patch: Partial<DraftPhone>) =>
+    setDraftPhones((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+
+  const removeDraftPhone = (idx: number) =>
+    setDraftPhones((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast({ title: "Name is required", variant: "destructive" });
       return;
     }
 
+    // Validate draft phones — no empty numbers (add flow only)
+    if (!editingRecord && draftPhones.some((p) => !p.number.trim())) {
+      toast({ title: "All phone number fields must be filled in", variant: "destructive" });
+      return;
+    }
+
     if (editingRecord) {
+      // Edit flow — just update the kin record; phones managed via embedded KinPhoneList
       updateNok.mutate(
         {
           id: employeeId,
@@ -82,11 +131,16 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
           },
         },
         {
-          onSuccess: () => { toast({ title: "Next of kin updated" }); invalidate(); setDialogOpen(false); },
+          onSuccess: () => {
+            toast({ title: "Next of kin updated" });
+            invalidate();
+            setDialogOpen(false);
+          },
           onError: () => toast({ title: "Failed to update", variant: "destructive" }),
         }
       );
     } else {
+      // Add flow — create kin, then POST draft phones sequentially
       createNok.mutate(
         {
           id: employeeId,
@@ -98,11 +152,39 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
           },
         },
         {
-          onSuccess: (created) => {
-            toast({ title: "Next of kin added" });
-            invalidate();
-            setDialogOpen(false);
-            setExpandedKinId(created.id);
+          onSuccess: async (created) => {
+            if (draftPhones.length === 0) {
+              toast({ title: "Next of kin added" });
+              invalidate();
+              setDialogOpen(false);
+              return;
+            }
+
+            // Post each draft phone sequentially
+            setPostingPhones(true);
+            try {
+              for (const phone of draftPhones) {
+                await new Promise<void>((resolve, reject) => {
+                  createKinPhone.mutate(
+                    { id: employeeId, kinId: created.id, data: phone },
+                    { onSuccess: () => resolve(), onError: reject }
+                  );
+                });
+              }
+              toast({ title: "Next of kin added" });
+              invalidate();
+              setDialogOpen(false);
+            } catch {
+              toast({
+                title: "Next of kin created, but some phone numbers failed to save",
+                description: "Open the record's Edit dialog to add phones.",
+                variant: "destructive",
+              });
+              invalidate();
+              setDialogOpen(false);
+            } finally {
+              setPostingPhones(false);
+            }
           },
           onError: () => toast({ title: "Failed to add", variant: "destructive" }),
         }
@@ -120,7 +202,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
     );
   };
 
-  const isSaving = createNok.isPending || updateNok.isPending;
+  const isSaving = createNok.isPending || updateNok.isPending || postingPhones;
 
   if (isLoading) {
     return (
@@ -157,27 +239,7 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-muted-foreground">
                     {record.email && <span>✉ {record.email}</span>}
                     {record.address && <span>📍 {record.address}</span>}
-                  </div>
-                  {/* Inline phone list — toggled open by clicking */}
-                  <div className="mt-3">
-                    {expandedKinId === record.id ? (
-                      <div>
-                        <button
-                          className="text-xs text-muted-foreground hover:text-foreground mb-1.5 flex items-center gap-1"
-                          onClick={() => setExpandedKinId(null)}
-                        >
-                          📞 Phone numbers ▲
-                        </button>
-                        <KinPhoneList employeeId={employeeId} kinId={record.id} />
-                      </div>
-                    ) : (
-                      <button
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => setExpandedKinId(record.id)}
-                      >
-                        📞 Phone numbers
-                      </button>
-                    )}
+                    <KinPrimaryPhone employeeId={employeeId} kinId={record.id} />
                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
@@ -208,8 +270,8 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[440px]">
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!isSaving) { setDialogOpen(open); if (!open) setDraftPhones([]); } }}>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingRecord ? "Edit Next of Kin" : "Add Next of Kin"}</DialogTitle>
           </DialogHeader>
@@ -230,12 +292,73 @@ export default function EmployeeNextOfKinTab({ employeeId }: Props) {
               <Label>Address</Label>
               <Input className="mt-1" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
             </div>
-            {editingRecord && (
-              <p className="text-xs text-muted-foreground">Phone numbers are managed on the record card below.</p>
-            )}
+
+            {/* Phone numbers section */}
+            <div className="space-y-2">
+              <Label>Phone Numbers</Label>
+              {editingRecord ? (
+                // Edit flow: embed live KinPhoneList
+                <div className="mt-1 rounded-md border border-border/50 p-3">
+                  <KinPhoneList employeeId={employeeId} kinId={editingRecord.id} />
+                </div>
+              ) : (
+                // Add flow: draft phone rows
+                <div className="space-y-2 mt-1">
+                  {draftPhones.map((phone, idx) => (
+                    <div key={idx} className="rounded-md border border-border/50 p-3 space-y-2">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Phone number"
+                            value={phone.number}
+                            onChange={e => updateDraftPhone(idx, { number: e.target.value })}
+                          />
+                        </div>
+                        <Select
+                          value={phone.label}
+                          onValueChange={(v) => updateDraftPhone(idx, { label: v as PhoneLabel })}
+                        >
+                          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PHONE_LABELS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeDraftPhone(idx)}
+                          type="button"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={phone.isPrimary}
+                          onChange={e => updateDraftPhone(idx, { isPrimary: e.target.checked })}
+                          className="accent-primary"
+                        />
+                        Set as primary
+                      </label>
+                    </div>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={addDraftPhone}
+                    type="button"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add phone number
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>Cancel</Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {editingRecord ? "Update" : "Add"}

@@ -65,6 +65,45 @@ interface SubmissionDetail extends Submission {
     fileName: string | null;
     fileUrl: string | null;
   }>;
+  address: {
+    line1: string | null;
+    line2: string | null;
+    city: string | null;
+    county: string | null;
+    postcode: string | null;
+    country: string | null;
+  } | null;
+  nextOfKin: {
+    name: string;
+    relationship: string | null;
+    email: string | null;
+    address: string | null;
+    phones: Array<{ id: number; number: string; label: string; isPrimary: boolean }>;
+  } | null;
+  medical: {
+    medicalSelections: string[] | null;
+    medicalNotes: string | null;
+    dietarySelections: string[] | null;
+    dietaryNotes: string | null;
+  } | null;
+  disclosure: {
+    checkType: string;
+    checkLevel: string;
+    certificateNumber: string | null;
+    issueDate: string | null;
+    onUpdateService: boolean;
+    updateServiceConsentName: string | null;
+    convictionDetails: string | null;
+    notes: string | null;
+  } | null;
+  /** Only present when the viewer has view_payroll or sysadmin. */
+  payroll: {
+    niNumber: string | null;
+    bankName: string | null;
+    accountHolder: string | null;
+    sortCode: string | null;
+    accountNumber: string | null;
+  } | null;
 }
 
 interface Page<T> {
@@ -87,6 +126,14 @@ const STATUS_BADGE_CLASSES: Record<SubmissionStatus, string> = {
   approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
   rejected: "bg-red-100 text-red-800 border-red-200",
 };
+
+/** Resolve a stored fileUrl to a browseable href (matches EmployeeQualificationsTab). */
+function resolveFileHref(fileUrl: string): string {
+  if (fileUrl.startsWith("/objects/")) {
+    return `/api/storage${fileUrl}`;
+  }
+  return fileUrl;
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -575,7 +622,7 @@ export default function OnboardingQueue() {
 
       {/* ── Detail Dialog ────────────────────────────────────────────────── */}
       <Dialog open={!!detailSub} onOpenChange={(open) => { if (!open) setDetailSub(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {detailSub?.firstName} {detailSub?.lastName}
@@ -637,7 +684,7 @@ export default function OnboardingQueue() {
                       {q.notes && <p className="text-muted-foreground text-xs">{q.notes}</p>}
                       {q.fileUrl && (
                         <a
-                          href={`/api/storage/objects/${encodeURIComponent(q.fileUrl)}`}
+                          href={resolveFileHref(q.fileUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline"
@@ -647,6 +694,188 @@ export default function OnboardingQueue() {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {detailSub.address && (
+                <div className="space-y-2">
+                  <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                    Address
+                  </p>
+                  <div className="border border-border/50 rounded p-2.5 bg-muted/20">
+                    <p>
+                      {[
+                        detailSub.address.line1,
+                        detailSub.address.line2,
+                        detailSub.address.city,
+                        detailSub.address.county,
+                        detailSub.address.postcode,
+                        detailSub.address.country,
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "—"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {detailSub.nextOfKin && (
+                <div className="space-y-2">
+                  <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                    Next of Kin
+                  </p>
+                  <div className="border border-border/50 rounded p-2.5 bg-muted/20 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <span className="text-muted-foreground">Name</span>
+                    <span>{detailSub.nextOfKin.name}</span>
+                    {detailSub.nextOfKin.relationship && (
+                      <>
+                        <span className="text-muted-foreground">Relationship</span>
+                        <span>{detailSub.nextOfKin.relationship}</span>
+                      </>
+                    )}
+                    {detailSub.nextOfKin.email && (
+                      <>
+                        <span className="text-muted-foreground">Email</span>
+                        <span className="break-all">{detailSub.nextOfKin.email}</span>
+                      </>
+                    )}
+                    {detailSub.nextOfKin.address && (
+                      <>
+                        <span className="text-muted-foreground">Address</span>
+                        <span>{detailSub.nextOfKin.address}</span>
+                      </>
+                    )}
+                    {detailSub.nextOfKin.phones.length > 0 && (
+                      <>
+                        <span className="text-muted-foreground">Phone</span>
+                        <span>
+                          {detailSub.nextOfKin.phones
+                            .map((p) => `${p.number} (${p.label}${p.isPrimary ? ", primary" : ""})`)
+                            .join(", ")}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detailSub.medical &&
+                (detailSub.medical.medicalSelections?.length ||
+                  detailSub.medical.medicalNotes ||
+                  detailSub.medical.dietarySelections?.length ||
+                  detailSub.medical.dietaryNotes) && (
+                  <div className="space-y-2">
+                    <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                      Medical & Dietary
+                    </p>
+                    <div className="border border-border/50 rounded p-2.5 bg-muted/20 space-y-1.5">
+                      {(detailSub.medical.medicalSelections?.length || detailSub.medical.medicalNotes) && (
+                        <p>
+                          <span className="text-muted-foreground">Medical: </span>
+                          {[
+                            ...(detailSub.medical.medicalSelections ?? []),
+                            detailSub.medical.medicalNotes,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
+                      {(detailSub.medical.dietarySelections?.length || detailSub.medical.dietaryNotes) && (
+                        <p>
+                          <span className="text-muted-foreground">Dietary: </span>
+                          {[
+                            ...(detailSub.medical.dietarySelections ?? []),
+                            detailSub.medical.dietaryNotes,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {detailSub.disclosure && (
+                <div className="space-y-2">
+                  <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                    Disclosure
+                  </p>
+                  <div className="border border-border/50 rounded p-2.5 bg-muted/20 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <span className="text-muted-foreground">Check</span>
+                    <span className="uppercase">
+                      {detailSub.disclosure.checkType} · {detailSub.disclosure.checkLevel}
+                    </span>
+                    {detailSub.disclosure.certificateNumber && (
+                      <>
+                        <span className="text-muted-foreground">Certificate No.</span>
+                        <span>{detailSub.disclosure.certificateNumber}</span>
+                      </>
+                    )}
+                    {detailSub.disclosure.issueDate && (
+                      <>
+                        <span className="text-muted-foreground">Issue Date</span>
+                        <span>{detailSub.disclosure.issueDate}</span>
+                      </>
+                    )}
+                    <span className="text-muted-foreground">Update Service</span>
+                    <span>
+                      {detailSub.disclosure.onUpdateService
+                        ? `Consented${detailSub.disclosure.updateServiceConsentName ? ` — ${detailSub.disclosure.updateServiceConsentName}` : ""}`
+                        : "Not enrolled"}
+                    </span>
+                    {detailSub.disclosure.convictionDetails && (
+                      <>
+                        <span className="text-muted-foreground">Conviction Details</span>
+                        <span>{detailSub.disclosure.convictionDetails}</span>
+                      </>
+                    )}
+                    {detailSub.disclosure.notes && (
+                      <>
+                        <span className="text-muted-foreground">Notes</span>
+                        <span>{detailSub.disclosure.notes}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {detailSub.payroll && (
+                <div className="space-y-2">
+                  <p className="font-medium text-xs uppercase tracking-wide text-muted-foreground">
+                    Payroll / Bank Details
+                  </p>
+                  <div className="border border-border/50 rounded p-2.5 bg-muted/20 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {detailSub.payroll.niNumber && (
+                      <>
+                        <span className="text-muted-foreground">NI Number</span>
+                        <span>{detailSub.payroll.niNumber}</span>
+                      </>
+                    )}
+                    {detailSub.payroll.bankName && (
+                      <>
+                        <span className="text-muted-foreground">Bank</span>
+                        <span>{detailSub.payroll.bankName}</span>
+                      </>
+                    )}
+                    {detailSub.payroll.accountHolder && (
+                      <>
+                        <span className="text-muted-foreground">Account Holder</span>
+                        <span>{detailSub.payroll.accountHolder}</span>
+                      </>
+                    )}
+                    {detailSub.payroll.sortCode && (
+                      <>
+                        <span className="text-muted-foreground">Sort Code</span>
+                        <span>{detailSub.payroll.sortCode}</span>
+                      </>
+                    )}
+                    {detailSub.payroll.accountNumber && (
+                      <>
+                        <span className="text-muted-foreground">Account Number</span>
+                        <span>{detailSub.payroll.accountNumber}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

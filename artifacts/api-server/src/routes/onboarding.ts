@@ -879,7 +879,60 @@ router.get(
       )
       .where(eq(onboardingSubmissionQualificationsTable.submissionId, params.data.id));
 
-    res.json({ ...submission, qualifications });
+    const [address] = await db
+      .select()
+      .from(onboardingAddressesTable)
+      .where(eq(onboardingAddressesTable.submissionId, params.data.id))
+      .limit(1);
+
+    const [nextOfKin] = await db
+      .select()
+      .from(onboardingNextOfKinTable)
+      .where(eq(onboardingNextOfKinTable.submissionId, params.data.id))
+      .limit(1);
+
+    const nextOfKinPhones = nextOfKin
+      ? await db
+          .select()
+          .from(onboardingNextOfKinPhonesTable)
+          .where(eq(onboardingNextOfKinPhonesTable.kinId, nextOfKin.id))
+      : [];
+
+    const [medical] = await db
+      .select()
+      .from(onboardingMedicalTable)
+      .where(eq(onboardingMedicalTable.submissionId, params.data.id))
+      .limit(1);
+
+    const [disclosure] = await db
+      .select()
+      .from(onboardingDisclosuresTable)
+      .where(eq(onboardingDisclosuresTable.submissionId, params.data.id))
+      .limit(1);
+
+    // Bank/payroll details are only shown to reviewers who could already see
+    // the same data on a live employee's Payroll tab — hr:access alone does
+    // not grant that elsewhere in the app, so it shouldn't here either.
+    const canViewPayroll =
+      req.effectivePermissions?.has("view_payroll") ||
+      req.effectivePermissions?.has("sysadmin");
+    const [payroll] = canViewPayroll
+      ? await db
+          .select()
+          .from(onboardingPayrollTable)
+          .where(eq(onboardingPayrollTable.submissionId, params.data.id))
+          .limit(1)
+      : [];
+
+    res.json({
+      ...submission,
+      qualifications,
+      address: address ?? null,
+      nextOfKin: nextOfKin ? { ...nextOfKin, phones: nextOfKinPhones } : null,
+      medical: medical ?? null,
+      disclosure: disclosure ?? null,
+      payroll: payroll ?? null,
+    });
   },
 );
 

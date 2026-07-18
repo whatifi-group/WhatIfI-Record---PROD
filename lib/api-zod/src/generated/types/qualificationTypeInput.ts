@@ -5,7 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { QualificationTypeInputValidityUnit } from './qualificationTypeInputValidityUnit';
 
 export interface QualificationTypeInput {
   /** @minLength 1 */
@@ -13,6 +12,7 @@ export interface QualificationTypeInput {
   awardingBody?: string;
   /** @minimum 1 */
   validityValue?: number;
-  validityUnit?: QualificationTypeInputValidityUnit;
+  /** Qualification duration unit value — managed via List of Values */
+  validityUnit?: string;
   isActive?: boolean;
 }

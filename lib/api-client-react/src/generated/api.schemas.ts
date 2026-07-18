@@ -57,14 +57,10 @@ export const EmployeeStatus = {
  */
 export type LeaveType = string;
 
-export type LeaveStatus = typeof LeaveStatus[keyof typeof LeaveStatus];
-
-
-export const LeaveStatus = {
-  pending: 'pending',
-  approved: 'approved',
-  rejected: 'rejected',
-} as const;
+/**
+ * Leave request status value — managed via List of Values
+ */
+export type LeaveStatus = string;
 
 export interface Department {
   id: number;
@@ -294,14 +290,10 @@ export const Permission = {
   view_employee_directory: 'view_employee_directory',
 } as const;
 
-export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
-
-
-export const UserStatus = {
-  active: 'active',
-  inactive: 'inactive',
-  suspended: 'suspended',
-} as const;
+/**
+ * User account status value — managed via List of Values
+ */
+export type UserStatus = string;
 
 export interface Role {
   id: number;
@@ -386,6 +378,33 @@ export interface SysadminSummary {
   suspendedUsers?: number;
   totalRoles: number;
   recentUsers: User[];
+}
+
+export interface AuditLogEntry {
+  id: number;
+  /** When the action occurred, in GMT/UTC. */
+  timestamp: string;
+  /** The system module the request belongs to, e.g. "sysadmin", "hr". */
+  module: string;
+  /** Human-readable action, e.g. "Created role", "Listed employees". */
+  action: string;
+  /** @nullable */
+  userId: number | null;
+  /**
+     * Snapshot of the acting user's name at the time of the action.
+     * @nullable
+     */
+  userName: string | null;
+  method: string;
+  path: string;
+  statusCode: number;
+  /** @nullable */
+  ipAddress?: string | null;
+}
+
+export interface AuditLogPage {
+  items: AuditLogEntry[];
+  total: number;
 }
 
 export interface EmployeeAddress {
@@ -661,22 +680,14 @@ export interface QualificationTypeImportResult {
   errors: QualificationTypeImportResultErrorsItem[];
 }
 
-export type QualificationTypeInputValidityUnit = typeof QualificationTypeInputValidityUnit[keyof typeof QualificationTypeInputValidityUnit];
-
-
-export const QualificationTypeInputValidityUnit = {
-  days: 'days',
-  months: 'months',
-  years: 'years',
-} as const;
-
 export interface QualificationTypeInput {
   /** @minLength 1 */
   name: string;
   awardingBody?: string;
   /** @minimum 1 */
   validityValue?: number;
-  validityUnit?: QualificationTypeInputValidityUnit;
+  /** Qualification duration unit value — managed via List of Values */
+  validityUnit?: string;
   isActive?: boolean;
 }
 
@@ -987,25 +998,6 @@ export interface ExpiringQualification {
   daysUntilExpiry: number;
 }
 
-export type EmployeeDisclosureCheckType = typeof EmployeeDisclosureCheckType[keyof typeof EmployeeDisclosureCheckType];
-
-
-export const EmployeeDisclosureCheckType = {
-  dbs: 'dbs',
-  pvg: 'pvg',
-  access_ni: 'access_ni',
-} as const;
-
-export type EmployeeDisclosureCheckLevel = typeof EmployeeDisclosureCheckLevel[keyof typeof EmployeeDisclosureCheckLevel];
-
-
-export const EmployeeDisclosureCheckLevel = {
-  basic: 'basic',
-  standard: 'standard',
-  enhanced: 'enhanced',
-  enhanced_barred: 'enhanced_barred',
-} as const;
-
 export type DisclosureUpdateCheckResult = typeof DisclosureUpdateCheckResult[keyof typeof DisclosureUpdateCheckResult];
 
 
@@ -1026,19 +1018,11 @@ export interface DisclosureUpdateCheck {
   createdAt: string;
 }
 
-export type DisclosureReviewRecommendation = typeof DisclosureReviewRecommendation[keyof typeof DisclosureReviewRecommendation];
-
-
-export const DisclosureReviewRecommendation = {
-  approved: 'approved',
-  not_approved: 'not_approved',
-  further_review: 'further_review',
-} as const;
-
 export interface DisclosureReview {
   id: number;
   disclosureId: number;
-  recommendation: DisclosureReviewRecommendation;
+  /** Disclosure review recommendation value — managed via List of Values */
+  recommendation: string;
   /** @nullable */
   reviewerNotes?: string | null;
   reviewDate: string;
@@ -1054,8 +1038,10 @@ export interface DisclosureReview {
 export interface EmployeeDisclosure {
   id: number;
   employeeId: number;
-  checkType: EmployeeDisclosureCheckType;
-  checkLevel: EmployeeDisclosureCheckLevel;
+  /** Disclosure check type value — managed via List of Values */
+  checkType: string;
+  /** Disclosure check level value — managed via List of Values (per check type) */
+  checkLevel: string;
   /** @nullable */
   certificateNumber?: string | null;
   issueDate: string;
@@ -1070,28 +1056,11 @@ export interface EmployeeDisclosure {
   review?: DisclosureReview | null;
 }
 
-export type EmployeeDisclosureInputCheckType = typeof EmployeeDisclosureInputCheckType[keyof typeof EmployeeDisclosureInputCheckType];
-
-
-export const EmployeeDisclosureInputCheckType = {
-  dbs: 'dbs',
-  pvg: 'pvg',
-  access_ni: 'access_ni',
-} as const;
-
-export type EmployeeDisclosureInputCheckLevel = typeof EmployeeDisclosureInputCheckLevel[keyof typeof EmployeeDisclosureInputCheckLevel];
-
-
-export const EmployeeDisclosureInputCheckLevel = {
-  basic: 'basic',
-  standard: 'standard',
-  enhanced: 'enhanced',
-  enhanced_barred: 'enhanced_barred',
-} as const;
-
 export interface EmployeeDisclosureInput {
-  checkType: EmployeeDisclosureInputCheckType;
-  checkLevel: EmployeeDisclosureInputCheckLevel;
+  /** Disclosure check type value — managed via List of Values */
+  checkType: string;
+  /** Disclosure check level value — managed via List of Values (per check type) */
+  checkLevel: string;
   certificateNumber?: string;
   issueDate: string;
   onUpdateService: boolean;
@@ -1099,28 +1068,11 @@ export interface EmployeeDisclosureInput {
   notes?: string;
 }
 
-export type EmployeeDisclosureUpdateCheckType = typeof EmployeeDisclosureUpdateCheckType[keyof typeof EmployeeDisclosureUpdateCheckType];
-
-
-export const EmployeeDisclosureUpdateCheckType = {
-  dbs: 'dbs',
-  pvg: 'pvg',
-  access_ni: 'access_ni',
-} as const;
-
-export type EmployeeDisclosureUpdateCheckLevel = typeof EmployeeDisclosureUpdateCheckLevel[keyof typeof EmployeeDisclosureUpdateCheckLevel];
-
-
-export const EmployeeDisclosureUpdateCheckLevel = {
-  basic: 'basic',
-  standard: 'standard',
-  enhanced: 'enhanced',
-  enhanced_barred: 'enhanced_barred',
-} as const;
-
 export interface EmployeeDisclosureUpdate {
-  checkType?: EmployeeDisclosureUpdateCheckType;
-  checkLevel?: EmployeeDisclosureUpdateCheckLevel;
+  /** Disclosure check type value — managed via List of Values */
+  checkType?: string;
+  /** Disclosure check level value — managed via List of Values (per check type) */
+  checkLevel?: string;
   certificateNumber?: string;
   issueDate?: string;
   onUpdateService?: boolean;
@@ -1144,36 +1096,20 @@ export interface DisclosureUpdateCheckInput {
   notes?: string;
 }
 
-export type PendingDisclosureReviewCheckType = typeof PendingDisclosureReviewCheckType[keyof typeof PendingDisclosureReviewCheckType];
-
-
-export const PendingDisclosureReviewCheckType = {
-  dbs: 'dbs',
-  pvg: 'pvg',
-  access_ni: 'access_ni',
-} as const;
-
 export interface PendingDisclosureReview {
   disclosureId: number;
   employeeId: number;
   employeeFirstName: string;
   employeeLastName: string;
-  checkType: PendingDisclosureReviewCheckType;
+  /** Disclosure check type value — managed via List of Values */
+  checkType: string;
   /** Number of days since the disclosure was created without a signed-off review */
   daysPending: number;
 }
 
-export type DisclosureReviewInputRecommendation = typeof DisclosureReviewInputRecommendation[keyof typeof DisclosureReviewInputRecommendation];
-
-
-export const DisclosureReviewInputRecommendation = {
-  approved: 'approved',
-  not_approved: 'not_approved',
-  further_review: 'further_review',
-} as const;
-
 export interface DisclosureReviewInput {
-  recommendation: DisclosureReviewInputRecommendation;
+  /** Disclosure review recommendation value — managed via List of Values */
+  recommendation: string;
   reviewerNotes?: string;
   reviewDate: string;
 }
@@ -1295,6 +1231,28 @@ export type ListUsersParams = {
 search?: string;
 status?: UserStatus;
 roleId?: number;
+};
+
+export type ListAuditLogParams = {
+module?: string;
+userId?: number;
+/**
+ * ISO timestamp — only entries at or after this time
+ */
+from?: string;
+/**
+ * ISO timestamp — only entries at or before this time
+ */
+to?: string;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
+limit?: number;
+/**
+ * @minimum 0
+ */
+offset?: number;
 };
 
 export type SearchParams = {

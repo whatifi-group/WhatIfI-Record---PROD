@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type LeaveStatus = typeof LeaveStatus[keyof typeof LeaveStatus];
-
-
-export const LeaveStatus = {
-  pending: 'pending',
-  approved: 'approved',
-  rejected: 'rejected',
-} as const;
+/**
+ * Leave request status value — managed via List of Values
+ */
+export type LeaveStatus = string;

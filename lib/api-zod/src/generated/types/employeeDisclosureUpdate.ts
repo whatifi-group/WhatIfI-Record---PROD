@@ -5,12 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { EmployeeDisclosureUpdateCheckLevel } from './employeeDisclosureUpdateCheckLevel';
-import type { EmployeeDisclosureUpdateCheckType } from './employeeDisclosureUpdateCheckType';
 
 export interface EmployeeDisclosureUpdate {
-  checkType?: EmployeeDisclosureUpdateCheckType;
-  checkLevel?: EmployeeDisclosureUpdateCheckLevel;
+  /** Disclosure check type value — managed via List of Values */
+  checkType?: string;
+  /** Disclosure check level value — managed via List of Values (per check type) */
+  checkLevel?: string;
   certificateNumber?: string;
   issueDate?: Date;
   onUpdateService?: boolean;

@@ -1,5 +1,6 @@
 import express, { type IRouter } from "express";
 import supertest from "supertest";
+import { randomUUID } from "node:crypto";
 import {
   db,
   employeesTable,
@@ -31,11 +32,9 @@ export function buildApp(router: IRouter, userId?: number) {
   return supertest(app);
 }
 
-let counter = 0;
-
 /** Insert a minimal employee into the DB and return its id. */
 export async function createTestEmployee(): Promise<number> {
-  const unique = `${Date.now()}-${++counter}`;
+  const unique = randomUUID();
   const [emp] = await db
     .insert(employeesTable)
     .values({
@@ -57,7 +56,7 @@ export async function cleanupEmployee(id: number): Promise<void> {
 
 /** Insert a qualification type with no expiry and return its id. */
 export async function createTestQualType(name?: string): Promise<number> {
-  const unique = `${Date.now()}-${++counter}`;
+  const unique = randomUUID();
   const [qt] = await db
     .insert(qualificationTypesTable)
     .values({ name: name ?? `Test Qual Type ${unique}` })
@@ -75,11 +74,16 @@ export async function cleanupQualType(id: number): Promise<void> {
 /**
  * Insert an employee qualification directly with an explicit expiryDate.
  * Bypasses the API so tests can control dates precisely.
+ *
+ * verificationStatus defaults to the schema default ("pending") unless
+ * given explicitly — pass "verified" for tests against routes that only
+ * consider verified qualifications (e.g. GET /qualifications/expiring).
  */
 export async function createTestQualification(
   employeeId: number,
   qualTypeId: number,
   expiryDate: string | null,
+  verificationStatus?: "pending" | "verified" | "rejected",
 ): Promise<number> {
   const [q] = await db
     .insert(employeeQualificationsTable)
@@ -88,6 +92,7 @@ export async function createTestQualification(
       qualificationTypeId: qualTypeId,
       dateAchieved: "2020-01-01",
       expiryDate,
+      ...(verificationStatus ? { verificationStatus } : {}),
     })
     .returning({ id: employeeQualificationsTable.id });
   return q.id;
@@ -101,7 +106,7 @@ export async function createTestRole(
   permissions: string[],
   name?: string,
 ): Promise<number> {
-  const unique = `${Date.now()}-${++counter}`;
+  const unique = randomUUID();
   const [role] = await db
     .insert(rolesTable)
     .values({
@@ -123,7 +128,7 @@ export async function cleanupRole(id: number): Promise<void> {
  * the role.
  */
 export async function createTestUser(roleId: number): Promise<number> {
-  const unique = `${Date.now()}-${++counter}`;
+  const unique = randomUUID();
   const [user] = await db
     .insert(usersTable)
     .values({

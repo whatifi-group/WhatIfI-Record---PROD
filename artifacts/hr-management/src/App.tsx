@@ -17,6 +17,7 @@ import RolesList from '@/pages/sysadmin/RolesList';
 import ListOfValues from '@/pages/sysadmin/ListOfValues';
 import LovCategoryDetail from '@/pages/sysadmin/LovCategoryDetail';
 import QualificationTypes from '@/pages/sysadmin/QualificationTypes';
+import NotificationSettings from '@/pages/sysadmin/NotificationSettings';
 import LeaveRequestsList from '@/pages/LeaveRequestsList';
 import PastEmployeesList from '@/pages/PastEmployeesList';
 import WorkRecordsList from '@/pages/WorkRecordsList';
@@ -152,6 +153,9 @@ function MainRoutes() {
         </Route>
         <Route path="/sysadmin/qualification-types">
           {() => <AdminRoute component={QualificationTypes} />}
+        </Route>
+        <Route path="/sysadmin/notifications">
+          {() => <AdminRoute component={NotificationSettings} />}
         </Route>
         <Route path="/sysadmin/lov/:category">
           {() => <AdminRoute component={LovCategoryDetail} />}

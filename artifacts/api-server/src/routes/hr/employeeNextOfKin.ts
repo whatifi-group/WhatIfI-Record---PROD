@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, eq } from "drizzle-orm";
 import { db, employeeNextOfKinTable, employeeNextOfKinPhonesTable } from "@workspace/db";
 import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
 
 const PhoneLabelEnum = z.enum(["Mobile", "Home", "Work", "Other"]);
 
@@ -12,6 +13,8 @@ const KinPhoneInput = z.object({
 });
 
 const router: IRouter = Router({ mergeParams: true });
+
+const EDIT = ["edit_employees", "sysadmin"];
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const KinIdParam = z.object({
@@ -48,7 +51,7 @@ async function getKinPhones(kinId: number) {
     .orderBy(employeeNextOfKinPhonesTable.createdAt);
 }
 
-router.get("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
+router.get("/employees/:id/next-of-kin", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -70,7 +73,7 @@ router.get("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
   res.json(withPhones);
 });
 
-router.post("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
+router.post("/employees/:id/next-of-kin", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -114,6 +117,7 @@ router.post("/employees/:id/next-of-kin", async (req, res): Promise<void> => {
 
 router.patch(
   "/employees/:id/next-of-kin/:kinId",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = KinIdParam.safeParse(req.params);
     if (!params.success) {
@@ -146,6 +150,7 @@ router.patch(
 
 router.delete(
   "/employees/:id/next-of-kin/:kinId",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = KinIdParam.safeParse(req.params);
     if (!params.success) {

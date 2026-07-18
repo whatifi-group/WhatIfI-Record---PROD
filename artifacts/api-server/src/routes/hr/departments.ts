@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
 import { db, departmentsTable, employeesTable } from "@workspace/db";
+import { requirePermission } from "../../middlewares/requirePermission";
 import {
   CreateDepartmentBody,
   UpdateDepartmentBody,
@@ -12,6 +13,9 @@ import {
   CreateDepartmentResponse,
   UpdateDepartmentResponse,
 } from "@workspace/api-zod";
+
+const VIEW = ["view_departments", "edit_departments", "sysadmin"];
+const EDIT = ["edit_departments", "sysadmin"];
 
 const router: IRouter = Router();
 
@@ -35,13 +39,13 @@ async function withEmployeeCount() {
   return rows;
 }
 
-router.get("/departments", async (req, res): Promise<void> => {
+router.get("/departments", requirePermission(VIEW), async (req, res): Promise<void> => {
   req.log.info("Listing departments");
   const rows = await withEmployeeCount();
   res.json(ListDepartmentsResponse.parse(rows));
 });
 
-router.post("/departments", async (req, res): Promise<void> => {
+router.post("/departments", requirePermission(EDIT), async (req, res): Promise<void> => {
   const parsed = CreateDepartmentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -58,7 +62,7 @@ router.post("/departments", async (req, res): Promise<void> => {
   );
 });
 
-router.get("/departments/:id", async (req, res): Promise<void> => {
+router.get("/departments/:id", requirePermission(VIEW), async (req, res): Promise<void> => {
   const params = GetDepartmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -76,7 +80,7 @@ router.get("/departments/:id", async (req, res): Promise<void> => {
   res.json(GetDepartmentResponse.parse(department));
 });
 
-router.patch("/departments/:id", async (req, res): Promise<void> => {
+router.patch("/departments/:id", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = UpdateDepartmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -108,10 +112,22 @@ router.patch("/departments/:id", async (req, res): Promise<void> => {
   res.json(UpdateDepartmentResponse.parse({ ...updated, employeeCount }));
 });
 
-router.delete("/departments/:id", async (req, res): Promise<void> => {
+router.delete("/departments/:id", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = DeleteDepartmentParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [{ employeeCount }] = await db
+    .select({ employeeCount: sql<number>`count(*)::int` })
+    .from(employeesTable)
+    .where(eq(employeesTable.departmentId, params.data.id));
+
+  if (employeeCount > 0) {
+    res.status(409).json({
+      error: `Cannot delete: ${employeeCount} employee(s) are still assigned to this department.`,
+    });
     return;
   }
 

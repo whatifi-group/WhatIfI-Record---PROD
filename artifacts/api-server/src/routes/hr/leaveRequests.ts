@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq, sql, type SQL } from "drizzle-orm";
 import { db, employeesTable, leaveRequestsTable } from "@workspace/db";
+import { requirePermission } from "../../middlewares/requirePermission";
 import {
   CreateLeaveRequestBody,
   UpdateLeaveRequestBody,
@@ -15,6 +16,9 @@ import {
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+const VIEW = ["view_leave", "manage_leave", "sysadmin"];
+const MANAGE = ["manage_leave", "sysadmin"];
 
 function toDateString(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -40,7 +44,7 @@ function leaveRequestSelection() {
     );
 }
 
-router.get("/leave-requests", async (req, res): Promise<void> => {
+router.get("/leave-requests", requirePermission(VIEW), async (req, res): Promise<void> => {
   const query = ListLeaveRequestsQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -64,10 +68,15 @@ router.get("/leave-requests", async (req, res): Promise<void> => {
   res.json(ListLeaveRequestsResponse.parse(rows));
 });
 
-router.post("/leave-requests", async (req, res): Promise<void> => {
+router.post("/leave-requests", requirePermission(MANAGE), async (req, res): Promise<void> => {
   const parsed = CreateLeaveRequestBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  if (parsed.data.endDate.getTime() < parsed.data.startDate.getTime()) {
+    res.status(400).json({ error: "endDate cannot be before startDate" });
     return;
   }
 
@@ -97,7 +106,7 @@ router.post("/leave-requests", async (req, res): Promise<void> => {
   res.status(201).json(CreateLeaveRequestResponse.parse(row));
 });
 
-router.get("/leave-requests/:id", async (req, res): Promise<void> => {
+router.get("/leave-requests/:id", requirePermission(VIEW), async (req, res): Promise<void> => {
   const params = GetLeaveRequestParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -116,7 +125,7 @@ router.get("/leave-requests/:id", async (req, res): Promise<void> => {
   res.json(GetLeaveRequestResponse.parse(row));
 });
 
-router.patch("/leave-requests/:id", async (req, res): Promise<void> => {
+router.patch("/leave-requests/:id", requirePermission(MANAGE), async (req, res): Promise<void> => {
   const params = UpdateLeaveRequestParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -130,6 +139,11 @@ router.patch("/leave-requests/:id", async (req, res): Promise<void> => {
   }
 
   const { startDate, endDate, ...rest } = parsed.data;
+
+  if (startDate !== undefined && endDate !== undefined && endDate.getTime() < startDate.getTime()) {
+    res.status(400).json({ error: "endDate cannot be before startDate" });
+    return;
+  }
 
   const [updated] = await db
     .update(leaveRequestsTable)
@@ -153,7 +167,7 @@ router.patch("/leave-requests/:id", async (req, res): Promise<void> => {
   res.json(UpdateLeaveRequestResponse.parse(row));
 });
 
-router.delete("/leave-requests/:id", async (req, res): Promise<void> => {
+router.delete("/leave-requests/:id", requirePermission(MANAGE), async (req, res): Promise<void> => {
   const params = DeleteLeaveRequestParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

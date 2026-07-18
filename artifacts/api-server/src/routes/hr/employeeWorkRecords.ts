@@ -2,8 +2,10 @@ import { Router, type IRouter } from "express";
 import { and, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
 import { db, employeeWorkRecordsTable, employeesTable, departmentsTable } from "@workspace/db";
 import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
 
 const router: IRouter = Router({ mergeParams: true });
+const EDIT = ["hr:access", "sysadmin"];
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const RecordIdParam = z.object({
@@ -61,7 +63,7 @@ const ListWorkRecordsQuery = z.object({
  * Returns work records joined with employee context in a single query,
  * avoiding the N-per-employee fan-out pattern on the client.
  */
-router.get("/work-records", async (req, res): Promise<void> => {
+router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<void> => {
   const parsed = ListWorkRecordsQuery.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -169,6 +171,7 @@ router.get("/work-records", async (req, res): Promise<void> => {
 
 router.get(
   "/employees/:id/work-records",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = IdParam.safeParse(req.params);
     if (!params.success) {
@@ -184,6 +187,7 @@ router.get(
 
 router.post(
   "/employees/:id/work-records",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = IdParam.safeParse(req.params);
     if (!params.success) {
@@ -216,6 +220,7 @@ router.post(
 
 router.patch(
   "/employees/:id/work-records/:recordId",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = RecordIdParam.safeParse(req.params);
     if (!params.success) {
@@ -257,6 +262,7 @@ router.patch(
 
 router.delete(
   "/employees/:id/work-records/:recordId",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = RecordIdParam.safeParse(req.params);
     if (!params.success) {

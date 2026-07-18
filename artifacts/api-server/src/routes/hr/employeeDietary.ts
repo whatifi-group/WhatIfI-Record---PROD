@@ -6,6 +6,7 @@ import {
   employeeDietaryNotesTable,
 } from "@workspace/db";
 import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
 
 const router: IRouter = Router({ mergeParams: true });
 
@@ -16,7 +17,7 @@ const DietaryPutBody = z.object({
   notes: z.string().optional().nullable(),
 });
 
-router.get("/employees/:id/dietary", async (req, res): Promise<void> => {
+router.get("/employees/:id/dietary", requirePermission(["hr:access", "sysadmin"]), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -39,7 +40,7 @@ router.get("/employees/:id/dietary", async (req, res): Promise<void> => {
   });
 });
 
-router.put("/employees/:id/dietary", async (req, res): Promise<void> => {
+router.put("/employees/:id/dietary", requirePermission(["hr:access", "sysadmin"]), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

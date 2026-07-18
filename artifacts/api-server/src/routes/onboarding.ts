@@ -57,6 +57,11 @@ import { requirePermission } from "../middlewares/requirePermission";
 import { requireOnboardingSession } from "../middlewares/requireOnboardingSession";
 import { signOnboardingToken } from "../lib/onboardingJwt";
 import { hashPassword } from "../lib/password";
+import {
+  sendOnboardingSubmittedEmail,
+  sendOnboardingApprovedEmail,
+  sendOnboardingRejectedEmail,
+} from "../lib/email";
 import crypto from "node:crypto";
 import { objectStorageService } from "./storage";
 import {
@@ -781,6 +786,8 @@ router.post(
       return submission;
     });
 
+    await sendOnboardingSubmittedEmail(`${result.firstName} ${result.lastName}`);
+
     res.status(201).json({ id: result.id, status: result.onboardingStatus });
   },
 );
@@ -978,7 +985,7 @@ router.post(
       req.socket.remoteAddress ??
       null;
 
-    let result: { employeeId: number } | null;
+    let result: { employeeId: number; email: string; name: string } | null;
     try {
     result = await db.transaction(async (tx) => {
       const [submission] = await tx
@@ -1063,7 +1070,11 @@ router.post(
         .set({ employeeId: employee.id, updatedAt: new Date() })
         .where(eq(onboardingSubmissionsTable.id, submission.id));
 
-      return { employeeId: employee.id };
+      return {
+        employeeId: employee.id,
+        email: submission.email,
+        name: `${submission.firstName} ${submission.lastName}`,
+      };
     });
     } catch (txErr) {
       console.error("[approve] transaction failed:", txErr);
@@ -1087,6 +1098,8 @@ router.post(
       }
       return;
     }
+
+    await sendOnboardingApprovedEmail(result.email, result.name, tempPassword);
 
     res.status(201).json({
       employeeId: result.employeeId,
@@ -1171,7 +1184,11 @@ router.post(
         .set({ employeeId: employee.id, updatedAt: new Date() })
         .where(eq(onboardingSubmissionsTable.id, submission.id));
 
-      return { employeeId: employee.id };
+      return {
+        employeeId: employee.id,
+        email: submission.email,
+        name: `${submission.firstName} ${submission.lastName}`,
+      };
     });
 
     if (result === null) {
@@ -1190,6 +1207,8 @@ router.post(
       }
       return;
     }
+
+    await sendOnboardingRejectedEmail(result.email, result.name);
 
     res.json({ employeeId: result.employeeId });
   },

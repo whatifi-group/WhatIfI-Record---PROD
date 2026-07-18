@@ -15,6 +15,13 @@
       "when": 1784388809903,
       "tag": "0001_sharp_black_crow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784391619536,
+      "tag": "0002_youthful_madame_masque",
+      "breakpoints": true
     }
   ]
 }

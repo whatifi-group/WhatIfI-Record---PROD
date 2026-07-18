@@ -22,7 +22,10 @@ async function buildAll() {
   await cp(migrationsSource, migrationsDest, { recursive: true });
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      path.resolve(artifactDir, "src/scripts/sendExpiryReminders.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",

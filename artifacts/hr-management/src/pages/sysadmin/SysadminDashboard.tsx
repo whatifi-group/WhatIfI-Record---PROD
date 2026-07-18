@@ -7,6 +7,7 @@ import {
   GraduationCap,
   ShieldCheck,
   ChevronRight,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,6 +54,13 @@ const MODULES: SysadminModule[] = [
     href: "/sysadmin/qualification-types",
     icon: GraduationCap,
     accentClass: "bg-chart-3/10 text-chart-3",
+  },
+  {
+    title: "Notifications",
+    description: "Edit recipient addresses and email copy for every transactional email the app sends.",
+    href: "/sysadmin/notifications",
+    icon: Mail,
+    accentClass: "bg-primary/10 text-primary",
   },
 ];
 

@@ -74,6 +74,9 @@ export default function LoginPage() {
               <h1 className="text-2xl font-display font-bold text-foreground text-center tracking-tight">
                 WhatIfI Record
               </h1>
+              <p className="text-muted-foreground text-xs mt-1 text-center">
+                WhatIfI Group Management Information System
+              </p>
               <p className="text-muted-foreground text-sm mt-2 text-center">
                 Sign in to continue
               </p>

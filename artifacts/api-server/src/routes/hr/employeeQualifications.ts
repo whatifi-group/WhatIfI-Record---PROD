@@ -223,7 +223,7 @@ router.get(
 // Returns all qualification records with an expiry date that is expired or expiring soon.
 // withinDays=0  → only already expired (expiryDate < today)
 // withinDays=N  → expired OR expiring within N days (expiryDate <= today + N days)
-router.get("/qualifications/expiring", async (req, res): Promise<void> => {
+router.get("/qualifications/expiring", requirePermission(["hr:access", "sysadmin"]), async (req, res): Promise<void> => {
   const rawDays = parseInt(String(req.query.withinDays ?? ""), 10);
   const withinDays = Math.max(0, isNaN(rawDays) ? 30 : rawDays);
   const today = new Date().toISOString().split("T")[0];
@@ -272,6 +272,7 @@ router.get("/qualifications/expiring", async (req, res): Promise<void> => {
 // GET /employees/:id/qualifications
 router.get(
   "/employees/:id/qualifications",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = IdParam.safeParse(req.params);
     if (!params.success) {
@@ -313,6 +314,7 @@ router.get(
 // POST /employees/:id/qualifications
 router.post(
   "/employees/:id/qualifications",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = IdParam.safeParse(req.params);
     if (!params.success) {
@@ -397,6 +399,7 @@ router.post(
 // PATCH /employees/:id/qualifications/:qualId
 router.patch(
   "/employees/:id/qualifications/:qualId",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -472,6 +475,7 @@ router.patch(
 // DELETE /employees/:id/qualifications/:qualId
 router.delete(
   "/employees/:id/qualifications/:qualId",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -526,6 +530,7 @@ router.delete(
 // POST /employees/:id/qualifications/:qualId/revalidate
 router.post(
   "/employees/:id/qualifications/:qualId/revalidate",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -643,6 +648,7 @@ async function requireQualOwnership(
 // GET /employees/:id/qualifications/:qualId/revalidations
 router.get(
   "/employees/:id/qualifications/:qualId/revalidations",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -666,6 +672,7 @@ router.get(
 // GET /employees/:id/qualifications/:qualId/certificates
 router.get(
   "/employees/:id/qualifications/:qualId/certificates",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -689,6 +696,7 @@ router.get(
 // POST /employees/:id/qualifications/:qualId/certificates
 router.post(
   "/employees/:id/qualifications/:qualId/certificates",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = QualIdParam.safeParse(req.params);
     if (!params.success) {
@@ -775,6 +783,7 @@ router.post(
 // DELETE /employees/:id/qualifications/:qualId/certificates/:certId
 router.delete(
   "/employees/:id/qualifications/:qualId/certificates/:certId",
+  requirePermission(["hr:access", "sysadmin"]),
   async (req, res): Promise<void> => {
     const params = CertIdParam.safeParse(req.params);
     if (!params.success) {

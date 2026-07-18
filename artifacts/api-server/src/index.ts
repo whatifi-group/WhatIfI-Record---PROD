@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { seedLov, assertLovSync } from "./lib/seedLov";
 import { seedRoles } from "./lib/seedRoles";
 import { seedAdmin } from "./lib/seedAdmin";
+import { seedNotificationSettings } from "./lib/seedNotificationSettings";
 import { runMigrations, db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import path from "path";
@@ -56,7 +57,11 @@ runMigrations(migrationsFolder)
     return ensureSessionTable();
   })
   .then(() => {
-    return Promise.all([seedLov().then(() => assertLovSync()), seedRoles()]);
+    return Promise.all([
+      seedLov().then(() => assertLovSync()),
+      seedRoles(),
+      seedNotificationSettings(),
+    ]);
   })
   .then(() => seedAdmin())
   .then(() => {

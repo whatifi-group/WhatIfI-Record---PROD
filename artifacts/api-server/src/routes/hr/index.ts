@@ -21,6 +21,16 @@ import { payrollVisibilityMiddleware, salaryRedactionMiddleware } from "../../li
 // HR module: departments, employees, leave requests, and employee section sub-resources.
 // Future modules (e.g. payroll, recruiting) should follow the same pattern:
 // a self-contained folder under routes/ with its own index.ts, mounted below.
+//
+// Unlike routes/sysadmin/index.ts, this module deliberately does NOT apply a
+// single blanket permission gate here — routes in this module are meant to be
+// reachable by narrow, resource-specific roles (e.g. a role with only
+// view_payroll and nothing else, for an external payroll contractor) without
+// requiring a separate umbrella permission on top. Every route below MUST
+// therefore call requirePermission([...]) itself with the correct permission
+// for that resource. See src/test/hrRouterAuthGuard.test.ts, which asserts
+// every mounted route rejects a caller with no relevant permission — run it
+// after adding a new route here.
 const router: IRouter = Router();
 
 // 1. Pre-compute req.canViewPayroll for every HR request.

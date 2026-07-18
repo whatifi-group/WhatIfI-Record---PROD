@@ -491,6 +491,7 @@ describe("Employee Qualifications", () => {
         empId,
         qtId,
         past.toISOString().split("T")[0],
+        "verified",
       );
 
       const future = new Date();
@@ -499,6 +500,7 @@ describe("Employee Qualifications", () => {
         empId,
         qtId,
         future.toISOString().split("T")[0],
+        "verified",
       );
 
       const res = await api.get("/api/qualifications/expiring?withinDays=0");
@@ -515,6 +517,7 @@ describe("Employee Qualifications", () => {
         empId,
         qtId,
         soon.toISOString().split("T")[0],
+        "verified",
       );
 
       const later = new Date();
@@ -523,6 +526,7 @@ describe("Employee Qualifications", () => {
         empId,
         qtId,
         later.toISOString().split("T")[0],
+        "verified",
       );
 
       const res = await api.get("/api/qualifications/expiring?withinDays=30");
@@ -544,7 +548,7 @@ describe("Employee Qualifications", () => {
     it("response includes employee name and daysUntilExpiry fields", async () => {
       const past = new Date();
       past.setDate(past.getDate() - 3);
-      await createTestQualification(empId, qtId, past.toISOString().split("T")[0]);
+      await createTestQualification(empId, qtId, past.toISOString().split("T")[0], "verified");
 
       const res = await api.get("/api/qualifications/expiring?withinDays=0");
       expect(res.status).toBe(200);

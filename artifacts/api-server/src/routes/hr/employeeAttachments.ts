@@ -2,8 +2,10 @@ import { Router, type IRouter } from "express";
 import { and, eq } from "drizzle-orm";
 import { db, employeeAttachmentsTable } from "@workspace/db";
 import { z } from "zod";
+import { requirePermission } from "../../middlewares/requirePermission";
 
 const router: IRouter = Router({ mergeParams: true });
+const EDIT = ["hr:access", "sysadmin"];
 
 const IdParam = z.object({ id: z.coerce.number().int().positive() });
 const AttachmentIdParam = z.object({
@@ -18,7 +20,7 @@ const AttachmentInput = z.object({
   fileSizeBytes: z.number().int().optional().nullable(),
 });
 
-router.get("/employees/:id/attachments", async (req, res): Promise<void> => {
+router.get("/employees/:id/attachments", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -32,7 +34,7 @@ router.get("/employees/:id/attachments", async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/employees/:id/attachments", async (req, res): Promise<void> => {
+router.post("/employees/:id/attachments", requirePermission(EDIT), async (req, res): Promise<void> => {
   const params = IdParam.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -52,6 +54,7 @@ router.post("/employees/:id/attachments", async (req, res): Promise<void> => {
 
 router.delete(
   "/employees/:id/attachments/:attachmentId",
+  requirePermission(EDIT),
   async (req, res): Promise<void> => {
     const params = AttachmentIdParam.safeParse(req.params);
     if (!params.success) {

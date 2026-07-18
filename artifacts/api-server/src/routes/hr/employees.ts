@@ -68,11 +68,22 @@ async function getEmployeePhones(employeeId: number) {
 }
 
 
-router.get("/employees", async (req, res): Promise<void> => {
+router.get("/employees", requirePermission(["view_employees", "edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
   const query = ListEmployeesQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
     return;
+  }
+
+  // Viewing leavers is gated separately from ordinary employee visibility —
+  // e.g. Senior Manager has view_employees but not hr:past_employees.
+  if (query.data.status === "leaver") {
+    const perms = req.effectivePermissions
+      ?? (req.session?.userId ? await getEffectivePermissions(req.session.userId) : new Set<string>());
+    if (!perms.has("hr:past_employees") && !perms.has("sysadmin")) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
   }
 
   const conditions: SQL[] = [];
@@ -202,7 +213,7 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
   res.status(201).json(CreateEmployeeResponse.parse({ ...row, phones }));
 });
 
-router.get("/employees/:id", async (req, res): Promise<void> => {
+router.get("/employees/:id", requirePermission(["view_employees", "edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
   const params = GetEmployeeParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });

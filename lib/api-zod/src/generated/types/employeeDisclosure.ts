@@ -7,14 +7,14 @@
  */
 import type { DisclosureReview } from './disclosureReview';
 import type { DisclosureUpdateCheck } from './disclosureUpdateCheck';
-import type { EmployeeDisclosureCheckLevel } from './employeeDisclosureCheckLevel';
-import type { EmployeeDisclosureCheckType } from './employeeDisclosureCheckType';
 
 export interface EmployeeDisclosure {
   id: number;
   employeeId: number;
-  checkType: EmployeeDisclosureCheckType;
-  checkLevel: EmployeeDisclosureCheckLevel;
+  /** Disclosure check type value — managed via List of Values */
+  checkType: string;
+  /** Disclosure check level value — managed via List of Values (per check type) */
+  checkLevel: string;
   /** @nullable */
   certificateNumber?: string | null;
   issueDate: Date;

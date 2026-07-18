@@ -5,14 +5,14 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { PendingDisclosureReviewCheckType } from './pendingDisclosureReviewCheckType';
 
 export interface PendingDisclosureReview {
   disclosureId: number;
   employeeId: number;
   employeeFirstName: string;
   employeeLastName: string;
-  checkType: PendingDisclosureReviewCheckType;
+  /** Disclosure check type value — managed via List of Values */
+  checkType: string;
   /** Number of days since the disclosure was created without a signed-off review */
   daysPending: number;
 }

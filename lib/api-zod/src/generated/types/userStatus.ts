@@ -6,11 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
-
-
-export const UserStatus = {
-  active: 'active',
-  inactive: 'inactive',
-  suspended: 'suspended',
-} as const;
+/**
+ * User account status value — managed via List of Values
+ */
+export type UserStatus = string;

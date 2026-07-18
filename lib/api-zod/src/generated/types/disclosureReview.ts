@@ -5,12 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { DisclosureReviewRecommendation } from './disclosureReviewRecommendation';
 
 export interface DisclosureReview {
   id: number;
   disclosureId: number;
-  recommendation: DisclosureReviewRecommendation;
+  /** Disclosure review recommendation value — managed via List of Values */
+  recommendation: string;
   /** @nullable */
   reviewerNotes?: string | null;
   reviewDate: Date;

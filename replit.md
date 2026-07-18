@@ -24,6 +24,23 @@ The system is organized into self-contained modules so new HR modules can be add
 
 Deliberately out of scope for v1: payroll, attendance/time tracking.
 
+## Audit trail
+
+Every API request is recorded to the `audit_log` table (SysAdmin → Audit
+Trail, `/sysadmin/audit-log`): timestamp (GMT), module, action, user, plus
+method/path/status/IP. This is fully automatic — adding a new module needs no
+audit-specific code:
+
+- `artifacts/api-server/src/routes/index.ts` tags each top-level router mount
+  with `tagAuditModule("<name>")`; a router mounted without a tag still gets
+  audited, falling back to its first URL path segment as the module name.
+- `artifacts/api-server/src/middlewares/auditLog.ts` derives a generic action
+  (e.g. "Created role", "Listed employees") from the HTTP method + path, and
+  writes one row per request after the response is sent (fire-and-forget, so
+  it never adds latency or can fail a request).
+- `/healthz` liveness probes are excluded — everything else, including reads,
+  is logged.
+
 ## Architecture notes
 - All request/response Zod schemas live in `lib/api-zod`; entity input/update bodies use dedicated component names (`DepartmentInput`, `EmployeeUpdate`, etc.) to avoid Orval type-name collisions.
 - API route handlers validate with the generated Zod schemas and never use raw `req.body`/`req.params` unchecked.

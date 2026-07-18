@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Mail,
+  ScrollText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -61,6 +62,13 @@ const MODULES: SysadminModule[] = [
     href: "/sysadmin/notifications",
     icon: Mail,
     accentClass: "bg-primary/10 text-primary",
+  },
+  {
+    title: "Audit Trail",
+    description: "Review a record of every interaction with the system, timestamped in GMT.",
+    href: "/sysadmin/audit-log",
+    icon: ScrollText,
+    accentClass: "bg-chart-2/10 text-chart-2",
   },
 ];
 

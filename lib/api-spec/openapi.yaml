@@ -2405,6 +2405,59 @@ paths:
         "404":
           description: Not found
 
+  /sysadmin/audit-log:
+    get:
+      operationId: listAuditLog
+      tags: [sysadmin]
+      summary: List system audit trail entries, most recent first
+      parameters:
+        - name: module
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: from
+          in: query
+          required: false
+          description: ISO timestamp — only entries at or after this time
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: ISO timestamp — only entries at or before this time
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Page of audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogPage"
+
   /sysadmin/summary:
     get:
       operationId: getSysadminSummary
@@ -3111,6 +3164,47 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/User"
+
+    AuditLogEntry:
+      type: object
+      required: [id, timestamp, module, action, userId, userName, method, path, statusCode]
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+          description: When the action occurred, in GMT/UTC.
+        module:
+          type: string
+          description: The system module the request belongs to, e.g. "sysadmin", "hr".
+        action:
+          type: string
+          description: Human-readable action, e.g. "Created role", "Listed employees".
+        userId:
+          type: ["integer", "null"]
+        userName:
+          type: ["string", "null"]
+          description: Snapshot of the acting user's name at the time of the action.
+        method:
+          type: string
+        path:
+          type: string
+        statusCode:
+          type: integer
+        ipAddress:
+          type: ["string", "null"]
+
+    AuditLogPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        total:
+          type: integer
 
     # ── Employee section schemas ────────────────────────────────────────────
 

@@ -6,6 +6,7 @@ import summaryRouter from "./summary";
 import lovRouter from "./lov";
 import qualificationTypesRouter from "./qualificationTypes";
 import notificationSettingsRouter from "./notificationSettings";
+import auditLogRouter from "./auditLog";
 
 // SysAdmin module: user management, role management, list of values, and summary.
 //
@@ -24,5 +25,6 @@ router.use(summaryRouter);
 router.use(lovRouter);
 router.use(qualificationTypesRouter);
 router.use(notificationSettingsRouter);
+router.use(auditLogRouter);
 
 export default router;

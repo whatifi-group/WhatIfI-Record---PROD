@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { requireAuth } from "./middlewares/requireAuth";
+import { auditLogMiddleware } from "./middlewares/auditLog";
 import "./types/session.d.ts";
 
 if (!process.env.SESSION_SECRET) {
@@ -70,6 +71,10 @@ app.use(
     },
   }),
 );
+
+// Audit trail — mounted before the auth guard so unauthenticated/rejected
+// requests (e.g. failed logins) are captured too, not just successful ones.
+app.use("/api", auditLogMiddleware);
 
 // Auth guard — runs before all API routes
 app.use("/api", requireAuth);

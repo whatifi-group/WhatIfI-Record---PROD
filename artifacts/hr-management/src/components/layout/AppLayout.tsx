@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList } from "lucide-react";
+import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList, History } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -102,6 +102,7 @@ const modules: Module[] = [
       { name: "Roles", href: "/sysadmin/roles", icon: Lock },
       { name: "List of Values", href: "/sysadmin/lov", icon: ListOrdered },
       { name: "Qualification Types", href: "/sysadmin/qualification-types", icon: GraduationCap },
+      { name: "Audit Trail", href: "/sysadmin/audit-log", icon: History },
     ],
   },
 ];

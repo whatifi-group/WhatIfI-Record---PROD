@@ -7,9 +7,14 @@ export default function ListOfValues() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">List of Values</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage dropdown options and categories across the system.</p>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+          <ListOrdered className="w-5 h-5" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">List of Values</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage dropdown options and categories across the system.</p>
+        </div>
       </div>
 
       {isLoading ? (

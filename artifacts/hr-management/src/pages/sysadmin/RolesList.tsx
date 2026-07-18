@@ -74,9 +74,14 @@ export default function RolesList() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Role Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Define permissions and access levels across the organization.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">Role Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">Define permissions and access levels across the organization.</p>
+          </div>
         </div>
         <Button onClick={handleCreate} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" />

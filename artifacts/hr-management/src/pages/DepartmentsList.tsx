@@ -120,9 +120,14 @@ export default function DepartmentsList() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Departments</h1>
-          <p className="text-muted-foreground mt-1">Manage organisational departments.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-foreground">Departments</h1>
+            <p className="text-muted-foreground mt-1">Manage organisational departments.</p>
+          </div>
         </div>
 
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>

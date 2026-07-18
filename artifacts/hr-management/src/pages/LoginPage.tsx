@@ -157,7 +157,7 @@ export default function LoginPage() {
           
           <div className="bg-muted/50 p-4 text-center border-t border-border">
             <p className="text-xs text-muted-foreground font-medium">
-              Authorised access only. All activities are recorded.
+              © 2026 WhatIfI Group Ltd
             </p>
           </div>
         </div>

@@ -34,9 +34,9 @@ import {
   useListRoles,
   useCreateUser,
   useUpdateUser,
+  useListLovItems,
   getListUsersQueryKey,
   User,
-  UserStatus,
   Permission,
 } from "@workspace/api-client-react";
 import { PERMISSION_LABELS } from "@/lib/permissions";
@@ -46,7 +46,7 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().optional(),
   roleId: z.coerce.number().min(1, "Role is required"),
-  status: z.nativeEnum(UserStatus).default(UserStatus.active),
+  status: z.string().default("active"),
   permissions: z.array(z.nativeEnum(Permission)).default([]),
 });
 
@@ -62,6 +62,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
   const queryClient = useQueryClient();
 
   const { data: roles } = useListRoles();
+  const { data: userStatuses } = useListLovItems("user_status");
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
 
@@ -72,7 +73,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       email: "",
       password: "",
       roleId: 0,
-      status: UserStatus.active,
+      status: "active",
       permissions: [],
     },
   });
@@ -94,7 +95,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
           email: "",
           password: "",
           roleId: roles && roles.length > 0 ? roles[0].id : 0,
-          status: UserStatus.active,
+          status: "active",
           permissions: [],
         });
       }
@@ -242,9 +243,9 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={UserStatus.active}>Active</SelectItem>
-                        <SelectItem value={UserStatus.inactive}>Inactive</SelectItem>
-                        <SelectItem value={UserStatus.suspended}>Suspended</SelectItem>
+                        {userStatuses?.filter(s => s.isActive).map(s => (
+                          <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

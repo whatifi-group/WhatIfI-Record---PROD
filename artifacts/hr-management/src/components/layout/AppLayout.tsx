@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, HardHat, ClipboardCheck, LayoutList } from "lucide-react";
+import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -85,10 +85,10 @@ const modules: Module[] = [
   },
   {
     name: "Safety",
-    icon: HardHat,
+    icon: LifeBuoy,
     hrOnly: true,
     pages: [
-      { name: "Safety", href: "/safety", icon: HardHat },
+      { name: "Safety", href: "/safety", icon: LifeBuoy },
     ],
   },
   {
@@ -240,7 +240,7 @@ function AppSidebar() {
                             <CollapsibleTrigger asChild>
                               <SidebarMenuSubButton isActive={ssActive} className="gap-2 cursor-pointer">
                                 <ss.icon className="h-3.5 w-3.5 shrink-0" />
-                                <span className="flex-1 text-xs font-medium">{ss.name}</span>
+                                <span className="flex-1 text-sm font-medium">{ss.name}</span>
                                 <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-data-[state=open]/subsection:rotate-90" />
                               </SidebarMenuSubButton>
                             </CollapsibleTrigger>
@@ -254,7 +254,7 @@ function AppSidebar() {
                                       href={page.href}
                                       onClick={() => setOpenMobile(false)}
                                       className={[
-                                        "flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] leading-snug transition-colors w-full",
+                                        "flex items-center gap-1.5 rounded-md px-2 py-1 text-sm leading-snug transition-colors w-full",
                                         isActive
                                           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                                           : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",

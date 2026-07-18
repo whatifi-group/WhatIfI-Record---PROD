@@ -8,7 +8,6 @@ import {
   getListLeaveRequestsQueryKey,
   useListLovItems
 } from "@workspace/api-client-react";
-import { LeaveStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +46,7 @@ export default function LeaveRequestsList() {
   const { data: leaveRequests, isLoading } = useListLeaveRequests();
   const { data: employees } = useListEmployees({ status: "active" as any });
   const { data: leaveTypes } = useListLovItems("leave_type");
+  const { data: leaveStatuses } = useListLovItems("leave_status");
   
   const createLeave = useCreateLeaveRequest();
   const updateLeave = useUpdateLeaveRequest();
@@ -80,7 +80,7 @@ export default function LeaveRequestsList() {
     );
   };
 
-  const handleStatusChange = (id: number, status: LeaveStatus) => {
+  const handleStatusChange = (id: number, status: string) => {
     updateLeave.mutate(
       { id, data: { status } },
       {
@@ -118,11 +118,11 @@ export default function LeaveRequestsList() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case LeaveStatus.approved:
+      case "approved":
         return <Badge className="bg-secondary hover:bg-secondary/90 text-white border-transparent">Approved</Badge>;
-      case LeaveStatus.pending:
+      case "pending":
         return <Badge className="bg-chart-4 hover:bg-chart-4/90 text-white border-transparent">Pending</Badge>;
-      case LeaveStatus.rejected:
+      case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -220,9 +220,9 @@ export default function LeaveRequestsList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Requests</SelectItem>
-                <SelectItem value={LeaveStatus.pending}>Pending</SelectItem>
-                <SelectItem value={LeaveStatus.approved}>Approved</SelectItem>
-                <SelectItem value={LeaveStatus.rejected}>Rejected</SelectItem>
+                {leaveStatuses?.filter(s => s.isActive).map(s => (
+                  <SelectItem key={s.id} value={s.value}>{s.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -285,22 +285,22 @@ export default function LeaveRequestsList() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end items-center gap-2">
-                          {request.status === LeaveStatus.pending && (
+                          {request.status === "pending" && (
                             <>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="h-8 border-secondary text-secondary hover:bg-secondary hover:text-white"
-                                onClick={() => handleStatusChange(request.id, LeaveStatus.approved)}
+                                onClick={() => handleStatusChange(request.id, "approved")}
                                 disabled={updateLeave.isPending}
                               >
                                 <Check className="w-4 h-4" />
                               </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="h-8 border-destructive text-destructive hover:bg-destructive hover:text-white"
-                                onClick={() => handleStatusChange(request.id, LeaveStatus.rejected)}
+                                onClick={() => handleStatusChange(request.id, "rejected")}
                                 disabled={updateLeave.isPending}
                               >
                                 <X className="w-4 h-4" />

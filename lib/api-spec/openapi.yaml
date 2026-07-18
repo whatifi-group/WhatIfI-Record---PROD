@@ -2597,7 +2597,7 @@ components:
 
     LeaveStatus:
       type: string
-      enum: [pending, approved, rejected]
+      description: Leave request status value — managed via List of Values
 
     Department:
       type: object
@@ -2946,7 +2946,7 @@ components:
 
     UserStatus:
       type: string
-      enum: [active, inactive, suspended]
+      description: User account status value — managed via List of Values
 
     Role:
       type: object
@@ -3546,7 +3546,7 @@ components:
           minimum: 1
         validityUnit:
           type: string
-          enum: [days, months, years]
+          description: Qualification duration unit value — managed via List of Values
         isActive:
           type: boolean
 
@@ -4022,10 +4022,10 @@ components:
           type: integer
         checkType:
           type: string
-          enum: [dbs, pvg, access_ni]
+          description: Disclosure check type value — managed via List of Values
         checkLevel:
           type: string
-          enum: [basic, standard, enhanced, enhanced_barred]
+          description: Disclosure check level value — managed via List of Values (per check type)
         certificateNumber:
           type: ["string", "null"]
         issueDate:
@@ -4058,10 +4058,10 @@ components:
       properties:
         checkType:
           type: string
-          enum: [dbs, pvg, access_ni]
+          description: Disclosure check type value — managed via List of Values
         checkLevel:
           type: string
-          enum: [basic, standard, enhanced, enhanced_barred]
+          description: Disclosure check level value — managed via List of Values (per check type)
         certificateNumber:
           type: string
         issueDate:
@@ -4079,10 +4079,10 @@ components:
       properties:
         checkType:
           type: string
-          enum: [dbs, pvg, access_ni]
+          description: Disclosure check type value — managed via List of Values
         checkLevel:
           type: string
-          enum: [basic, standard, enhanced, enhanced_barred]
+          description: Disclosure check level value — managed via List of Values (per check type)
         certificateNumber:
           type: string
         issueDate:
@@ -4142,7 +4142,7 @@ components:
           type: integer
         recommendation:
           type: string
-          enum: [approved, not_approved, further_review]
+          description: Disclosure review recommendation value — managed via List of Values
         reviewerNotes:
           type: ["string", "null"]
         reviewDate:
@@ -4173,7 +4173,7 @@ components:
           type: string
         checkType:
           type: string
-          enum: [dbs, pvg, access_ni]
+          description: Disclosure check type value — managed via List of Values
         daysPending:
           type: integer
           description: Number of days since the disclosure was created without a signed-off review
@@ -4184,7 +4184,7 @@ components:
       properties:
         recommendation:
           type: string
-          enum: [approved, not_approved, further_review]
+          description: Disclosure review recommendation value — managed via List of Values
         reviewerNotes:
           type: string
         reviewDate:

@@ -5,6 +5,7 @@ import {
   useCreateQualificationType,
   useUpdateQualificationType,
   useDeleteQualificationType,
+  useListLovItems,
   getListQualificationTypesQueryKey,
 } from "@workspace/api-client-react";
 import type { QualificationType } from "@workspace/api-client-react";
@@ -67,6 +68,7 @@ export default function QualificationTypes() {
   const [form, setForm] = useState<FormData>(defaultForm);
 
   const { data: types, isLoading } = useListQualificationTypes();
+  const { data: durationUnits } = useListLovItems("qualification_duration_unit");
   const createType = useCreateQualificationType();
   const updateType = useUpdateQualificationType();
   const deleteType = useDeleteQualificationType();
@@ -102,7 +104,7 @@ export default function QualificationTypes() {
       name: form.name.trim(),
       awardingBody: form.awardingBody.trim() || undefined,
       validityValue: validityValue && !isNaN(validityValue) ? validityValue : undefined,
-      validityUnit: (form.validityUnit || undefined) as "days" | "months" | "years" | undefined,
+      validityUnit: form.validityUnit || undefined,
       isActive: form.isActive,
     };
 
@@ -323,9 +325,9 @@ export default function QualificationTypes() {
                     <SelectValue placeholder="Select unit" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="days">Days</SelectItem>
-                    <SelectItem value="months">Months</SelectItem>
-                    <SelectItem value="years">Years</SelectItem>
+                    {durationUnits?.filter(u => u.isActive).map(u => (
+                      <SelectItem key={u.id} value={u.value}>{u.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

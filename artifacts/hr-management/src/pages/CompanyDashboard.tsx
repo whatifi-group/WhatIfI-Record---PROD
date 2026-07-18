@@ -32,14 +32,7 @@ const modules: ModuleLink[] = [
     icon: Users,
   },
   {
-    name: "SysAdmin",
-    description: "User accounts, roles, and system permissions.",
-    href: "/sysadmin",
-    icon: ShieldCheck,
-    permission: "sysadmin",
-  },
-  {
-    name: "Courses Management",
+    name: "Course Management",
     description: "Training courses, enrolments, and completions.",
     href: "/course-management",
     icon: GraduationCap,
@@ -49,6 +42,13 @@ const modules: ModuleLink[] = [
     description: "Safety records, incidents, and compliance.",
     href: "/safety",
     icon: LifeBuoy,
+  },
+  {
+    name: "SysAdmin",
+    description: "User accounts, roles, and system permissions.",
+    href: "/sysadmin",
+    icon: ShieldCheck,
+    permission: "sysadmin",
   },
 ];
 

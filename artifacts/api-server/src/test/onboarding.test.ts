@@ -106,10 +106,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Restore the original seed label
+  // Restore the original seed label. isActive is irrelevant to whether the
+  // passphrase is considered "set" (see getOnboardingPassphrase) — always
+  // leave it true, since that's the only state real rows should ever be in.
   await db
     .update(lovItemsTable)
-    .set({ label: originalLabel, isActive: false })
+    .set({ label: originalLabel, isActive: true })
     .where(
       and(
         eq(lovItemsTable.category, "system_config"),
@@ -427,6 +429,41 @@ describe("Onboarding passphrase endpoints — auth guard", () => {
       .patch("/api/onboarding/passphrase")
       .send({ passphrase: "newpassword123", confirm: "newpassword123" });
     expect(res.status).toBe(403);
+  });
+});
+
+// ── Passphrase considered set regardless of isActive ───────────────────────────
+// A recorded phrase is definitive; isActive on the LOV row must not be able to
+// make a real passphrase appear unset (see getOnboardingPassphrase).
+
+describe("Onboarding passphrase status — isActive independence", () => {
+  it("passphrase-status reports isSet true even when the row's isActive is false", async () => {
+    await db
+      .update(lovItemsTable)
+      .set({ isActive: false })
+      .where(
+        and(
+          eq(lovItemsTable.category, "system_config"),
+          eq(lovItemsTable.value, "onboarding_password"),
+        ),
+      );
+
+    try {
+      const api = buildApp(onboardingRouter, hrUserId);
+      const res = await api.get("/api/onboarding/passphrase-status");
+      expect(res.status).toBe(200);
+      expect(res.body.isSet).toBe(true);
+    } finally {
+      await db
+        .update(lovItemsTable)
+        .set({ isActive: true })
+        .where(
+          and(
+            eq(lovItemsTable.category, "system_config"),
+            eq(lovItemsTable.value, "onboarding_password"),
+          ),
+        );
+    }
   });
 });
 

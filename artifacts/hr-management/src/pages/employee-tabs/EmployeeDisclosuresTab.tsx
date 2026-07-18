@@ -8,6 +8,7 @@ import {
   useDeleteDisclosureUpdateCheck,
   useSubmitDisclosureReview,
   useSignOffDisclosureReview,
+  useListLovItems,
   getListEmployeeDisclosuresQueryKey,
 } from "@workspace/api-client-react";
 import type { EmployeeDisclosure, DisclosureUpdateCheck, DisclosureReview } from "@workspace/api-client-react";
@@ -68,30 +69,14 @@ interface Props {
   employeeId: number;
 }
 
-type CheckType = "dbs" | "pvg" | "access_ni";
-type CheckLevel = "basic" | "standard" | "enhanced" | "enhanced_barred";
+// Check type, check level, and recommendation are List of Values-backed
+// (categories "disclosure_check_type", "disclosure_check_level_<type>", and
+// "disclosure_recommendation") — any value a sysadmin has configured is valid,
+// so these are plain strings rather than closed unions.
+type CheckType = string;
+type CheckLevel = string;
 type UpdateCheckResult = "clear" | "not_clear" | "changes_shown";
-type Recommendation = "approved" | "not_approved" | "further_review";
-
-const CHECK_TYPE_LABELS: Record<CheckType, string> = {
-  dbs: "DBS",
-  pvg: "PVG",
-  access_ni: "AccessNI",
-};
-
-const CHECK_LEVEL_LABELS: Record<CheckLevel, string> = {
-  basic: "Basic",
-  standard: "Standard",
-  enhanced: "Enhanced",
-  enhanced_barred: "Enhanced with Barred Lists",
-};
-
-// Level options filtered by check type
-const LEVELS_BY_TYPE: Record<CheckType, CheckLevel[]> = {
-  dbs: ["basic", "standard", "enhanced", "enhanced_barred"],
-  pvg: ["standard", "enhanced", "enhanced_barred"],
-  access_ni: ["basic", "standard", "enhanced", "enhanced_barred"],
-};
+type Recommendation = string;
 
 const RESULT_LABELS: Record<UpdateCheckResult, string> = {
   clear: "Clear",
@@ -99,11 +84,15 @@ const RESULT_LABELS: Record<UpdateCheckResult, string> = {
   changes_shown: "Changes Shown",
 };
 
-const RECOMMENDATION_LABELS: Record<Recommendation, string> = {
-  approved: "Approved to Work",
-  not_approved: "Not Approved",
-  further_review: "Further Review Needed",
-};
+/** Looks up the display label for a LOV value, falling back to the raw value. */
+function lovLabel(items: { value: string; label: string }[] | undefined, value: string): string {
+  return items?.find((i) => i.value === value)?.label ?? value;
+}
+
+/** Category slug for the check-level LOV list scoped to a given check type. */
+function checkLevelCategory(checkType: string): string {
+  return `disclosure_check_level_${checkType}`;
+}
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -339,6 +328,7 @@ function ConvictionReviewPanel({
   const { toast } = useToast();
   const submitReview = useSubmitDisclosureReview();
   const signOff = useSignOffDisclosureReview();
+  const { data: recommendations } = useListLovItems("disclosure_recommendation");
   const review = (disclosure as any).review as DisclosureReview | null;
 
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -417,7 +407,7 @@ function ConvictionReviewPanel({
       {review ? (
         <div className="border border-border/40 rounded-lg p-3 space-y-1.5 bg-muted/10 text-xs">
           <div className="flex items-center justify-between gap-2">
-            <span className="font-medium">{RECOMMENDATION_LABELS[review.recommendation as Recommendation]}</span>
+            <span className="font-medium">{lovLabel(recommendations, review.recommendation)}</span>
             <ReviewStatusBadge review={review} />
           </div>
           {review.reviewDate && (
@@ -462,8 +452,8 @@ function ConvictionReviewPanel({
               <Select value={reviewForm.recommendation} onValueChange={(v) => setReviewForm((f) => ({ ...f, recommendation: v as Recommendation }))}>
                 <SelectTrigger><SelectValue placeholder="Select recommendation…" /></SelectTrigger>
                 <SelectContent>
-                  {(["approved", "not_approved", "further_review"] as Recommendation[]).map((r) => (
-                    <SelectItem key={r} value={r}>{RECOMMENDATION_LABELS[r]}</SelectItem>
+                  {recommendations?.filter((r) => r.isActive).map((r) => (
+                    <SelectItem key={r.id} value={r.value}>{r.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -540,6 +530,8 @@ function DisclosureCard({
 }) {
   const { toast } = useToast();
   const signOff = useSignOffDisclosureReview();
+  const { data: checkTypes } = useListLovItems("disclosure_check_type");
+  const { data: checkLevels } = useListLovItems(checkLevelCategory(disclosure.checkType));
   const [expanded, setExpanded] = useState(false);
   const [hrSignOffOpen, setHrSignOffOpen] = useState(false);
   const review = (disclosure as any).review as DisclosureReview | null;
@@ -567,9 +559,9 @@ function DisclosureCard({
       {/* Card header */}
       <div className="flex flex-wrap items-start gap-2">
         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-          {CHECK_TYPE_LABELS[disclosure.checkType as CheckType]}
+          {lovLabel(checkTypes, disclosure.checkType)}
         </span>
-        <span className="text-xs text-muted-foreground pt-0.5">{CHECK_LEVEL_LABELS[disclosure.checkLevel as CheckLevel]}</span>
+        <span className="text-xs text-muted-foreground pt-0.5">{lovLabel(checkLevels, disclosure.checkLevel)}</span>
 
         {disclosure.onUpdateService && (
           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
@@ -711,6 +703,15 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
   const isSysAdmin = hasPermission("sysadmin");
 
   const { data: disclosures, isLoading, isError, refetch } = useListEmployeeDisclosures(employeeId);
+  const { data: checkTypes } = useListLovItems("disclosure_check_type");
+  const { data: dbsLevels } = useListLovItems("disclosure_check_level_dbs");
+  const { data: pvgLevels } = useListLovItems("disclosure_check_level_pvg");
+  const { data: accessNiLevels } = useListLovItems("disclosure_check_level_access_ni");
+  const levelsByType: Record<string, typeof dbsLevels> = {
+    dbs: dbsLevels,
+    pvg: pvgLevels,
+    access_ni: accessNiLevels,
+  };
   const createDisclosure = useCreateEmployeeDisclosure();
   const updateDisclosure = useUpdateEmployeeDisclosure();
   const deleteDisclosure = useDeleteEmployeeDisclosure();
@@ -746,7 +747,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
   }, [employeeId]);
 
   const availableLevels =
-    form.checkType ? LEVELS_BY_TYPE[form.checkType as CheckType] : [];
+    (form.checkType ? levelsByType[form.checkType] : undefined) ?? [];
 
   const invalidateList = () =>
     queryClient.invalidateQueries({
@@ -982,9 +983,9 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
                   onValueChange={(v) =>
                     setForm((f) => ({
                       ...f,
-                      checkType: v as CheckType,
+                      checkType: v,
                       // Reset level if it's not valid for the new type
-                      checkLevel: LEVELS_BY_TYPE[v as CheckType].includes(f.checkLevel as CheckLevel)
+                      checkLevel: (levelsByType[v] ?? []).some((l) => l.value === f.checkLevel)
                         ? f.checkLevel
                         : "",
                     }))
@@ -992,8 +993,8 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
                 >
                   <SelectTrigger><SelectValue placeholder="Select type…" /></SelectTrigger>
                   <SelectContent>
-                    {(["dbs", "pvg", "access_ni"] as CheckType[]).map((t) => (
-                      <SelectItem key={t} value={t}>{CHECK_TYPE_LABELS[t]}</SelectItem>
+                    {checkTypes?.filter((t) => t.isActive).map((t) => (
+                      <SelectItem key={t.id} value={t.value}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1002,13 +1003,13 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
                 <Label>Check Level <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.checkLevel}
-                  onValueChange={(v) => setForm((f) => ({ ...f, checkLevel: v as CheckLevel }))}
+                  onValueChange={(v) => setForm((f) => ({ ...f, checkLevel: v }))}
                   disabled={!form.checkType}
                 >
                   <SelectTrigger><SelectValue placeholder="Select level…" /></SelectTrigger>
                   <SelectContent>
-                    {availableLevels.map((l) => (
-                      <SelectItem key={l} value={l}>{CHECK_LEVEL_LABELS[l]}</SelectItem>
+                    {availableLevels.filter((l) => l.isActive).map((l) => (
+                      <SelectItem key={l.id} value={l.value}>{l.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

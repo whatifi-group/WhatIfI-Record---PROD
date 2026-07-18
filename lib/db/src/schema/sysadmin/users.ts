@@ -19,9 +19,8 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  status: text("status", { enum: userStatusValues })
-    .notNull()
-    .default("active"),
+  // Value managed via List of Values (category "user_status"); see seedLov.ts.
+  status: text("status").notNull().default("active"),
   roleId: integer("role_id")
     .notNull()
     .references(() => rolesTable.id),

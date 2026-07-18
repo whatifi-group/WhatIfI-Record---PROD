@@ -3,9 +3,10 @@
  * Inserts any missing system LOV items; safe to re-run on every boot.
  *
  * IMPORTANT — schema-backed categories:
- *   `employee_status`, `employment_type`, and `shift_type` entries are
- *   auto-derived from DB schema constants (`employeeStatusValues`,
- *   `employmentTypeValues`, `shiftTypeValues`).
+ *   `employee_status`, `employment_type`, `shift_type`, `user_status`, and
+ *   `leave_status` entries are auto-derived from DB schema constants
+ *   (`employeeStatusValues`, `employmentTypeValues`, `shiftTypeValues`,
+ *   `userStatusValues`, `leaveStatusValues`).
  *   Adding a value to any of those constants is sufficient — no manual
  *   seed update required.
  *   All other categories are maintained in the `MANUAL_ITEMS` list below.
@@ -16,6 +17,8 @@ import {
   employeeStatusValues,
   employmentTypeValues,
   shiftTypeValues,
+  userStatusValues,
+  leaveStatusValues,
 } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 
@@ -49,6 +52,8 @@ export const SCHEMA_BACKED_CATEGORIES = {
   employee_status: employeeStatusValues as readonly string[],
   employment_type: employmentTypeValues as readonly string[],
   shift_type: shiftTypeValues as readonly string[],
+  user_status: userStatusValues as readonly string[],
+  leave_status: leaveStatusValues as readonly string[],
 } satisfies Record<string, readonly string[]>;
 
 const schemaBackedItems: SeedItem[] = Object.entries(
@@ -88,6 +93,32 @@ const MANUAL_ITEMS: SeedItem[] = [
   { category: "dietary_requirement", value: "dairy_free",  label: "Dairy Free",  sortOrder: 5 },
   { category: "dietary_requirement", value: "halal",       label: "Halal",       sortOrder: 6 },
   { category: "dietary_requirement", value: "kosher",      label: "Kosher",      sortOrder: 7 },
+  // disclosure_check_type
+  { category: "disclosure_check_type", value: "dbs",       label: "DBS",       sortOrder: 1 },
+  { category: "disclosure_check_type", value: "pvg",       label: "PVG",       sortOrder: 2 },
+  { category: "disclosure_check_type", value: "access_ni", label: "AccessNI", sortOrder: 3 },
+  // disclosure_check_level_dbs — DBS supports all four levels
+  { category: "disclosure_check_level_dbs", value: "basic",           label: "Basic",                       sortOrder: 1 },
+  { category: "disclosure_check_level_dbs", value: "standard",        label: "Standard",                    sortOrder: 2 },
+  { category: "disclosure_check_level_dbs", value: "enhanced",        label: "Enhanced",                    sortOrder: 3 },
+  { category: "disclosure_check_level_dbs", value: "enhanced_barred", label: "Enhanced with Barred Lists",  sortOrder: 4 },
+  // disclosure_check_level_pvg — PVG (Scotland) has no "basic" level
+  { category: "disclosure_check_level_pvg", value: "standard",        label: "Standard",                    sortOrder: 1 },
+  { category: "disclosure_check_level_pvg", value: "enhanced",        label: "Enhanced",                    sortOrder: 2 },
+  { category: "disclosure_check_level_pvg", value: "enhanced_barred", label: "Enhanced with Barred Lists",  sortOrder: 3 },
+  // disclosure_check_level_access_ni — AccessNI (Northern Ireland) supports all four levels
+  { category: "disclosure_check_level_access_ni", value: "basic",           label: "Basic",                      sortOrder: 1 },
+  { category: "disclosure_check_level_access_ni", value: "standard",        label: "Standard",                   sortOrder: 2 },
+  { category: "disclosure_check_level_access_ni", value: "enhanced",        label: "Enhanced",                   sortOrder: 3 },
+  { category: "disclosure_check_level_access_ni", value: "enhanced_barred", label: "Enhanced with Barred Lists", sortOrder: 4 },
+  // disclosure_recommendation
+  { category: "disclosure_recommendation", value: "approved",       label: "Approved to Work",        sortOrder: 1 },
+  { category: "disclosure_recommendation", value: "not_approved",   label: "Not Approved",             sortOrder: 2 },
+  { category: "disclosure_recommendation", value: "further_review", label: "Further Review Needed",    sortOrder: 3 },
+  // qualification_duration_unit
+  { category: "qualification_duration_unit", value: "days",   label: "Days",   sortOrder: 1 },
+  { category: "qualification_duration_unit", value: "months", label: "Months", sortOrder: 2 },
+  { category: "qualification_duration_unit", value: "years",  label: "Years",  sortOrder: 3 },
   // system_config — shared onboarding passphrase (HR managers set the value via the UI)
   { category: "system_config", value: "onboarding_password", label: "Onboarding Password", sortOrder: 1 },
 ];

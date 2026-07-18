@@ -180,7 +180,16 @@ const RejectBody = z.object({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Fetch the onboarding passphrase (stored in the label field). */
+/**
+ * Fetch the onboarding passphrase (stored in the label field).
+ *
+ * Deliberately does not filter on isActive: a recorded phrase (anything but
+ * the seed placeholder label) is definitive proof the passphrase is set,
+ * regardless of that column's state. There's no legitimate way to "disable"
+ * onboarding by deactivating this row — the only editor for it is this file
+ * — so treating isActive as authoritative here just reintroduces the bug
+ * where a stale/corrupted flag makes a real passphrase look unset.
+ */
 async function getOnboardingPassphrase(): Promise<string | null> {
   const [row] = await db
     .select({ label: lovItemsTable.label })
@@ -189,7 +198,6 @@ async function getOnboardingPassphrase(): Promise<string | null> {
       and(
         eq(lovItemsTable.category, "system_config"),
         eq(lovItemsTable.value, "onboarding_password"),
-        eq(lovItemsTable.isActive, true),
       ),
     )
     .limit(1);

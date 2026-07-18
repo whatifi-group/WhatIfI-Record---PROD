@@ -23,6 +23,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   medical_condition: "Medical Conditions",
   dietary_requirement: "Dietary Requirements",
   leaver_reason: "Leaver Reasons",
+  user_status: "User Status",
+  leave_status: "Leave Request Status",
+  disclosure_check_type: "Disclosure Check Types",
+  disclosure_check_level_dbs: "DBS Check Levels",
+  disclosure_check_level_pvg: "PVG Check Levels",
+  disclosure_check_level_access_ni: "AccessNI Check Levels",
+  disclosure_recommendation: "Disclosure Review Recommendations",
+  qualification_duration_unit: "Qualification Duration Units",
 };
 
 // "system_config" holds internal single-value settings (e.g. the onboarding
@@ -207,6 +215,11 @@ router.delete("/sysadmin/lov/:category/:id", async (req, res): Promise<void> => 
 
   if (!existing) {
     res.status(404).json({ error: "Item not found" });
+    return;
+  }
+
+  if (existing.isSystem) {
+    res.status(403).json({ error: "System values cannot be deleted, only relabelled or deactivated." });
     return;
   }
 

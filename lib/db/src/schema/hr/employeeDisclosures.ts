@@ -21,12 +21,10 @@ export const employeeDisclosuresTable = pgTable("employee_disclosures", {
   employeeId: integer("employee_id")
     .notNull()
     .references(() => employeesTable.id, { onDelete: "cascade" }),
-  checkType: text("check_type", {
-    enum: ["dbs", "pvg", "access_ni"],
-  }).notNull(),
-  checkLevel: text("check_level", {
-    enum: ["basic", "standard", "enhanced", "enhanced_barred"],
-  }).notNull(),
+  // checkType/checkLevel values managed via List of Values (categories
+  // "disclosure_check_type" and "disclosure_check_level_<type>"); see seedLov.ts.
+  checkType: text("check_type").notNull(),
+  checkLevel: text("check_level").notNull(),
   certificateNumber: text("certificate_number"),
   issueDate: date("issue_date", { mode: "string" }).notNull(),
   onUpdateService: boolean("on_update_service").notNull().default(false),
@@ -98,9 +96,8 @@ export const employeeDisclosureReviewsTable = pgTable(
       .notNull()
       .references(() => employeeDisclosuresTable.id, { onDelete: "cascade" })
       .unique(),
-    recommendation: text("recommendation", {
-      enum: ["approved", "not_approved", "further_review"],
-    }).notNull(),
+    // Value managed via List of Values (category "disclosure_recommendation"); see seedLov.ts.
+    recommendation: text("recommendation").notNull(),
     reviewerNotes: text("reviewer_notes"),
     reviewDate: date("review_date", { mode: "string" }).notNull(),
     signedOffByUserId: integer("signed_off_by_user_id").references(

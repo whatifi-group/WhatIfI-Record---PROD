@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useListUsers, useDeleteUser, getListUsersQueryKey, User, UserStatus } from "@workspace/api-client-react";
+import { useListUsers, useDeleteUser, getListUsersQueryKey, User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert, Server, KeyRound } from "lucide-react";
+import { Users, Search, Plus, MoreHorizontal, Pencil, Trash2, ShieldAlert, Server, KeyRound, UserCog } from "lucide-react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -68,9 +68,14 @@ export default function UsersList() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage system access, roles, and status for all personnel.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <UserCog className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-bold tracking-tight text-foreground">User Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage system access, roles, and status for all personnel.</p>
+          </div>
         </div>
         <Button onClick={handleCreate} className="gap-2 shrink-0">
           <Plus className="w-4 h-4" />
@@ -139,11 +144,11 @@ export default function UsersList() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${
-                        user.status === UserStatus.active ? 'bg-secondary/15 text-secondary border border-secondary/20' :
-                        user.status === UserStatus.suspended ? 'bg-destructive/15 text-destructive border border-destructive/20' :
+                        user.status === "active" ? 'bg-secondary/15 text-secondary border border-secondary/20' :
+                        user.status === "suspended" ? 'bg-destructive/15 text-destructive border border-destructive/20' :
                         'bg-muted text-muted-foreground border border-border/50'
                       }`}>
-                        {user.status === UserStatus.suspended && <ShieldAlert className="w-3 h-3 mr-1" />}
+                        {user.status === "suspended" && <ShieldAlert className="w-3 h-3 mr-1" />}
                         {user.status}
                       </span>
                     </td>

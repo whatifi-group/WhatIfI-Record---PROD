@@ -28,9 +28,8 @@ export const leaveRequestsTable = pgTable("leave_requests", {
   type: text("type").notNull(),
   startDate: date("start_date", { mode: "string" }).notNull(),
   endDate: date("end_date", { mode: "string" }).notNull(),
-  status: text("status", { enum: leaveStatusValues })
-    .notNull()
-    .default("pending"),
+  // Value managed via List of Values (category "leave_status"); see seedLov.ts.
+  status: text("status").notNull().default("pending"),
   reason: text("reason"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

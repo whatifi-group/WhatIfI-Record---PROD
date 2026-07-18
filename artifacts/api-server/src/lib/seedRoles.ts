@@ -15,6 +15,32 @@ interface SeedRole {
 
 const SEED_ROLES: SeedRole[] = [
   {
+    name: "Administrator",
+    description:
+      "Full system access, including SysAdmin pages. Reserved for platform administrators.",
+    permissions: [
+      "sysadmin",
+      "hr:access",
+      "hr:past_employees",
+      "hr_admin",
+      "view_employees",
+      "edit_employees",
+      "delete_employees",
+      "view_departments",
+      "edit_departments",
+      "view_leave",
+      "manage_leave",
+      "view_reports",
+      "view_payroll",
+      "view_disclosures",
+      "review_disclosures",
+      "view_own_profile",
+      "upload_qualifications",
+      "view_employee_directory",
+    ],
+    isSystem: true,
+  },
+  {
     name: "HR Manager",
     description:
       "Full access to the HR module including employee directory, leave requests, and past employees. Cannot access SysAdmin pages.",

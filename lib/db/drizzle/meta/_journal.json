@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1784065962749,
-      "tag": "0000_spotty_lenny_balinger",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1784076472167,
-      "tag": "0001_users_employee_link",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1784077884608,
-      "tag": "0002_add_employee_pay_rates",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1752576000000,
-      "tag": "0005_add_employee_service_periods",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1784073600000,
-      "tag": "0006_pay_rate_date_ranges",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1752624000000,
-      "tag": "0007_onboarding",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1752624001000,
-      "tag": "0008_work_records_index",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1752710400000,
-      "tag": "0009_employee_disclosures",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1752796800000,
-      "tag": "0010_employee_phones",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1752883200000,
-      "tag": "0011_qualification_verification",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1752969600000,
-      "tag": "0012_onboarding_extended",
+      "when": 1784383811089,
+      "tag": "0000_tidy_microchip",
       "breakpoints": true
     }
   ]

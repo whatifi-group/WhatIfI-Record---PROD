@@ -31,7 +31,8 @@ export const onboardingSubmissionsTable = pgTable("onboarding_submissions", {
     { onDelete: "set null" },
   ),
   employmentType: text("employment_type"),
-  startDate: date("start_date", { mode: "string" }).notNull(),
+  // Set by HR at approval time — no longer collected during onboarding.
+  startDate: date("start_date", { mode: "string" }),
   onboardingStatus: text("onboarding_status", {
     enum: onboardingStatusValues,
   })

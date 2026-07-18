@@ -48,7 +48,7 @@ interface Submission {
   phone: string | null;
   jobTitle: string;
   employmentType: string;
-  startDate: string;
+  startDate: string | null;
   onboardingStatus: SubmissionStatus;
   submittedAt: string;
   reviewedAt: string | null;
@@ -396,7 +396,7 @@ export default function OnboardingQueue() {
                     {sub.jobTitle}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                    {sub.startDate}
+                    {sub.startDate || "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {format(parseISO(sub.submittedAt), "d MMM yyyy")}
@@ -607,8 +607,12 @@ export default function OnboardingQueue() {
                     <span className="capitalize">{detailSub.employmentType.replace(/_/g, " ")}</span>
                   </>
                 )}
-                <span className="text-muted-foreground">Start Date</span>
-                <span>{detailSub.startDate}</span>
+                {detailSub.startDate && (
+                  <>
+                    <span className="text-muted-foreground">Start Date</span>
+                    <span>{detailSub.startDate}</span>
+                  </>
+                )}
                 <span className="text-muted-foreground">Status</span>
                 <Badge
                   variant="outline"

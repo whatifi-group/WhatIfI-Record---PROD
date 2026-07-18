@@ -124,3 +124,24 @@ export type OnboardingDisclosure =
   typeof onboardingDisclosuresTable.$inferSelect;
 export type InsertOnboardingDisclosure =
   typeof onboardingDisclosuresTable.$inferInsert;
+
+// ── Payroll / Bank Details ───────────────────────────────────────────────────
+
+export const onboardingPayrollTable = pgTable("onboarding_payroll", {
+  id: serial("id").primaryKey(),
+  submissionId: integer("submission_id")
+    .notNull()
+    .references(() => onboardingSubmissionsTable.id, { onDelete: "cascade" }),
+  niNumber: text("ni_number"),
+  bankName: text("bank_name"),
+  accountHolder: text("account_holder"),
+  sortCode: text("sort_code"),
+  accountNumber: text("account_number"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type OnboardingPayroll = typeof onboardingPayrollTable.$inferSelect;
+export type InsertOnboardingPayroll =
+  typeof onboardingPayrollTable.$inferInsert;

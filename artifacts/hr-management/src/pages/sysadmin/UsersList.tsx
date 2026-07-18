@@ -148,7 +148,7 @@ export default function UsersList() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-xs">
-                      {user.lastLoginAt ? format(new Date(user.lastLoginAt), "MMM d, yyyy HH:mm") : "Never"}
+                      {user.lastLoginAt ? format(new Date(user.lastLoginAt), "dd/MM/yyyy HH:mm") : "Never"}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <DropdownMenu>

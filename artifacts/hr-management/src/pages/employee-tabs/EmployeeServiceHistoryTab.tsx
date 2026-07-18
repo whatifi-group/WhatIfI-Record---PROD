@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,7 +64,7 @@ function formatDate(val: string | Date | null | undefined): string {
   if (!val) return "Present";
   const str = typeof val === "string" ? val : val.toISOString();
   try {
-    return format(new Date(str.slice(0, 10) + "T00:00:00"), "d MMM yyyy");
+    return format(new Date(str.slice(0, 10) + "T00:00:00"), "dd/MM/yyyy");
   } catch {
     return String(val);
   }
@@ -229,20 +230,18 @@ export default function EmployeeServiceHistoryTab({ employeeId, canEdit }: Props
                 <Label htmlFor="add-start">
                   Start Date <span className="text-destructive">*</span>
                 </Label>
-                <Input
+                <DatePicker
                   id="add-start"
-                  type="date"
                   value={addForm.startDate}
-                  onChange={(e) => setAddForm((f) => ({ ...f, startDate: e.target.value }))}
+                  onChange={(value) => setAddForm((f) => ({ ...f, startDate: value }))}
                 />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="add-end">End Date</Label>
-                <Input
+                <DatePicker
                   id="add-end"
-                  type="date"
                   value={addForm.endDate}
-                  onChange={(e) => setAddForm((f) => ({ ...f, endDate: e.target.value }))}
+                  onChange={(value) => setAddForm((f) => ({ ...f, endDate: value }))}
                 />
               </div>
               <div className="space-y-1">
@@ -306,20 +305,18 @@ export default function EmployeeServiceHistoryTab({ employeeId, canEdit }: Props
                       <Label htmlFor={`edit-start-${period.id}`}>
                         Start Date <span className="text-destructive">*</span>
                       </Label>
-                      <Input
+                      <DatePicker
                         id={`edit-start-${period.id}`}
-                        type="date"
                         value={editForm.startDate}
-                        onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                        onChange={(value) => setEditForm((f) => ({ ...f, startDate: value }))}
                       />
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor={`edit-end-${period.id}`}>End Date</Label>
-                      <Input
+                      <DatePicker
                         id={`edit-end-${period.id}`}
-                        type="date"
                         value={editForm.endDate}
-                        onChange={(e) => setEditForm((f) => ({ ...f, endDate: e.target.value }))}
+                        onChange={(value) => setEditForm((f) => ({ ...f, endDate: value }))}
                       />
                     </div>
                     <div className="space-y-1">

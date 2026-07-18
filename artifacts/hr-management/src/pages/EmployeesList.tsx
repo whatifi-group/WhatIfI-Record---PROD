@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -215,7 +216,7 @@ export default function EmployeesList() {
                   <FormField control={form.control} name="startDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Date</FormLabel>
-                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormControl><DatePicker {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -353,7 +354,7 @@ export default function EmployeesList() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                      {format(new Date(employee.startDate), "MMM d, yyyy")}
+                      {format(new Date(employee.startDate), "dd/MM/yyyy")}
                     </TableCell>
                   </TableRow>
                 ))}

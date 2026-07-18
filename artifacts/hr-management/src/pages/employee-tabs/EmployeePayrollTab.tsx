@@ -19,6 +19,7 @@ import type {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -198,20 +199,18 @@ function PayRateFormFields({
       </div>
       <div>
         <Label className="text-xs">Effective From <span className="text-destructive">*</span></Label>
-        <Input
+        <DatePicker
           className="mt-1"
-          type="date"
           value={form.effectiveFrom}
-          onChange={(e) => onChange({ effectiveFrom: e.target.value })}
+          onChange={(value) => onChange({ effectiveFrom: value })}
         />
       </div>
       <div>
         <Label className="text-xs">Effective To (leave blank = open)</Label>
-        <Input
+        <DatePicker
           className="mt-1"
-          type="date"
           value={form.effectiveTo}
-          onChange={(e) => onChange({ effectiveTo: e.target.value })}
+          onChange={(value) => onChange({ effectiveTo: value })}
         />
       </div>
     </div>

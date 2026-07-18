@@ -17,6 +17,11 @@
  * events, so `@/components/ui/select` is replaced with native <select> elements
  * for this test file only.  The behaviour under test (disabled state, payload,
  * callbacks) is in the dialog's own logic, not in the Select widget itself.
+ *
+ * Similarly, `@/components/ui/date-picker` renders a Popover + Calendar
+ * (also portal-based) instead of an editable input, so it's replaced with a
+ * native <input type="date"> here too — this file tests the dialog's date
+ * validation and payload logic, not the calendar widget's own interaction.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -56,6 +61,29 @@ vi.mock("@/components/ui/select", () => ({
     value: string;
     children: React.ReactNode;
   }) => <option value={value}>{children}</option>,
+}));
+
+// ── Replace the Calendar-popover DatePicker with a native date input ────────
+vi.mock("@/components/ui/date-picker", () => ({
+  DatePicker: ({
+    id,
+    value,
+    onChange,
+    ...rest
+  }: {
+    id?: string;
+    value?: string;
+    onChange?: (value: string) => void;
+    [key: string]: unknown;
+  }) => (
+    <input
+      id={id}
+      type="date"
+      value={value ?? ""}
+      onChange={(e) => onChange?.(e.target.value)}
+      {...rest}
+    />
+  ),
 }));
 
 // ── Mock API hooks ─────────────────────────────────────────────────────────────

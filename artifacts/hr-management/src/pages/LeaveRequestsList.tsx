@@ -12,6 +12,7 @@ import { LeaveStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -168,10 +169,10 @@ export default function LeaveRequestsList() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="startDate" render={({ field }) => (
-                    <FormItem><FormLabel>Start Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Start Date</FormLabel><FormControl><DatePicker {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="endDate" render={({ field }) => (
-                    <FormItem><FormLabel>End Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>End Date</FormLabel><FormControl><DatePicker {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
 
@@ -271,7 +272,7 @@ export default function LeaveRequestsList() {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-sm">
-                            {format(new Date(request.startDate), "MMM d")} - {format(new Date(request.endDate), "MMM d, yyyy")}
+                            {format(new Date(request.startDate), "dd/MM/yyyy")} - {format(new Date(request.endDate), "dd/MM/yyyy")}
                           </span>
                           <span className="text-xs text-muted-foreground mt-0.5">{days} day{days !== 1 ? 's' : ''}</span>
                         </div>

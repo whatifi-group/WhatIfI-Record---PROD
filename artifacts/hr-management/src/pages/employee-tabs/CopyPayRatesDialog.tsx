@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
@@ -342,11 +343,10 @@ export default function CopyPayRatesDialog({ open, onClose, targetEmployeeId }: 
                       Start date for newly inserted rates
                     </p>
                   </div>
-                  <Input
+                  <DatePicker
                     id="copy-effective-date"
-                    type="date"
                     value={effectiveDate}
-                    onChange={(e) => setEffectiveDate(e.target.value)}
+                    onChange={setEffectiveDate}
                     disabled={controlsDisabled}
                     className="w-36 text-sm shrink-0"
                   />

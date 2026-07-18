@@ -51,7 +51,7 @@ function resolveFileHref(fileUrl: string): string {
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   try {
-    return format(parseISO(dateStr), "d MMM yyyy");
+    return format(parseISO(dateStr), "dd/MM/yyyy");
   } catch {
     return dateStr;
   }

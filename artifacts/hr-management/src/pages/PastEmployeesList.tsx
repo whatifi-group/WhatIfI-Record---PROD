@@ -4,6 +4,7 @@ import { EmployeeStatus } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, UserX, Search, X } from "lucide-react";
@@ -108,11 +109,10 @@ export default function PastEmployeesList() {
                   <Label htmlFor="date-from" className="text-xs text-muted-foreground">
                     Left from
                   </Label>
-                  <Input
+                  <DatePicker
                     id="date-from"
-                    type="date"
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={setDateFrom}
                     className="bg-background border-border/50 text-sm h-9"
                   />
                 </div>
@@ -120,12 +120,11 @@ export default function PastEmployeesList() {
                   <Label htmlFor="date-to" className="text-xs text-muted-foreground">
                     Left to
                   </Label>
-                  <Input
+                  <DatePicker
                     id="date-to"
-                    type="date"
                     value={dateTo}
                     min={dateFrom || undefined}
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={setDateTo}
                     className="bg-background border-border/50 text-sm h-9"
                   />
                 </div>
@@ -187,11 +186,11 @@ export default function PastEmployeesList() {
                           </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                          {format(new Date(employee.startDate), "MMM d, yyyy")}
+                          {format(new Date(employee.startDate), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                           {employee.leaverDate
-                            ? format(new Date(employee.leaverDate as string), "MMM d, yyyy")
+                            ? format(new Date(employee.leaverDate as string), "dd/MM/yyyy")
                             : <span className="text-muted-foreground/50 italic">Not recorded</span>}
                         </TableCell>
                       </TableRow>

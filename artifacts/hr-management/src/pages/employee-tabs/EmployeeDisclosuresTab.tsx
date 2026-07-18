@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -268,7 +269,7 @@ function UpdateChecksSection({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">Date of Check</Label>
-              <Input type="date" className="h-7 text-xs" value={form.checkedDate} onChange={(e) => setForm((f) => ({ ...f, checkedDate: e.target.value }))} />
+              <DatePicker className="h-7 text-xs" value={form.checkedDate} onChange={(value) => setForm((f) => ({ ...f, checkedDate: value }))} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Result</Label>
@@ -469,7 +470,7 @@ function ConvictionReviewPanel({
             </div>
             <div className="space-y-1">
               <Label>Review Date</Label>
-              <Input type="date" value={reviewForm.reviewDate} onChange={(e) => setReviewForm((f) => ({ ...f, reviewDate: e.target.value }))} />
+              <DatePicker value={reviewForm.reviewDate} onChange={(value) => setReviewForm((f) => ({ ...f, reviewDate: value }))} />
             </div>
             <div className="space-y-1">
               <Label>Notes (optional)</Label>
@@ -1017,7 +1018,7 @@ export default function EmployeeDisclosuresTab({ employeeId }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Issue Date <span className="text-destructive">*</span></Label>
-                <Input type="date" value={form.issueDate} onChange={(e) => setForm((f) => ({ ...f, issueDate: e.target.value }))} />
+                <DatePicker value={form.issueDate} onChange={(value) => setForm((f) => ({ ...f, issueDate: value }))} />
               </div>
               <div className="space-y-1">
                 <Label>Certificate Number</Label>

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -201,11 +201,10 @@ export default function MarkAsLeaverDialog({
             <Label htmlFor="leaver-date">
               Leaving Date <span className="text-destructive">*</span>
             </Label>
-            <Input
+            <DatePicker
               id="leaver-date"
-              type="date"
               value={leaverDate}
-              onChange={(e) => setLeaverDate(e.target.value)}
+              onChange={setLeaverDate}
               aria-invalid={showBlankError || showFutureError}
               aria-describedby={
                 showBlankError

@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import TabErrorState from "@/components/TabErrorState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -106,7 +107,7 @@ const defaultQualForm: QualForm = {
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
   try {
-    return format(parseISO(dateStr), "d MMM yyyy");
+    return format(parseISO(dateStr), "dd/MM/yyyy");
   } catch {
     return dateStr;
   }
@@ -804,12 +805,11 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
 
             <div>
               <Label>Date Achieved *</Label>
-              <Input
+              <DatePicker
                 className="mt-1"
-                type="date"
                 value={form.dateAchieved}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dateAchieved: e.target.value }))
+                onChange={(value) =>
+                  setForm((f) => ({ ...f, dateAchieved: value }))
                 }
               />
             </div>
@@ -860,12 +860,11 @@ export default function EmployeeQualificationsTab({ employeeId }: Props) {
           <div className="space-y-4">
             <div>
               <Label>New Date Achieved *</Label>
-              <Input
+              <DatePicker
                 className="mt-1"
-                type="date"
                 value={revalidateForm.dateAchieved}
-                onChange={(e) =>
-                  setRevalidateForm((f) => ({ ...f, dateAchieved: e.target.value }))
+                onChange={(value) =>
+                  setRevalidateForm((f) => ({ ...f, dateAchieved: value }))
                 }
               />
             </div>

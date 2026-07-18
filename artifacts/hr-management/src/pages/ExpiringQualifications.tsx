@@ -152,12 +152,12 @@ export default function ExpiringQualifications() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {r.dateAchieved
-                          ? format(new Date(r.dateAchieved as unknown as string), "dd MMM yyyy")
+                          ? format(new Date(r.dateAchieved as unknown as string), "dd/MM/yyyy")
                           : "—"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {r.expiryDate
-                          ? format(new Date(r.expiryDate as unknown as string), "dd MMM yyyy")
+                          ? format(new Date(r.expiryDate as unknown as string), "dd/MM/yyyy")
                           : "—"}
                       </td>
                       <td className="px-4 py-3">

@@ -11,6 +11,7 @@ import type { EmployeeWorkRecord } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -197,7 +198,7 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
               {sortedRecords.map((record) => (
                 <TableRow key={record.id} className="border-border/30">
                   <TableCell className="text-sm font-medium whitespace-nowrap">
-                    {format(new Date(record.shiftDate), "MMM d, yyyy")}
+                    {format(new Date(record.shiftDate), "dd/MM/yyyy")}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -257,7 +258,7 @@ export default function EmployeeWorkRecordsTab({ employeeId }: Props) {
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="col-span-2">
               <Label>Date *</Label>
-              <Input className="mt-1" type="date" value={form.shiftDate} onChange={e => setForm(f => ({ ...f, shiftDate: e.target.value }))} />
+              <DatePicker className="mt-1" value={form.shiftDate} onChange={value => setForm(f => ({ ...f, shiftDate: value }))} />
             </div>
             <div className="col-span-2">
               <Label>Shift Type</Label>

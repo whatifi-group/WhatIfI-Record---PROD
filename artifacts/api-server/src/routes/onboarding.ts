@@ -32,6 +32,7 @@ import {
   onboardingNextOfKinPhonesTable,
   onboardingMedicalTable,
   onboardingDisclosuresTable,
+  onboardingPayrollTable,
   employeesTable,
   employeePhonesTable,
   employeeQualificationsTable,
@@ -47,6 +48,7 @@ import {
   employeeDisclosuresTable,
   employeeAttachmentsTable,
   employeeDisclosureConsentsTable,
+  employeePayrollTable,
   usersTable,
   rolesTable,
   employeeServicePeriodsTable,
@@ -126,13 +128,21 @@ const DisclosureSubmitInput = z.object({
   notes: z.string().optional().nullable(),
 }).optional().nullable();
 
+const PayrollSubmitInput = z.object({
+  niNumber: z.string().optional().nullable(),
+  bankName: z.string().optional().nullable(),
+  accountHolder: z.string().optional().nullable(),
+  sortCode: z.string().optional().nullable(),
+  accountNumber: z.string().optional().nullable(),
+}).optional().nullable();
+
 const SubmitBody = z.object({
   firstName: z.string().min(1).max(100),
   lastName: z.string().min(1).max(100),
   email: z.string().email(),
   phone: z.string().optional().nullable(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  // Optional — HR sets these at approval time
+  // Optional — HR sets the start date and these fields at approval time
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   jobTitle: z.string().max(200).optional().nullable(),
   departmentId: z.number().int().positive().optional().nullable(),
   employmentType: z.string().optional().nullable(),
@@ -142,6 +152,7 @@ const SubmitBody = z.object({
   nextOfKin: NextOfKinInput,
   medical: MedicalInput,
   disclosure: DisclosureSubmitInput,
+  payroll: PayrollSubmitInput,
 });
 
 const SubmissionsQuery = z.object({
@@ -225,8 +236,8 @@ async function copySubmissionQualifications(
 }
 
 /**
- * Copy staged address, next-of-kin, medical, dietary, and disclosure rows
- * from the staging tables into the proper employee tables.
+ * Copy staged address, next-of-kin, medical, dietary, disclosure, and payroll
+ * rows from the staging tables into the proper employee tables.
  * Also generates and uploads the Update Service consent PDF if applicable.
  * Creates an employee_disclosure_update_service_consents row for every approval.
  */
@@ -419,6 +430,24 @@ async function copySubmissionExtendedData(
       consentedAt,
       ipAddress,
       pdfAttachmentId,
+    });
+  }
+
+  // ── Payroll / Bank Details ─────────────────────────────────────────────────
+  const [stagedPayroll] = await tx
+    .select()
+    .from(onboardingPayrollTable)
+    .where(eq(onboardingPayrollTable.submissionId, submissionId))
+    .limit(1);
+
+  if (stagedPayroll) {
+    await tx.insert(employeePayrollTable).values({
+      employeeId,
+      niNumber: stagedPayroll.niNumber,
+      bankName: stagedPayroll.bankName,
+      accountHolder: stagedPayroll.accountHolder,
+      sortCode: stagedPayroll.sortCode,
+      accountNumber: stagedPayroll.accountNumber,
     });
   }
 }
@@ -650,7 +679,7 @@ router.post(
       return;
     }
 
-    const { qualifications, address, nextOfKin, medical, disclosure, ...profileData } =
+    const { qualifications, address, nextOfKin, medical, disclosure, payroll, ...profileData } =
       parsed.data;
 
     const result = await db.transaction(async (tx) => {
@@ -735,6 +764,17 @@ router.post(
           updateServiceConsentName: disclosure.updateServiceConsentName ?? null,
           convictionDetails: disclosure.convictionDetails ?? null,
           notes: disclosure.notes ?? null,
+        });
+      }
+
+      if (payroll) {
+        await tx.insert(onboardingPayrollTable).values({
+          submissionId: submission.id,
+          niNumber: payroll.niNumber ?? null,
+          bankName: payroll.bankName ?? null,
+          accountHolder: payroll.accountHolder ?? null,
+          sortCode: payroll.sortCode ?? null,
+          accountNumber: payroll.accountNumber ?? null,
         });
       }
 

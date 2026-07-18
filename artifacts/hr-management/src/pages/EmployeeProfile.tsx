@@ -13,6 +13,7 @@ import { EmployeeStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -219,7 +220,7 @@ export default function EmployeeProfile() {
                 </div>
                 <div className="flex items-center text-muted-foreground">
                   <Calendar className="w-4 h-4 mr-3 shrink-0" />
-                  <span>Joined {format(new Date(employee.startDate), "MMM d, yyyy")}</span>
+                  <span>Joined {format(new Date(employee.startDate), "dd/MM/yyyy")}</span>
                 </div>
               </div>
 
@@ -229,7 +230,7 @@ export default function EmployeeProfile() {
                   {employee.leaverDate && (
                     <div className="flex items-center text-muted-foreground">
                       <LogOut className="w-4 h-4 mr-3 shrink-0 text-destructive/60" />
-                      <span>Left {format(new Date(employee.leaverDate), "MMM d, yyyy")}</span>
+                      <span>Left {format(new Date(employee.leaverDate), "dd/MM/yyyy")}</span>
                     </div>
                   )}
                   {employee.leaverReason && (
@@ -457,7 +458,7 @@ export default function EmployeeProfile() {
                             <FormField control={form.control} name="startDate" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Start Date</FormLabel>
-                                <FormControl><Input type="date" {...field} /></FormControl>
+                                <FormControl><DatePicker {...field} /></FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -501,7 +502,7 @@ export default function EmployeeProfile() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Start Date</h3>
-                        <p className="text-base font-medium">{format(new Date(employee.startDate), "MMMM d, yyyy")}</p>
+                        <p className="text-base font-medium">{format(new Date(employee.startDate), "dd/MM/yyyy")}</p>
                       </div>
                       {employee.status === EmployeeStatus.leaver && (
                         <>
@@ -515,7 +516,7 @@ export default function EmployeeProfile() {
                           <div>
                             <h3 className="text-sm font-medium text-muted-foreground mb-1">Leaving Date</h3>
                             <p className="text-base font-medium">
-                              {employee.leaverDate ? format(new Date(employee.leaverDate), "MMMM d, yyyy") : "Not recorded"}
+                              {employee.leaverDate ? format(new Date(employee.leaverDate), "dd/MM/yyyy") : "Not recorded"}
                             </p>
                           </div>
                         </>

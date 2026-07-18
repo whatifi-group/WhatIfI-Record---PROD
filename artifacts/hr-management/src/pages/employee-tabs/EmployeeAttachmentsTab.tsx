@@ -128,7 +128,7 @@ export default function EmployeeAttachmentsTab({ employeeId }: Props) {
                     {att.fileSizeBytes ? `${(att.fileSizeBytes / 1024).toFixed(1)} KB` : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(att.uploadedAt), "MMM d, yyyy")}
+                    {format(new Date(att.uploadedAt), "dd/MM/yyyy")}
                   </TableCell>
                   <TableCell>
                     <AlertDialog>

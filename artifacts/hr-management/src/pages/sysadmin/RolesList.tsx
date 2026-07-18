@@ -132,7 +132,7 @@ export default function RolesList() {
                           </div>
                         )}
                         <div className="text-[10px] text-muted-foreground/70 mt-2">
-                          Created {format(new Date(role.createdAt), "MMM d, yyyy")}
+                          Created {format(new Date(role.createdAt), "dd/MM/yyyy")}
                         </div>
                       </div>
                     </td>

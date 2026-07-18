@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,19 +244,17 @@ export default function WorkRecordsList() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">From</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={setDateFrom}
                 className="h-9 text-sm"
               />
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">To</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={setDateTo}
                 className="h-9 text-sm"
               />
             </div>
@@ -408,7 +407,7 @@ export default function WorkRecordsList() {
                         {row.employeeDepartmentName ?? <span className="italic">—</span>}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {format(parseISO(row.shiftDate), "MMM d, yyyy")}
+                        {format(parseISO(row.shiftDate), "dd/MM/yyyy")}
                       </TableCell>
                       <TableCell>
                         <Badge

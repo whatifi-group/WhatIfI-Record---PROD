@@ -25,6 +25,15 @@ const CATEGORY_LABELS: Record<string, string> = {
   leaver_reason: "Leaver Reasons",
 };
 
+// "system_config" holds internal single-value settings (e.g. the onboarding
+// passphrase in routes/onboarding.ts) — it reuses the lov_items table as
+// storage but is not a real list-of-values category, and must never be
+// editable through this generic list-management API. Without this guard, a
+// sysadmin browsing "Manage Lists" can toggle the passphrase row inactive
+// (or delete it outright) with no indication it isn't an ordinary dropdown
+// value — this has happened in production.
+const MANAGED_CATEGORY_BLOCKLIST = new Set(["system_config"]);
+
 // GET /sysadmin/lov — all categories with their items
 router.get("/sysadmin/lov", async (req, res): Promise<void> => {
   const rows = await db
@@ -36,6 +45,7 @@ router.get("/sysadmin/lov", async (req, res): Promise<void> => {
   const grouped = new Map<string, typeof rows>();
   for (const cat of Object.keys(CATEGORY_LABELS)) grouped.set(cat, []);
   for (const row of rows) {
+    if (MANAGED_CATEGORY_BLOCKLIST.has(row.category)) continue;
     if (!grouped.has(row.category)) grouped.set(row.category, []);
     grouped.get(row.category)!.push(row);
   }
@@ -52,6 +62,10 @@ router.get("/sysadmin/lov", async (req, res): Promise<void> => {
 // GET /sysadmin/lov/:category — items for one category
 router.get("/sysadmin/lov/:category", async (req, res): Promise<void> => {
   const { category } = req.params;
+  if (MANAGED_CATEGORY_BLOCKLIST.has(category)) {
+    res.status(404).json({ error: "Category not found" });
+    return;
+  }
   const rows = await db
     .select()
     .from(lovItemsTable)
@@ -64,6 +78,10 @@ router.get("/sysadmin/lov/:category", async (req, res): Promise<void> => {
 // POST /sysadmin/lov/:category — create item
 router.post("/sysadmin/lov/:category", async (req, res): Promise<void> => {
   const { category } = req.params;
+  if (MANAGED_CATEGORY_BLOCKLIST.has(category)) {
+    res.status(403).json({ error: "This category cannot be managed here." });
+    return;
+  }
 
   const parsed = CreateLovItemBody.safeParse(req.body);
   if (!parsed.success) {
@@ -109,6 +127,11 @@ router.patch("/sysadmin/lov/:category/:id", async (req, res): Promise<void> => {
   const params = UpdateLovItemParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  if (MANAGED_CATEGORY_BLOCKLIST.has(params.data.category)) {
+    res.status(403).json({ error: "This category cannot be managed here." });
     return;
   }
 
@@ -166,6 +189,11 @@ router.delete("/sysadmin/lov/:category/:id", async (req, res): Promise<void> => 
 
   if (isNaN(idNum)) {
     res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  if (MANAGED_CATEGORY_BLOCKLIST.has(category)) {
+    res.status(403).json({ error: "This category cannot be managed here." });
     return;
   }
 

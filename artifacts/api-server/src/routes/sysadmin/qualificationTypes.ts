@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
-import { asc, eq } from "drizzle-orm";
-import { db, qualificationTypesTable } from "@workspace/db";
+import { asc, eq, sql } from "drizzle-orm";
+import {
+  db,
+  qualificationTypesTable,
+  employeeQualificationsTable,
+  onboardingSubmissionQualificationsTable,
+} from "@workspace/db";
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -196,6 +201,31 @@ router.delete("/sysadmin/qualification-types/:id", async (req, res): Promise<voi
     res.status(400).json({ error: "Invalid id" });
     return;
   }
+
+  const [{ employeeQualificationCount }] = await db
+    .select({ employeeQualificationCount: sql<number>`count(*)::int` })
+    .from(employeeQualificationsTable)
+    .where(eq(employeeQualificationsTable.qualificationTypeId, params.data.id));
+
+  const [{ onboardingSubmissionCount }] = await db
+    .select({ onboardingSubmissionCount: sql<number>`count(*)::int` })
+    .from(onboardingSubmissionQualificationsTable)
+    .where(eq(onboardingSubmissionQualificationsTable.qualificationTypeId, params.data.id));
+
+  if (employeeQualificationCount > 0 || onboardingSubmissionCount > 0) {
+    const parts: string[] = [];
+    if (employeeQualificationCount > 0) {
+      parts.push(`${employeeQualificationCount} employee record(s)`);
+    }
+    if (onboardingSubmissionCount > 0) {
+      parts.push(`${onboardingSubmissionCount} onboarding submission(s)`);
+    }
+    res.status(409).json({
+      error: `Cannot delete: this qualification type is still referenced by ${parts.join(" and ")}.`,
+    });
+    return;
+  }
+
   const [deleted] = await db
     .delete(qualificationTypesTable)
     .where(eq(qualificationTypesTable.id, params.data.id))

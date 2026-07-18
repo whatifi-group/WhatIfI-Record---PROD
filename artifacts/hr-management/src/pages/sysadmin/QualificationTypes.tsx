@@ -145,8 +145,12 @@ export default function QualificationTypes() {
           invalidate();
           setDeletingId(null);
         },
-        onError: () => {
-          toast({ title: "Failed to delete", variant: "destructive" });
+        onError: (error) => {
+          toast({
+            title: "Failed to delete",
+            description: error instanceof Error ? error.message : undefined,
+            variant: "destructive",
+          });
           setDeletingId(null);
         },
       },

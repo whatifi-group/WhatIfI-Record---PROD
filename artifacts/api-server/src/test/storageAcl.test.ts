@@ -12,22 +12,9 @@
  *      this endpoint serves the full private namespace and cannot enforce
  *      per-object ownership; self-service users must not have blanket access.
  *
- * GCS storage interactions are mocked so no live bucket is required.
+ * Object storage interactions are mocked so no real files are touched.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-
-// Mock @google-cloud/storage before any module that imports it is loaded.
-// This prevents the ObjectStorageService constructor from attempting a real
-// GCS credential exchange at import time.
-vi.mock("@google-cloud/storage", () => {
-  function MockStorage(this: Record<string, unknown>) {
-    this.bucket = vi.fn().mockReturnValue({});
-  }
-  return {
-    Storage: MockStorage,
-    File: vi.fn(),
-  };
-});
 
 import storageRouter, { objectStorageService } from "../routes/storage";
 import {

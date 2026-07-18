@@ -18,6 +18,7 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEB_ROOT="/var/www/whatifi-record/public"
 PM2_APP="whatifi-api-server"
+ECOSYSTEM_FILE="$REPO_DIR/artifacts/api-server/ecosystem.config.cjs"
 
 cd "$REPO_DIR"
 
@@ -40,7 +41,10 @@ find "$WEB_ROOT" -type d -exec chmod 755 {} \;
 find "$WEB_ROOT" -type f -exec chmod 644 {} \;
 
 echo "==> Restarting api-server (pm2)"
-pm2 restart "$PM2_APP" --update-env
+# Restart via the ecosystem file (not just the app name) — `pm2 restart <name>
+# --update-env` does NOT re-read env vars from ecosystem.config.cjs, only
+# `pm2 restart <file>` does. This matters whenever env vars change there.
+pm2 restart "$ECOSYSTEM_FILE"
 pm2 save
 
 echo "==> Reloading nginx"

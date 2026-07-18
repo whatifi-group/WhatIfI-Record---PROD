@@ -3,11 +3,13 @@ import {
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
 } from "@workspace/api-zod";
-import { Router, type IRouter, type Request, type Response } from "express";
+import express, { Router, type IRouter, type Request, type Response } from "express";
 
 import {
+  LocalFile,
   ObjectNotFoundError,
   ObjectStorageService,
+  verifySignedObjectUrl,
 } from "../lib/objectStorage";
 import { getEffectivePermissions } from "../middlewares/requirePermission";
 import {
@@ -17,6 +19,22 @@ import {
 
 const router: IRouter = Router();
 export const objectStorageService = new ObjectStorageService();
+
+/** Stream a stored file to the response, mirroring its Content-Type/-Length. */
+async function streamFileToResponse(res: Response, file: LocalFile): Promise<void> {
+  const response = await objectStorageService.downloadObject(file);
+  res.status(response.status);
+  response.headers.forEach((value, key) => res.setHeader(key, value));
+
+  if (response.body) {
+    const nodeStream = Readable.fromWeb(
+      response.body as ReadableStream<Uint8Array>,
+    );
+    nodeStream.pipe(res);
+  } else {
+    res.end();
+  }
+}
 
 /**
  * POST /storage/uploads/request-url
@@ -76,39 +94,72 @@ router.post(
 );
 
 /**
- * GET /storage/public-objects/*
+ * PUT /storage/local-upload/:objectId
  *
- * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
- * Unconditionally public — no authentication or ACL checks.
+ * Backs the presigned URL returned by /storage/uploads/request-url.
+ * Not session-gated (see middlewares/requireAuth.ts) — the HMAC signature +
+ * expiry embedded in the URL is the auth, exactly like a real GCS presigned
+ * URL. Anyone with the link can upload once, before it expires.
+ */
+router.put(
+  "/storage/local-upload/:objectId",
+  express.raw({ type: () => true, limit: "25mb" }),
+  async (req: Request, res: Response) => {
+    const objectId = String(req.params.objectId);
+    const { expires, sig } = req.query;
+
+    if (!verifySignedObjectUrl("put", objectId, expires, sig)) {
+      res.status(403).json({ error: "Invalid or expired upload link" });
+      return;
+    }
+
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ error: "Missing request body" });
+      return;
+    }
+
+    try {
+      const contentType = req.headers["content-type"] || "application/octet-stream";
+      const file = new LocalFile(objectId);
+      await file.save(req.body, { contentType });
+      res.status(200).json({ ok: true });
+    } catch (error) {
+      console.error("Error saving uploaded object", error);
+      res.status(500).json({ error: "Failed to save uploaded file" });
+    }
+  },
+);
+
+/**
+ * GET /storage/local-download/:objectId
+ *
+ * Backs the signed URL returned by ObjectStorageService.getSignedDownloadUrl,
+ * used for self-service PDF downloads that can't go through the HR-gated
+ * /storage/objects/* route below. Not session-gated — the HMAC signature +
+ * expiry is the auth.
  */
 router.get(
-  "/storage/public-objects/*filePath",
+  "/storage/local-download/:objectId",
   async (req: Request, res: Response) => {
+    const objectId = String(req.params.objectId);
+    const { expires, sig } = req.query;
+
+    if (!verifySignedObjectUrl("get", objectId, expires, sig)) {
+      res.status(403).json({ error: "Invalid or expired download link" });
+      return;
+    }
+
     try {
-      const raw = req.params.filePath;
-      const filePath = Array.isArray(raw) ? raw.join("/") : raw;
-      const file = await objectStorageService.searchPublicObject(filePath);
-      if (!file) {
-        res.status(404).json({ error: "File not found" });
+      const file = new LocalFile(objectId);
+      const [exists] = await file.exists();
+      if (!exists) {
+        res.status(404).json({ error: "Object not found" });
         return;
       }
-
-      const response = await objectStorageService.downloadObject(file);
-
-      res.status(response.status);
-      response.headers.forEach((value, key) => res.setHeader(key, value));
-
-      if (response.body) {
-        const nodeStream = Readable.fromWeb(
-          response.body as ReadableStream<Uint8Array>,
-        );
-        nodeStream.pipe(res);
-      } else {
-        res.end();
-      }
+      await streamFileToResponse(res, file);
     } catch (error) {
-      console.error("Error serving public object", error);
-      res.status(500).json({ error: "Failed to serve public object" });
+      console.error("Error serving signed object", error);
+      res.status(500).json({ error: "Failed to serve object" });
     }
   },
 );
@@ -116,7 +167,7 @@ router.get(
 /**
  * GET /storage/objects/*
  *
- * Serve object entities from PRIVATE_OBJECT_DIR.
+ * Serve object entities from private storage.
  * Requires an authenticated session plus one of:
  *  - view_payroll  — full payroll HR staff
  *  - sysadmin      — system administrators
@@ -156,19 +207,7 @@ router.get(
       const objectFile =
         await objectStorageService.getObjectEntityFile(objectPath);
 
-      const response = await objectStorageService.downloadObject(objectFile);
-
-      res.status(response.status);
-      response.headers.forEach((value, key) => res.setHeader(key, value));
-
-      if (response.body) {
-        const nodeStream = Readable.fromWeb(
-          response.body as ReadableStream<Uint8Array>,
-        );
-        nodeStream.pipe(res);
-      } else {
-        res.end();
-      }
+      await streamFileToResponse(res, objectFile);
     } catch (error) {
       if (error instanceof ObjectNotFoundError) {
         res.status(404).json({ error: "Object not found" });

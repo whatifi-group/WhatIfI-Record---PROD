@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList, History } from "lucide-react";
+import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList, History, IdCard } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -81,6 +81,7 @@ const modules: Module[] = [
     hrOnly: true,
     pages: [
       { name: "Course Management", href: "/course-management", icon: BookOpen },
+      { name: "Student Register", href: "/course-management/students", icon: IdCard },
     ],
   },
   {

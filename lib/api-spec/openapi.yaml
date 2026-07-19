@@ -26,6 +26,8 @@ tags:
     description: Object storage upload and serving endpoints.
   - name: search
     description: Global permission-aware search
+  - name: course-management
+    description: Course management operations
 
 paths:
   # ── Storage ───────────────────────────────────────────────────────────────
@@ -2566,6 +2568,86 @@ paths:
         "404":
           description: Not found
 
+  # ── Course management ────────────────────────────────────────────────────
+
+  /course-management/students:
+    get:
+      operationId: listStudents
+      tags: [course-management]
+      summary: List all registered students
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Student"
+    post:
+      operationId: createStudent
+      tags: [course-management]
+      summary: Register a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentInput"
+      responses:
+        "201":
+          description: Created student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /course-management/students/{studentId}:
+    get:
+      operationId: getStudent
+      tags: [course-management]
+      summary: Get a registered student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateStudent
+      tags: [course-management]
+      summary: Update a registered student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+      responses:
+        "200":
+          description: Updated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+
   # ── Search ────────────────────────────────────────────────────────────────
 
   /search:
@@ -3658,6 +3740,58 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+
+    Student:
+      type: object
+      required: [studentId, firstName, lastName]
+      properties:
+        studentId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        homeAddress:
+          type: ["string", "null"]
+        phoneNumber:
+          type: ["string", "null"]
+        emailAddress:
+          type: ["string", "null"]
+
+    StudentInput:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        homeAddress:
+          type: string
+        phoneNumber:
+          type: string
+        emailAddress:
+          type: string
+          description: Must be a valid email address — validated server-side.
+
+    StudentUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        homeAddress:
+          type: ["string", "null"]
+        phoneNumber:
+          type: ["string", "null"]
+        emailAddress:
+          type: ["string", "null"]
+          description: Must be a valid email address — validated server-side.
 
     EmployeeServicePeriod:
       type: object

@@ -25,6 +25,7 @@ import WorkRecordsList from '@/pages/WorkRecordsList';
 import ExpiringQualifications from '@/pages/ExpiringQualifications';
 import QualificationVerification from '@/pages/QualificationVerification';
 import CourseManagement from '@/pages/CourseManagement';
+import StudentRegister from '@/pages/course-management/StudentRegister';
 import Safety from '@/pages/Safety';
 import LoginPage from '@/pages/LoginPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -139,6 +140,9 @@ function MainRoutes() {
         </Route>
         <Route path="/course-management">
           {() => <HrRoute component={CourseManagement} />}
+        </Route>
+        <Route path="/course-management/students">
+          {() => <HrRoute component={StudentRegister} />}
         </Route>
         <Route path="/safety">
           {() => <HrRoute component={Safety} />}

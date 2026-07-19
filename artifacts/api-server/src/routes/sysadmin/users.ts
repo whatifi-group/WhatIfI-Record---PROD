@@ -90,10 +90,12 @@ router.post("/sysadmin/users", async (req, res): Promise<void> => {
     return;
   }
 
+  const email = parsed.data.email.toLowerCase();
+
   const existing = await db
     .select({ id: usersTable.id })
     .from(usersTable)
-    .where(eq(usersTable.email, parsed.data.email))
+    .where(eq(usersTable.email, email))
     .limit(1);
 
   if (existing.length > 0) {
@@ -112,12 +114,12 @@ router.post("/sysadmin/users", async (req, res): Promise<void> => {
     return;
   }
 
-  const { password, ...rest } = parsed.data;
+  const { password, email: _email, ...rest } = parsed.data;
   const passwordHash = hashPassword(password);
 
   const [created] = await db
     .insert(usersTable)
-    .values({ ...rest, passwordHash, isSystemAccount: true, employeeId: null })
+    .values({ ...rest, email, passwordHash, isSystemAccount: true, employeeId: null })
     .returning();
 
   const [row] = await userSelection().where(eq(usersTable.id, created.id));
@@ -176,9 +178,14 @@ router.patch("/sysadmin/users/:id", async (req, res): Promise<void> => {
     }
   }
 
+  const updates = {
+    ...parsed.data,
+    ...(parsed.data.email != null ? { email: parsed.data.email.toLowerCase() } : {}),
+  };
+
   await db
     .update(usersTable)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set({ ...updates, updatedAt: new Date() })
     .where(eq(usersTable.id, params.data.id));
 
   // Evict stale cached permissions for this user so the next request picks up

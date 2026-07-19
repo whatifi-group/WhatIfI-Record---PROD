@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { KeyRound, TriangleAlert } from "lucide-react";
 
 const schema = z
   .object({
@@ -44,7 +46,9 @@ interface Props {
 
 export function ResetPasswordDialog({ open, onOpenChange, userId, userName }: Props) {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const resetPassword = useResetUserPassword();
+  const isOwnAccount = currentUser?.id === userId;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -94,6 +98,16 @@ export function ResetPasswordDialog({ open, onOpenChange, userId, userName }: Pr
             They will need to use this password on their next login.
           </DialogDescription>
         </DialogHeader>
+
+        {isOwnAccount && (
+          <Alert variant="destructive">
+            <TriangleAlert className="h-4 w-4" />
+            <AlertDescription>
+              This is your own account. Your current password will stop working
+              immediately — make sure you remember the new one before saving.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">

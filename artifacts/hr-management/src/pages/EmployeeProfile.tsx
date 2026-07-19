@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,6 +28,7 @@ import * as z from "zod";
 import { Loader2, ArrowLeft, Mail, Phone, Calendar, Briefcase, Building2, Pencil, Save, X, Trash2, ShieldAlert, LogOut, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useViewDuration } from "@/hooks/use-view-duration";
 import { format } from "date-fns";
 
 import EmployeeAddressesTab from "./employee-tabs/EmployeeAddressesTab";
@@ -47,7 +49,7 @@ const employeeUpdateSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   jobTitle: z.string().min(1, "Job title is required"),
-  departmentId: z.coerce.number().optional().nullable(),
+  departmentIds: z.array(z.number()).default([]),
   employmentType: z.string().min(1, "Engagement type is required"),
   status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
@@ -77,9 +79,15 @@ export default function EmployeeProfile() {
   const [isMarkingLeaver, setIsMarkingLeaver] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
-  const { data: employee, isLoading, isError } = useGetEmployee(employeeId, { 
-    query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) } 
+  const { data: employee, isLoading, isError } = useGetEmployee(employeeId, {
+    query: { enabled: !!employeeId, queryKey: getGetEmployeeQueryKey(employeeId) }
   });
+  useViewDuration(
+    "hr",
+    `/employees/${employeeId}`,
+    employeeId > 0,
+    employee ? `${employee.firstName} ${employee.lastName}` : null,
+  );
   const { data: departments } = useListDepartments();
   const { data: employmentTypes } = useListLovItems("employment_type");
   const { data: employeeStatuses } = useListLovItems("employee_status");
@@ -94,7 +102,7 @@ export default function EmployeeProfile() {
       lastName: "",
       email: "",
       jobTitle: "",
-      departmentId: null,
+      departmentIds: [],
       employmentType: "full_time",
       status: "active",
       startDate: new Date().toISOString().split("T")[0],
@@ -111,7 +119,7 @@ export default function EmployeeProfile() {
         lastName: employee.lastName,
         email: employee.email,
         jobTitle: employee.jobTitle,
-        departmentId: employee.departmentId,
+        departmentIds: employee.departments.map((d) => d.id),
         employmentType: employee.employmentType,
         status: employee.status as EmployeeStatus,
         startDate: employee.startDate.split("T")[0],
@@ -216,7 +224,11 @@ export default function EmployeeProfile() {
                 </div>
                 <div className="flex items-center text-muted-foreground">
                   <Building2 className="w-4 h-4 mr-3 shrink-0" />
-                  <span>{employee.departmentName || "No Department"}</span>
+                  <span>
+                    {employee.departments.length > 0
+                      ? employee.departments.map((d) => d.name).join(", ")
+                      : "No Department"}
+                  </span>
                 </div>
                 <div className="flex items-center text-muted-foreground">
                   <Calendar className="w-4 h-4 mr-3 shrink-0" />
@@ -407,20 +419,17 @@ export default function EmployeeProfile() {
                               <FormItem className="md:col-span-2"><FormLabel>Role / Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             
-                            <FormField control={form.control} name="departmentId" render={({ field }) => (
+                            <FormField control={form.control} name="departmentIds" render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Department</FormLabel>
-                                <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
-                                  <FormControl>
-                                    <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="none">No Department</SelectItem>
-                                    {departments?.map((d) => (
-                                      <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <FormLabel>Departments</FormLabel>
+                                <FormControl>
+                                  <MultiSelect
+                                    options={departments ?? []}
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Select departments"
+                                  />
+                                </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )} />
@@ -494,7 +503,11 @@ export default function EmployeeProfile() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Department</h3>
-                        <p className="text-base font-medium">{employee.departmentName || "Unassigned"}</p>
+                        <p className="text-base font-medium">
+                          {employee.departments.length > 0
+                            ? employee.departments.map((d) => d.name).join(", ")
+                            : "Unassigned"}
+                        </p>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-muted-foreground mb-1">Engagement Type</h3>

@@ -34,6 +34,7 @@ import {
   onboardingDisclosuresTable,
   onboardingPayrollTable,
   employeesTable,
+  employeeDepartmentsTable,
   employeePhonesTable,
   employeeQualificationsTable,
   qualificationTypesTable,
@@ -51,6 +52,7 @@ import {
   employeePayrollTable,
   usersTable,
   rolesTable,
+  userRolesTable,
   employeeServicePeriodsTable,
 } from "@workspace/db";
 import { requirePermission } from "../middlewares/requirePermission";
@@ -1025,12 +1027,18 @@ router.post(
           lastName: submission.lastName,
           email: submission.email,
           jobTitle: submission.jobTitle ?? "To be confirmed",
-          departmentId: submission.departmentId,
           employmentType: submission.employmentType ?? "full_time",
           startDate: submission.startDate ?? today,
           status: "active",
         })
         .returning();
+
+      if (submission.departmentId != null) {
+        await tx.insert(employeeDepartmentsTable).values({
+          employeeId: employee.id,
+          departmentId: submission.departmentId,
+        });
+      }
 
       // Migrate submission phone → employee_phones
       if (submission.phone) {
@@ -1049,16 +1057,20 @@ router.post(
       });
 
       // 2. Insert linked user account with temporary password
-      await tx.insert(usersTable).values({
-        name: `${submission.firstName} ${submission.lastName}`,
-        email: submission.email,
-        passwordHash: hashPassword(tempPassword),
-        status: "active",
-        roleId: roleId!,
-        permissions: [],
-        isSystemAccount: false,
-        employeeId: employee.id,
-      });
+      const [user] = await tx
+        .insert(usersTable)
+        .values({
+          name: `${submission.firstName} ${submission.lastName}`,
+          email: submission.email,
+          passwordHash: hashPassword(tempPassword),
+          status: "active",
+          permissions: [],
+          isSystemAccount: false,
+          employeeId: employee.id,
+        })
+        .returning();
+
+      await tx.insert(userRolesTable).values({ userId: user.id, roleId: roleId! });
 
       // 3. Copy qualifications from submission
       await copySubmissionQualifications(tx, submission.id, employee.id);
@@ -1167,7 +1179,6 @@ router.post(
           lastName: submission.lastName,
           email: submission.email,
           jobTitle: submission.jobTitle ?? "N/A",
-          departmentId: submission.departmentId,
           employmentType: submission.employmentType ?? "full_time",
           startDate: submission.startDate ?? today,
           status: "leaver",
@@ -1175,6 +1186,13 @@ router.post(
           leaverDate: today,
         })
         .returning();
+
+      if (submission.departmentId != null) {
+        await tx.insert(employeeDepartmentsTable).values({
+          employeeId: employee.id,
+          departmentId: submission.departmentId,
+        });
+      }
 
       if (submission.phone) {
         await tx.insert(employeePhonesTable).values({

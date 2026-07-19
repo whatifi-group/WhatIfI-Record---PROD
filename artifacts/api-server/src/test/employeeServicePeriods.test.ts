@@ -17,7 +17,7 @@ import {
   createTestRole,
   createTestUser,
 } from "./helpers";
-import { db, employeeServicePeriodsTable, employeesTable, usersTable } from "@workspace/db";
+import { db, employeeServicePeriodsTable, employeesTable, usersTable, userRolesTable } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
 
 // ── File-level fixtures ───────────────────────────────────────────────────────
@@ -80,13 +80,13 @@ beforeAll(async () => {
       name: "Leaver TestB",
       email: `leaver-user-b-${Date.now()}@example-test.invalid`,
       passwordHash: "not-a-real-hash",
-      roleId: editorRoleId,
       permissions: [],
       employeeId: empBId,
       status: "active",
     })
     .returning({ id: usersTable.id });
   empBUserId = empBUser.id;
+  await db.insert(userRolesTable).values({ userId: empBUserId, roleId: editorRoleId });
 
   await db
     .insert(employeeServicePeriodsTable)
@@ -313,13 +313,13 @@ describe("PATCH /api/employees/:id — two complete leaver/re-activation cycles"
         name: "Cycle TestC",
         email: `cycle-user-c-${Date.now()}@example-test.invalid`,
         passwordHash: "not-a-real-hash",
-        roleId: editorRoleId,
         permissions: [],
         employeeId: empCId,
         status: "active",
       })
       .returning({ id: usersTable.id });
     empCUserId = empCUser.id;
+    await db.insert(userRolesTable).values({ userId: empCUserId, roleId: editorRoleId });
 
     // Initial open service period
     await db

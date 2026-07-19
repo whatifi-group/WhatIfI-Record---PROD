@@ -8,6 +8,7 @@ import {
   employeeQualificationsTable,
   rolesTable,
   usersTable,
+  userRolesTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -135,10 +136,10 @@ export async function createTestUser(roleId: number): Promise<number> {
       name: "Test User",
       email: `test-user-${unique}@example-test.invalid`,
       passwordHash: "not-a-real-hash",
-      roleId,
       permissions: [],
     })
     .returning({ id: usersTable.id });
+  await db.insert(userRolesTable).values({ userId: user.id, roleId });
   return user.id;
 }
 

@@ -26,6 +26,9 @@ export const auditLogTable = pgTable(
     path: text("path").notNull(),
     statusCode: integer("status_code").notNull(),
     ipAddress: text("ip_address"),
+    // Set only for client-reported "record view" events (method "VIEW") — how
+    // long a record detail page stayed open. See routes/auditLog.ts.
+    durationMs: integer("duration_ms"),
   },
   (table) => [
     index("audit_log_timestamp_idx").on(table.timestamp),

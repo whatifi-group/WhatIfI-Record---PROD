@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -30,12 +31,12 @@ const employeeSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
   jobTitle: z.string().min(1, "Job title is required"),
-  departmentId: z.coerce.number().optional().nullable(),
+  departmentIds: z.array(z.number()).default([]),
   employmentType: z.string().min(1, "Engagement type is required"),
   status: z.string().min(1, "Status is required"),
   startDate: z.string().min(1, "Start date is required"),
   // System access — required to create the linked user account
-  userRole: z.coerce.number().min(1, "Role is required"),
+  userRoleIds: z.array(z.number()).min(1, "At least one role is required"),
   temporaryPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -67,11 +68,11 @@ export default function EmployeesList() {
       lastName: "",
       email: "",
       jobTitle: "",
-      departmentId: null,
+      departmentIds: [],
       employmentType: "full_time",
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
-      userRole: 0,
+      userRoleIds: [],
       temporaryPassword: "",
     },
   });
@@ -82,7 +83,7 @@ export default function EmployeesList() {
         data: {
           ...data,
           status: data.status as EmployeeStatus,
-          userRole: data.userRole,
+          userRoleIds: data.userRoleIds,
           temporaryPassword: data.temporaryPassword,
         },
       },
@@ -117,7 +118,8 @@ export default function EmployeesList() {
         emp.jobTitle.toLowerCase().includes(search.toLowerCase());
 
       const matchesDept =
-        departmentFilter === "all" || emp.departmentId === parseInt(departmentFilter);
+        departmentFilter === "all" ||
+        emp.departments.some((d) => d.id === parseInt(departmentFilter));
 
       return matchesSearch && matchesDept;
     });
@@ -161,20 +163,17 @@ export default function EmployeesList() {
                     <FormItem className="md:col-span-2"><FormLabel>Role / Title</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
 
-                  <FormField control={form.control} name="departmentId" render={({ field }) => (
+                  <FormField control={form.control} name="departmentIds" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">No Department</SelectItem>
-                          {departments?.map((d) => (
-                            <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Departments</FormLabel>
+                      <FormControl>
+                        <MultiSelect
+                          options={departments ?? []}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select departments"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -231,19 +230,17 @@ export default function EmployeesList() {
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="userRole" render={({ field }) => (
+                    <FormField control={form.control} name="userRoleIds" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? field.value.toString() : ""}>
-                          <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {roles?.map(r => (
-                              <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Roles</FormLabel>
+                        <FormControl>
+                          <MultiSelect
+                            options={roles ?? []}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select roles"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />

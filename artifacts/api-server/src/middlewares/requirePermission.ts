@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { eq } from "drizzle-orm";
 import { LRUCache } from "lru-cache";
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { db, rolesTable, usersTable, userRolesTable } from "@workspace/db";
 
 // ---------------------------------------------------------------------------
 // In-process permissions cache
@@ -24,7 +24,7 @@ const permissionsCache = new LRUCache<number, Set<string>>({
 
 /**
  * Evict the cached permissions for a single user.
- * Call this whenever a user's roleId or user-level permissions are changed.
+ * Call this whenever a user's role assignments or user-level permissions are changed.
  */
 export function invalidatePermissionsCache(userId: number): void {
   permissionsCache.delete(userId);
@@ -63,12 +63,8 @@ export async function getEffectivePermissions(
   }
 
   const [row] = await db
-    .select({
-      rolePermissions: rolesTable.permissions,
-      userPermissions: usersTable.permissions,
-    })
+    .select({ userPermissions: usersTable.permissions })
     .from(usersTable)
-    .leftJoin(rolesTable, eq(usersTable.roleId, rolesTable.id))
     .where(eq(usersTable.id, userId))
     .limit(1);
 
@@ -79,9 +75,15 @@ export async function getEffectivePermissions(
     return empty;
   }
 
-  const rolePerms = Array.isArray(row.rolePermissions)
-    ? (row.rolePermissions as string[])
-    : [];
+  const roleRows = await db
+    .select({ permissions: rolesTable.permissions })
+    .from(userRolesTable)
+    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+    .where(eq(userRolesTable.userId, userId));
+
+  const rolePerms = roleRows.flatMap((r) =>
+    Array.isArray(r.permissions) ? (r.permissions as string[]) : [],
+  );
   const userPerms = Array.isArray(row.userPermissions)
     ? (row.userPermissions as string[])
     : [];

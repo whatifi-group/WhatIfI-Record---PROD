@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
-import { db, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, inArray, isNull, ne, or, type SQL } from "drizzle-orm";
+import { db, rolesTable, usersTable, userRolesTable } from "@workspace/db";
 import { hashPassword } from "../../lib/password";
 import {
   invalidatePermissionsCache,
@@ -29,16 +29,44 @@ function userSelection() {
       name: usersTable.name,
       email: usersTable.email,
       status: usersTable.status,
-      roleId: usersTable.roleId,
-      roleName: rolesTable.name,
       permissions: usersTable.permissions,
       isSystemAccount: usersTable.isSystemAccount,
       employeeId: usersTable.employeeId,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })
-    .from(usersTable)
-    .leftJoin(rolesTable, eq(usersTable.roleId, rolesTable.id));
+    .from(usersTable);
+}
+
+async function attachRoles<T extends { id: number }>(
+  rows: T[],
+): Promise<(T & { roles: { id: number; name: string }[] })[]> {
+  if (rows.length === 0) return [];
+
+  const links = await db
+    .select({
+      userId: userRolesTable.userId,
+      id: rolesTable.id,
+      name: rolesTable.name,
+    })
+    .from(userRolesTable)
+    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+    .where(
+      inArray(
+        userRolesTable.userId,
+        rows.map((r) => r.id),
+      ),
+    );
+
+  const byUser = new Map<number, { id: number; name: string }[]>();
+  for (const link of links) {
+    byUser.set(link.userId, [
+      ...(byUser.get(link.userId) ?? []),
+      { id: link.id, name: link.name },
+    ]);
+  }
+
+  return rows.map((r) => ({ ...r, roles: byUser.get(r.id) ?? [] }));
 }
 
 router.get("/sysadmin/users", async (req, res): Promise<void> => {
@@ -72,15 +100,29 @@ router.get("/sysadmin/users", async (req, res): Promise<void> => {
   if (query.data.status) {
     conditions.push(eq(usersTable.status, query.data.status));
   }
-  if (query.data.roleId != null) {
-    conditions.push(eq(usersTable.roleId, query.data.roleId));
+  if (query.data.roleIds) {
+    const roleIds = query.data.roleIds
+      .split(",")
+      .map(Number)
+      .filter((n) => !Number.isNaN(n));
+    if (roleIds.length > 0) {
+      conditions.push(
+        inArray(
+          usersTable.id,
+          db
+            .select({ id: userRolesTable.userId })
+            .from(userRolesTable)
+            .where(inArray(userRolesTable.roleId, roleIds)),
+        ),
+      );
+    }
   }
 
   const rows = await userSelection()
     .where(and(...conditions))
     .orderBy(usersTable.name);
 
-  res.json(ListUsersResponse.parse(rows));
+  res.json(ListUsersResponse.parse(await attachRoles(rows)));
 });
 
 router.post("/sysadmin/users", async (req, res): Promise<void> => {
@@ -103,27 +145,35 @@ router.post("/sysadmin/users", async (req, res): Promise<void> => {
     return;
   }
 
-  const role = await db
+  const roles = await db
     .select({ id: rolesTable.id })
     .from(rolesTable)
-    .where(eq(rolesTable.id, parsed.data.roleId))
-    .limit(1);
+    .where(inArray(rolesTable.id, parsed.data.roleIds));
 
-  if (role.length === 0) {
+  if (roles.length !== new Set(parsed.data.roleIds).size) {
     res.status(400).json({ error: "Role not found" });
     return;
   }
 
-  const { password, email: _email, ...rest } = parsed.data;
+  const { password, email: _email, roleIds, ...rest } = parsed.data;
   const passwordHash = hashPassword(password);
 
-  const [created] = await db
-    .insert(usersTable)
-    .values({ ...rest, email, passwordHash, isSystemAccount: true, employeeId: null })
-    .returning();
+  const created = await db.transaction(async (tx) => {
+    const [user] = await tx
+      .insert(usersTable)
+      .values({ ...rest, email, passwordHash, isSystemAccount: true, employeeId: null })
+      .returning();
+
+    await tx
+      .insert(userRolesTable)
+      .values(roleIds.map((roleId) => ({ userId: user.id, roleId })));
+
+    return user;
+  });
 
   const [row] = await userSelection().where(eq(usersTable.id, created.id));
-  res.status(201).json(CreateUserResponse.parse(row));
+  const [withRoles] = await attachRoles([row]);
+  res.status(201).json(CreateUserResponse.parse(withRoles));
 });
 
 router.get("/sysadmin/users/:id", async (req, res): Promise<void> => {
@@ -139,7 +189,8 @@ router.get("/sysadmin/users/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetUserResponse.parse(row));
+  const [withRoles] = await attachRoles([row]);
+  res.json(GetUserResponse.parse(withRoles));
 });
 
 router.patch("/sysadmin/users/:id", async (req, res): Promise<void> => {
@@ -166,34 +217,44 @@ router.patch("/sysadmin/users/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  if (parsed.data.roleId) {
-    const role = await db
+  if (parsed.data.roleIds) {
+    const roles = await db
       .select({ id: rolesTable.id })
       .from(rolesTable)
-      .where(eq(rolesTable.id, parsed.data.roleId))
-      .limit(1);
-    if (role.length === 0) {
+      .where(inArray(rolesTable.id, parsed.data.roleIds));
+    if (roles.length !== new Set(parsed.data.roleIds).size) {
       res.status(400).json({ error: "Role not found" });
       return;
     }
   }
 
+  const { roleIds, ...bodyRest } = parsed.data;
   const updates = {
-    ...parsed.data,
+    ...bodyRest,
     ...(parsed.data.email != null ? { email: parsed.data.email.toLowerCase() } : {}),
   };
 
-  await db
-    .update(usersTable)
-    .set({ ...updates, updatedAt: new Date() })
-    .where(eq(usersTable.id, params.data.id));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(usersTable)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(usersTable.id, params.data.id));
+
+    if (roleIds) {
+      await tx.delete(userRolesTable).where(eq(userRolesTable.userId, params.data.id));
+      await tx
+        .insert(userRolesTable)
+        .values(roleIds.map((roleId) => ({ userId: params.data.id, roleId })));
+    }
+  });
 
   // Evict stale cached permissions for this user so the next request picks up
   // the new role/permission values immediately without waiting for the TTL.
   invalidatePermissionsCache(params.data.id);
 
   const [row] = await userSelection().where(eq(usersTable.id, params.data.id));
-  res.json(UpdateUserResponse.parse(row));
+  const [withRoles] = await attachRoles([row]);
+  res.json(UpdateUserResponse.parse(withRoles));
 });
 
 router.post("/sysadmin/users/:id/reset-password", async (req, res): Promise<void> => {

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { db, rolesTable, userRolesTable } from "@workspace/db";
 import { invalidatePermissionsCache } from "../../middlewares/requirePermission";
 import {
   CreateRoleBody,
@@ -24,11 +24,11 @@ function roleSelection() {
       description: rolesTable.description,
       permissions: rolesTable.permissions,
       isSystem: rolesTable.isSystem,
-      userCount: sql<number>`cast(count(${usersTable.id}) as int)`,
+      userCount: sql<number>`cast(count(distinct ${userRolesTable.userId}) as int)`,
       createdAt: rolesTable.createdAt,
     })
     .from(rolesTable)
-    .leftJoin(usersTable, eq(usersTable.roleId, rolesTable.id))
+    .leftJoin(userRolesTable, eq(userRolesTable.roleId, rolesTable.id))
     .groupBy(rolesTable.id);
 }
 
@@ -121,9 +121,9 @@ router.patch("/sysadmin/roles/:id", async (req, res): Promise<void> => {
   let affectedUserIds: number[] = [];
   if (parsed.data.permissions !== undefined) {
     const affected = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.roleId, params.data.id));
+      .select({ id: userRolesTable.userId })
+      .from(userRolesTable)
+      .where(eq(userRolesTable.roleId, params.data.id));
     affectedUserIds = affected.map((u) => u.id);
   }
 
@@ -162,9 +162,9 @@ router.delete("/sysadmin/roles/:id", async (req, res): Promise<void> => {
   }
 
   const usersWithRole = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.roleId, params.data.id))
+    .select({ userId: userRolesTable.userId })
+    .from(userRolesTable)
+    .where(eq(userRolesTable.roleId, params.data.id))
     .limit(1);
 
   if (usersWithRole.length > 0) {

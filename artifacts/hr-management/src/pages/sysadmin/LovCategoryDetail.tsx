@@ -33,6 +33,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useViewDuration } from "@/hooks/use-view-duration";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -48,6 +49,13 @@ type LovItemFormValues = z.infer<typeof lovItemSchema>;
 export default function LovCategoryDetail() {
   const { category } = useParams<{ category: string }>();
   const { data: categories, isLoading } = useListLovCategories();
+  const categoryGroup = categories?.find((c) => c.category === category);
+  useViewDuration(
+    "sysadmin",
+    `/sysadmin/lov/${category}`,
+    Boolean(category),
+    categoryGroup?.label ?? null,
+  );
   const createLovItem = useCreateLovItem();
   const updateLovItem = useUpdateLovItem();
   const deleteLovItem = useDeleteLovItem();
@@ -62,8 +70,6 @@ export default function LovCategoryDetail() {
     resolver: zodResolver(lovItemSchema),
     defaultValues: { label: "", isActive: true, sortOrder: 0 },
   });
-
-  const categoryGroup = categories?.find((c) => c.category === category);
 
   const handleCreate = () => {
     setEditingItem(null);

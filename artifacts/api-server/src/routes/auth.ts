@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gt } from "drizzle-orm";
 import crypto from "crypto";
-import { db, employeesTable, rolesTable, usersTable, passwordResetTokensTable } from "@workspace/db";
+import { db, employeesTable, rolesTable, usersTable, userRolesTable, passwordResetTokensTable } from "@workspace/db";
 import { verifyPassword, hashPassword } from "../lib/password";
 import { LoginBody } from "@workspace/api-zod";
 import { sendPasswordResetEmail } from "../lib/email";
@@ -13,9 +13,8 @@ function userRow(row: {
   name: string;
   email: string;
   status: string;
-  roleId: number;
-  roleName: string | null;
-  rolePermissions: unknown;
+  roles: { id: number; name: string }[];
+  rolePermissions: unknown[];
   userPermissions: unknown;
   isSystemAccount: boolean;
   employeeId: number | null;
@@ -23,17 +22,15 @@ function userRow(row: {
   lastLoginAt: Date | null;
   createdAt: Date;
 }) {
-  const rolePerms = Array.isArray(row.rolePermissions) ? row.rolePermissions : [];
   const userPerms = Array.isArray(row.userPermissions) ? row.userPermissions : [];
-  const effectivePermissions = [...new Set([...rolePerms, ...userPerms])];
+  const effectivePermissions = [...new Set([...row.rolePermissions, ...userPerms])];
 
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     status: row.status,
-    roleId: row.roleId,
-    roleName: row.roleName ?? "",
+    roles: row.roles,
     permissions: effectivePermissions,
     isSystemAccount: row.isSystemAccount,
     employeeId: row.employeeId,
@@ -50,9 +47,6 @@ async function fetchUser(id: number) {
       name: usersTable.name,
       email: usersTable.email,
       status: usersTable.status,
-      roleId: usersTable.roleId,
-      roleName: rolesTable.name,
-      rolePermissions: rolesTable.permissions,
       userPermissions: usersTable.permissions,
       isSystemAccount: usersTable.isSystemAccount,
       employeeId: usersTable.employeeId,
@@ -64,14 +58,21 @@ async function fetchUser(id: number) {
       createdAt: usersTable.createdAt,
     })
     .from(usersTable)
-    .leftJoin(rolesTable, eq(usersTable.roleId, rolesTable.id))
     .leftJoin(employeesTable, eq(usersTable.employeeId, employeesTable.id))
     .where(eq(usersTable.id, id));
 
   if (!row) return null;
 
+  const roleRows = await db
+    .select({ id: rolesTable.id, name: rolesTable.name, permissions: rolesTable.permissions })
+    .from(userRolesTable)
+    .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+    .where(eq(userRolesTable.userId, id));
+
   return {
     ...row,
+    roles: roleRows.map((r) => ({ id: r.id, name: r.name })),
+    rolePermissions: roleRows.flatMap((r) => (Array.isArray(r.permissions) ? r.permissions : [])),
     employee:
       row.employeeRecordId != null
         ? {

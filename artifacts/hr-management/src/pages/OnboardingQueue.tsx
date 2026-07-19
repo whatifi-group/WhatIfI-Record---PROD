@@ -35,6 +35,7 @@ import { Loader2, CheckCircle2, XCircle, Eye, EyeOff, Check, AlertCircle, Settin
 import { format, parseISO } from "date-fns";
 import { useLocation } from "wouter";
 import ProfileCompletionModal from "@/components/ProfileCompletionModal";
+import { useViewDuration } from "@/hooks/use-view-duration";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,12 @@ export default function OnboardingQueue() {
   // Detail dialog
   const [detailSub, setDetailSub] = useState<SubmissionDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  useViewDuration(
+    "onboarding",
+    `/onboarding/submissions/${detailSub?.id ?? ""}`,
+    detailSub !== null,
+    detailSub ? `${detailSub.firstName} ${detailSub.lastName}` : null,
+  );
 
   // Approve dialog
   const [approveId, setApproveId] = useState<number | null>(null);

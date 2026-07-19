@@ -138,8 +138,15 @@ export default function UsersList() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="inline-flex items-center px-2.5 py-1 rounded-md bg-muted text-foreground text-xs font-medium border border-border/50 shadow-sm">
-                        {user.roleName}
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.map((role) => (
+                          <div
+                            key={role.id}
+                            className="inline-flex items-center px-2.5 py-1 rounded-md bg-muted text-foreground text-xs font-medium border border-border/50 shadow-sm"
+                          >
+                            {role.name}
+                          </div>
+                        ))}
                       </div>
                     </td>
                     <td className="px-6 py-4">

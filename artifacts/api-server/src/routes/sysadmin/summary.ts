@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { eq, inArray, sql } from "drizzle-orm";
+import { db, rolesTable, usersTable, userRolesTable } from "@workspace/db";
 import { GetSysadminSummaryResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -25,16 +25,34 @@ router.get("/sysadmin/summary", async (req, res): Promise<void> => {
       name: usersTable.name,
       email: usersTable.email,
       status: usersTable.status,
-      roleId: usersTable.roleId,
-      roleName: rolesTable.name,
       permissions: usersTable.permissions,
+      isSystemAccount: usersTable.isSystemAccount,
+      employeeId: usersTable.employeeId,
       lastLoginAt: usersTable.lastLoginAt,
       createdAt: usersTable.createdAt,
     })
     .from(usersTable)
-    .leftJoin(rolesTable, eq(usersTable.roleId, rolesTable.id))
     .orderBy(sql`${usersTable.createdAt} desc`)
     .limit(10);
+
+  const roleLinks = recentUsers.length > 0
+    ? await db
+        .select({ userId: userRolesTable.userId, id: rolesTable.id, name: rolesTable.name })
+        .from(userRolesTable)
+        .innerJoin(rolesTable, eq(userRolesTable.roleId, rolesTable.id))
+        .where(inArray(userRolesTable.userId, recentUsers.map((u) => u.id)))
+    : [];
+  const rolesByUser = new Map<number, { id: number; name: string }[]>();
+  for (const link of roleLinks) {
+    rolesByUser.set(link.userId, [
+      ...(rolesByUser.get(link.userId) ?? []),
+      { id: link.id, name: link.name },
+    ]);
+  }
+  const recentUsersWithRoles = recentUsers.map((u) => ({
+    ...u,
+    roles: rolesByUser.get(u.id) ?? [],
+  }));
 
   res.json(
     GetSysadminSummaryResponse.parse({
@@ -42,7 +60,7 @@ router.get("/sysadmin/summary", async (req, res): Promise<void> => {
       activeUsers: counts?.activeUsers ?? 0,
       suspendedUsers: counts?.suspendedUsers ?? 0,
       totalRoles: roleCount?.totalRoles ?? 0,
-      recentUsers,
+      recentUsers: recentUsersWithRoles,
     }),
   );
 });

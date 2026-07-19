@@ -1,10 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import router from "../routes/hr/employeeWorkRecords";
-import { buildApp, cleanupEmployee, createTestEmployee } from "./helpers";
-import { db, employeesTable, departmentsTable } from "@workspace/db";
+import { buildApp, cleanupEmployee, cleanupRole, cleanupUser, createTestEmployee, createTestRole, createTestUser } from "./helpers";
+import { db, employeesTable, departmentsTable, employeeDepartmentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
-const api = buildApp(router);
+let api: ReturnType<typeof buildApp>;
+let editorRoleId: number;
+let editorUserId: number;
+
+beforeAll(async () => {
+  editorRoleId = await createTestRole(["hr:access"]);
+  editorUserId = await createTestUser(editorRoleId);
+  api = buildApp(router, editorUserId);
+});
+
+afterAll(async () => {
+  await cleanupUser(editorUserId);
+  await cleanupRole(editorRoleId);
+});
 
 describe("Employee Work Records", () => {
   let empId: number;
@@ -53,10 +66,10 @@ describe("Employee Work Records", () => {
           firstName: "WrFilterAlice",
           lastName: `Smith${ts}`,
           email: emp1Email,
-          departmentId: dept1Id,
           status: "active",
         })
         .where(eq(employeesTable.id, emp1Id));
+      await db.insert(employeeDepartmentsTable).values({ employeeId: emp1Id, departmentId: dept1Id });
 
       await db
         .update(employeesTable)
@@ -64,10 +77,10 @@ describe("Employee Work Records", () => {
           firstName: "WrFilterBob",
           lastName: `Jones${ts}`,
           email: `wr-filter-bob-${ts}@test.invalid`,
-          departmentId: dept2Id,
           status: "leaver",
         })
         .where(eq(employeesTable.id, emp2Id));
+      await db.insert(employeeDepartmentsTable).values({ employeeId: emp2Id, departmentId: dept2Id });
 
       // emp1 has a regular shift on 2026-01-15
       await api
@@ -126,7 +139,7 @@ describe("Employee Work Records", () => {
       expect(row).toHaveProperty("employeeLastName");
       expect(row).toHaveProperty("employeeEmail");
       expect(row).toHaveProperty("employeeStatus");
-      expect(row).toHaveProperty("employeeDepartmentId");
+      expect(row).toHaveProperty("employeeDepartments");
       expect(row).toHaveProperty("shiftDate");
       expect(row).toHaveProperty("shiftType");
     });

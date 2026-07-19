@@ -101,12 +101,12 @@ export default function ProfileCompletionModal({
   useEffect(() => {
     fetch(`/api/hr/employees/${employeeId}`, { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { jobTitle?: string; departmentId?: number | null; employmentType?: string } | null) => {
+      .then((data: { jobTitle?: string; departments?: { id: number; name: string }[]; employmentType?: string } | null) => {
         if (!data) return;
         const isPlaceholder = data.jobTitle === "To be confirmed";
         setEmployment({
           jobTitle: isPlaceholder ? "" : (data.jobTitle ?? ""),
-          departmentId: data.departmentId != null ? String(data.departmentId) : "",
+          departmentId: data.departments && data.departments.length > 0 ? String(data.departments[0].id) : "",
           employmentType: data.employmentType ?? "",
         });
       })
@@ -144,7 +144,7 @@ export default function ProfileCompletionModal({
       if (employment.jobTitle.trim())
         employmentPayload.jobTitle = employment.jobTitle.trim();
       if (employment.departmentId)
-        employmentPayload.departmentId = parseInt(employment.departmentId, 10);
+        employmentPayload.departmentIds = [parseInt(employment.departmentId, 10)];
       if (employment.employmentType)
         employmentPayload.employmentType = employment.employmentType;
 

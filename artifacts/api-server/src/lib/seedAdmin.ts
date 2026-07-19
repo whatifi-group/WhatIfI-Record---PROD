@@ -15,7 +15,7 @@
  *   email:    admin@whatifi.group
  *   password: WhatIfI@2024        ← change immediately after first login
  */
-import { db, rolesTable, usersTable } from "@workspace/db";
+import { db, rolesTable, usersTable, userRolesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "./password";
 import { logger } from "./logger";
@@ -49,15 +49,20 @@ export async function seedAdmin(): Promise<void> {
   if (!existing) {
     // First boot — create the admin user
     const password = overridePassword ?? DEFAULT_ADMIN_PASSWORD;
-    await db.insert(usersTable).values({
-      name: DEFAULT_ADMIN_NAME,
-      email: DEFAULT_ADMIN_EMAIL,
-      passwordHash: hashPassword(password),
-      roleId: adminRole.id,
-      isSystemAccount: true,
-      status: "active",
-      permissions: [],
-    });
+    const [created] = await db
+      .insert(usersTable)
+      .values({
+        name: DEFAULT_ADMIN_NAME,
+        email: DEFAULT_ADMIN_EMAIL,
+        passwordHash: hashPassword(password),
+        isSystemAccount: true,
+        status: "active",
+        permissions: [],
+      })
+      .returning({ id: usersTable.id });
+    await db
+      .insert(userRolesTable)
+      .values({ userId: created.id, roleId: adminRole.id });
     logger.info(
       { email: DEFAULT_ADMIN_EMAIL },
       "seedAdmin: created initial system administrator",

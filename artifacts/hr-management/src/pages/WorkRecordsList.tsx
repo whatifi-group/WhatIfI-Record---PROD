@@ -106,7 +106,10 @@ export default function WorkRecordsList() {
   const hoursByDept = useMemo(() => {
     const map: Record<string, number> = {};
     rows.forEach((row) => {
-      const key = row.employeeDepartmentName ?? "No Department";
+      const key =
+        row.employeeDepartments && row.employeeDepartments.length > 0
+          ? row.employeeDepartments.map((d) => d.name).join(", ")
+          : "No Department";
       map[key] = (map[key] ?? 0) + (row.hoursWorked ?? 0);
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
@@ -177,7 +180,7 @@ export default function WorkRecordsList() {
 
     const dataRows = sorted.map((row) => [
       `${row.employeeFirstName} ${row.employeeLastName}`,
-      row.employeeDepartmentName ?? "",
+      row.employeeDepartments?.map((d) => d.name).join(", ") ?? "",
       row.shiftDate,
       shiftTypes?.find((t) => t.value === row.shiftType)?.label ?? row.shiftType,
       row.startTime ?? "",
@@ -404,7 +407,9 @@ export default function WorkRecordsList() {
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {row.employeeDepartmentName ?? <span className="italic">—</span>}
+                        {row.employeeDepartments && row.employeeDepartments.length > 0
+                          ? row.employeeDepartments.map((d) => d.name).join(", ")
+                          : <span className="italic">—</span>}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
                         {format(parseISO(row.shiftDate), "dd/MM/yyyy")}

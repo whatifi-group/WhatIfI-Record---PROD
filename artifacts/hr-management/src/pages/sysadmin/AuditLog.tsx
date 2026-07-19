@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useListAuditLog } from "@workspace/api-client-react";
-import { ScrollText, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useListAuditLog, type AuditLogEntry } from "@workspace/api-client-react";
+import { ScrollText, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,6 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const PAGE_SIZE = 50;
 
@@ -36,9 +43,92 @@ function statusBadgeClass(statusCode: number): string {
   return "bg-chart-2/10 text-chart-2 border-chart-2/20";
 }
 
+function formatDurationMs(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+}
+
+/** VIEW rows are client-reported "how long was this open" events, not real HTTP responses — show a duration badge instead of a status code. */
+function StatusOrDuration({ entry }: { entry: AuditLogEntry }) {
+  if (entry.method === "VIEW" && entry.durationMs != null) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border bg-chart-3/10 text-chart-3 border-chart-3/20">
+        <Clock className="w-3 h-3" /> {formatDurationMs(entry.durationMs)}
+      </span>
+    );
+  }
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${statusBadgeClass(entry.statusCode)}`}>
+      {entry.statusCode}
+    </span>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
+      <div className="text-sm text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function AuditEntryDialog({
+  entry,
+  onOpenChange,
+}: {
+  entry: AuditLogEntry | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={entry !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Audit entry #{entry?.id}</DialogTitle>
+          <DialogDescription>Full detail of what was done or viewed, exactly as recorded.</DialogDescription>
+        </DialogHeader>
+        {entry && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <DetailRow label="Date/Time (GMT)" value={formatGmt(entry.timestamp)} />
+              <DetailRow label="Module" value={<Badge variant="outline" className="capitalize">{entry.module}</Badge>} />
+              <DetailRow label="User" value={entry.userName ?? <span className="italic">Unauthenticated</span>} />
+              <DetailRow
+                label={entry.method === "VIEW" ? "Duration" : "Status"}
+                value={
+                  entry.method === "VIEW" ? (
+                    <StatusOrDuration entry={entry} />
+                  ) : (
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${statusBadgeClass(entry.statusCode)}`}>
+                      {entry.method} {entry.statusCode}
+                    </span>
+                  )
+                }
+              />
+            </div>
+            <DetailRow label="Path" value={<code className="text-xs">{entry.path}</code>} />
+            <DetailRow
+              label="Action"
+              value={
+                <pre className="whitespace-pre-wrap break-words text-xs bg-muted/30 border border-border/50 rounded-lg p-3 max-h-[40vh] overflow-y-auto">
+                  {entry.action}
+                </pre>
+              }
+            />
+            {entry.ipAddress && <DetailRow label="IP Address" value={entry.ipAddress} />}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AuditLog() {
   const [moduleFilter, setModuleFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
 
   const { data, isLoading } = useListAuditLog({
     module: moduleFilter === "all" ? undefined : moduleFilter,
@@ -118,7 +208,11 @@ export default function AuditLog() {
                 </tr>
               ) : entries.length > 0 ? (
                 entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={entry.id}
+                    className="hover:bg-muted/20 transition-colors cursor-pointer"
+                    onClick={() => setSelectedEntry(entry)}
+                  >
                     <td className="px-6 py-4 align-top font-mono text-xs text-muted-foreground">
                       {formatGmt(entry.timestamp)}
                     </td>
@@ -127,16 +221,16 @@ export default function AuditLog() {
                         {entry.module}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 align-top text-foreground">{entry.action}</td>
+                    <td className="px-6 py-4 align-top text-foreground">
+                      <span className="line-clamp-2 max-w-[480px]" title="Click the row for full detail">
+                        {entry.action}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 align-top text-muted-foreground">
                       {entry.userName ?? <span className="italic">Unauthenticated</span>}
                     </td>
                     <td className="px-6 py-4 align-top text-center">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${statusBadgeClass(entry.statusCode)}`}
-                      >
-                        {entry.statusCode}
-                      </span>
+                      <StatusOrDuration entry={entry} />
                     </td>
                   </tr>
                 ))
@@ -176,6 +270,8 @@ export default function AuditLog() {
           </div>
         </div>
       </div>
+
+      <AuditEntryDialog entry={selectedEntry} onOpenChange={(open) => !open && setSelectedEntry(null)} />
     </div>
   );
 }

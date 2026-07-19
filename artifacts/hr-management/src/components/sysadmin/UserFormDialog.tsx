@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,7 +46,7 @@ const userSchema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().optional(),
-  roleId: z.coerce.number().min(1, "Role is required"),
+  roleIds: z.array(z.number()).min(1, "At least one role is required"),
   status: z.string().default("active"),
   permissions: z.array(z.nativeEnum(Permission)).default([]),
 });
@@ -72,7 +73,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       name: "",
       email: "",
       password: "",
-      roleId: 0,
+      roleIds: [],
       status: "active",
       permissions: [],
     },
@@ -85,7 +86,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
           name: user.name,
           email: user.email,
           password: "",
-          roleId: user.roleId,
+          roleIds: user.roles.map((r) => r.id),
           status: user.status,
           permissions: user.permissions,
         });
@@ -94,7 +95,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
           name: "",
           email: "",
           password: "",
-          roleId: roles && roles.length > 0 ? roles[0].id : 0,
+          roleIds: roles && roles.length > 0 ? [roles[0].id] : [],
           status: "active",
           permissions: [],
         });
@@ -116,7 +117,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             name: data.name,
             email: data.email,
             status: data.status,
-            roleId: data.roleId,
+            roleIds: data.roleIds,
             permissions: data.permissions.length > 0 ? data.permissions : undefined,
           },
         },
@@ -138,7 +139,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             name: data.name,
             email: data.email,
             password: data.password!,
-            roleId: data.roleId,
+            roleIds: data.roleIds,
             isSystemAccount: true,
             permissions: data.permissions.length > 0 ? data.permissions : undefined,
           },
@@ -205,27 +206,18 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="roleId"
+                name="roleIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      onValueChange={(v) => field.onChange(Number(v))}
-                      value={field.value ? field.value.toString() : ""}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles?.map((role) => (
-                          <SelectItem key={role.id} value={role.id.toString()}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Roles</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        options={roles ?? []}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select roles"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

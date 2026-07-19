@@ -200,7 +200,7 @@ describe("POST /api/employees — permission guard", () => {
       employmentType: "full_time",
       status: "active",
       startDate: "2024-01-01",
-      userRole: viewerRoleId,
+      userRoleIds: [viewerRoleId],
       temporaryPassword: "TestPass123!",
     });
     expect(res.status).toBe(403);
@@ -227,7 +227,7 @@ describe("POST /api/employees — salary hidden in 201 response without view_pay
       status: "active",
       startDate: "2024-01-01",
       salary: 90000,
-      userRole: hrManagerRoleId,
+      userRoleIds: [hrManagerRoleId],
       temporaryPassword: "TestPass123!",
     });
     expect(res.status).toBe(201);
@@ -246,7 +246,7 @@ describe("POST /api/employees — salary hidden in 201 response without view_pay
       status: "active",
       startDate: "2024-01-01",
       salary: 80000,
-      userRole: hrManagerRoleId,
+      userRoleIds: [hrManagerRoleId],
       temporaryPassword: "TestPass123!",
     });
     expect(res.status).toBe(201);

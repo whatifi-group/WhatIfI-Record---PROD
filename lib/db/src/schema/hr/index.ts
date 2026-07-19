@@ -1,5 +1,6 @@
 export * from "./departments";
 export * from "./employees";
+export * from "./employeeDepartments";
 export * from "./leaveRequests";
 export * from "./employeeAddresses";
 export * from "./employeePayroll";

@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import express, { type IRouter } from "express";
 import supertest from "supertest";
 import { and, eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, userRolesTable } from "@workspace/db";
 import hrRouter from "../routes/hr";
 import sysadminRouter from "../routes/sysadmin";
 import {
@@ -109,7 +109,7 @@ function makeEmployeeBody(overrides: Record<string, unknown> = {}) {
     employmentType: "full_time",
     status: "active",
     startDate: "2024-01-01",
-    userRole: employeeRoleId,
+    userRoleIds: [employeeRoleId],
     temporaryPassword: "Temp1234!",
     ...overrides,
   };
@@ -153,9 +153,9 @@ describe("POST /employees — user provisioning", () => {
         email,
         passwordHash: "not-a-real-hash",
         permissions: [],
-        roleId: employeeRoleId,
       })
       .returning({ id: usersTable.id });
+    await db.insert(userRolesTable).values({ userId: existingUser.id, roleId: employeeRoleId });
     userIdsToClean.push(existingUser.id);
 
     const res = await api
@@ -171,7 +171,7 @@ describe("POST /employees — user provisioning", () => {
 
     const res = await api
       .post("/api/employees")
-      .send(makeEmployeeBody({ userRole: 999_999_999 }));
+      .send(makeEmployeeBody({ userRoleIds: [999_999_999] }));
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/role/i);
@@ -274,11 +274,11 @@ describe("GET /sysadmin/users — leaver accounts excluded; system accounts incl
         email: uniqueEmail("system"),
         passwordHash: "not-a-real-hash",
         permissions: [],
-        roleId: sysadminRoleId,
         isSystemAccount: true,
         status: "suspended",
       })
       .returning({ id: usersTable.id });
+    await db.insert(userRolesTable).values({ userId: sysUser.id, roleId: sysadminRoleId });
     systemUserId = sysUser.id;
     userIdsToClean.push(systemUserId);
   });

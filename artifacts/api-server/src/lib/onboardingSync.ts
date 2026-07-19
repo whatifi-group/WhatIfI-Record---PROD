@@ -21,6 +21,7 @@ import {
   onboardingSubmissionsTable,
   onboardingSubmissionQualificationsTable,
   employeesTable,
+  employeeDepartmentsTable,
   employeeQualificationsTable,
   qualificationCertificatesTable,
 } from "@workspace/db";
@@ -58,7 +59,6 @@ export async function syncOnboardingSubmission(
       lastName: employeesTable.lastName,
       email: employeesTable.email,
       jobTitle: employeesTable.jobTitle,
-      departmentId: employeesTable.departmentId,
       employmentType: employeesTable.employmentType,
       startDate: employeesTable.startDate,
     })
@@ -68,6 +68,16 @@ export async function syncOnboardingSubmission(
 
   if (!employee) return;
 
+  // The onboarding submission keeps a single departmentId column; an employee
+  // may now belong to zero or many departments, so we take the first assigned
+  // one as the representative value (or null if the employee has none).
+  const [primaryDepartment] = await db
+    .select({ departmentId: employeeDepartmentsTable.departmentId })
+    .from(employeeDepartmentsTable)
+    .where(eq(employeeDepartmentsTable.employeeId, employeeId))
+    .orderBy(employeeDepartmentsTable.departmentId)
+    .limit(1);
+
   // 3. Overwrite profile fields on the submission
   await db
     .update(onboardingSubmissionsTable)
@@ -76,7 +86,7 @@ export async function syncOnboardingSubmission(
       lastName: employee.lastName,
       email: employee.email,
       jobTitle: employee.jobTitle,
-      departmentId: employee.departmentId,
+      departmentId: primaryDepartment?.departmentId ?? null,
       employmentType: employee.employmentType,
       startDate: employee.startDate,
       updatedAt: new Date(),

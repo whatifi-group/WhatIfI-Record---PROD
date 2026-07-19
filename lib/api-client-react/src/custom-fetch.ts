@@ -134,6 +134,13 @@ function looksLikeJson(text: string): boolean {
   return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
+// Catches HTML error pages (e.g. a bare 500 from a proxy/framework default
+// handler, not the app's own JSON error responses) so their markup never
+// leaks into a user-facing error message.
+function looksLikeMarkup(text: string): boolean {
+  return text.trimStart().startsWith("<");
+}
+
 function getStringField(value: unknown, key: string): string | undefined {
   if (!value || typeof value !== "object") return undefined;
 
@@ -153,7 +160,8 @@ function buildErrorMessage(response: Response, data: unknown): string {
 
   if (typeof data === "string") {
     const text = data.trim();
-    return text ? `${prefix}: ${truncate(text)}` : prefix;
+    if (!text || looksLikeMarkup(text)) return prefix;
+    return `${prefix}: ${truncate(text)}`;
   }
 
   const title = getStringField(data, "title");

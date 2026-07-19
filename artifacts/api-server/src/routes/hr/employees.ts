@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq, ilike, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
-import { db, departmentsTable, employeeDisclosuresTable, employeeDisclosureReviewsTable, employeePayRatesTable, employeePhonesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable } from "@workspace/db";
+import { and, eq, ilike, inArray, isNotNull, isNull, lte, or, sql, type SQL } from "drizzle-orm";
+import { db, departmentsTable, employeeDepartmentsTable, employeeDisclosuresTable, employeeDisclosureReviewsTable, employeePayRatesTable, employeePhonesTable, employeeServicePeriodsTable, employeesTable, rolesTable, usersTable, userRolesTable } from "@workspace/db";
 import {
   requirePermission,
   invalidatePermissionsCache,
@@ -35,8 +35,6 @@ function employeeSelection() {
       lastName: employeesTable.lastName,
       email: employeesTable.email,
       jobTitle: employeesTable.jobTitle,
-      departmentId: employeesTable.departmentId,
-      departmentName: departmentsTable.name,
       employmentType: employeesTable.employmentType,
       status: employeesTable.status,
       startDate: employeesTable.startDate,
@@ -46,11 +44,7 @@ function employeeSelection() {
       leaverDate: employeesTable.leaverDate,
       createdAt: employeesTable.createdAt,
     })
-    .from(employeesTable)
-    .leftJoin(
-      departmentsTable,
-      eq(employeesTable.departmentId, departmentsTable.id),
-    );
+    .from(employeesTable);
 }
 
 /** Fetch phones for a single employee. */
@@ -65,6 +59,38 @@ async function getEmployeePhones(employeeId: number) {
     .from(employeePhonesTable)
     .where(eq(employeePhonesTable.employeeId, employeeId))
     .orderBy(employeePhonesTable.createdAt);
+}
+
+/** Attach the assigned departments (id + name) to a batch of employee rows. */
+async function attachDepartments<T extends { id: number }>(
+  rows: T[],
+): Promise<(T & { departments: { id: number; name: string }[] })[]> {
+  if (rows.length === 0) return [];
+
+  const links = await db
+    .select({
+      employeeId: employeeDepartmentsTable.employeeId,
+      id: departmentsTable.id,
+      name: departmentsTable.name,
+    })
+    .from(employeeDepartmentsTable)
+    .innerJoin(departmentsTable, eq(employeeDepartmentsTable.departmentId, departmentsTable.id))
+    .where(
+      inArray(
+        employeeDepartmentsTable.employeeId,
+        rows.map((r) => r.id),
+      ),
+    );
+
+  const byEmployee = new Map<number, { id: number; name: string }[]>();
+  for (const link of links) {
+    byEmployee.set(link.employeeId, [
+      ...(byEmployee.get(link.employeeId) ?? []),
+      { id: link.id, name: link.name },
+    ]);
+  }
+
+  return rows.map((r) => ({ ...r, departments: byEmployee.get(r.id) ?? [] }));
 }
 
 
@@ -98,8 +124,22 @@ router.get("/employees", requirePermission(["view_employees", "edit_employees", 
       )!,
     );
   }
-  if (query.data.departmentId != null) {
-    conditions.push(eq(employeesTable.departmentId, query.data.departmentId));
+  if (query.data.departmentIds) {
+    const departmentIds = query.data.departmentIds
+      .split(",")
+      .map(Number)
+      .filter((n) => !Number.isNaN(n));
+    if (departmentIds.length > 0) {
+      conditions.push(
+        inArray(
+          employeesTable.id,
+          db
+            .select({ id: employeeDepartmentsTable.employeeId })
+            .from(employeeDepartmentsTable)
+            .where(inArray(employeeDepartmentsTable.departmentId, departmentIds)),
+        ),
+      );
+    }
   }
   if (query.data.status) {
     conditions.push(eq(employeesTable.status, query.data.status));
@@ -142,7 +182,8 @@ router.get("/employees", requirePermission(["view_employees", "edit_employees", 
     }
   }
 
-  const responseRows = rows.map((row) => ({
+  const rowsWithDepartments = await attachDepartments(rows);
+  const responseRows = rowsWithDepartments.map((row) => ({
     ...row,
     pendingDisclosureReview: pendingMap.get(row.id) ?? false,
   }));
@@ -169,21 +210,20 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
     return;
   }
 
-  // Verify the requested role exists
-  const role = await db
+  // Verify the requested roles exist
+  const roles = await db
     .select({ id: rolesTable.id })
     .from(rolesTable)
-    .where(eq(rolesTable.id, parsed.data.userRole))
-    .limit(1);
+    .where(inArray(rolesTable.id, parsed.data.userRoleIds));
 
-  if (role.length === 0) {
+  if (roles.length !== new Set(parsed.data.userRoleIds).size) {
     res.status(400).json({ error: "User role not found" });
     return;
   }
 
-  const { userRole, temporaryPassword, ...employeeData } = parsed.data;
+  const { userRoleIds, temporaryPassword, departmentIds, ...employeeData } = parsed.data;
 
-  // Create employee + linked user in a single transaction
+  // Create employee + linked user (+ department/role assignments) in a single transaction
   const created = await db.transaction(async (tx) => {
     const [employee] = await tx
       .insert(employeesTable)
@@ -194,23 +234,36 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
       })
       .returning();
 
-    await tx.insert(usersTable).values({
-      name: `${employeeData.firstName} ${employeeData.lastName}`,
-      email: employeeData.email.toLowerCase(),
-      passwordHash: hashPassword(temporaryPassword),
-      status: "active",
-      roleId: userRole,
-      permissions: [],
-      isSystemAccount: false,
-      employeeId: employee.id,
-    });
+    if (departmentIds && departmentIds.length > 0) {
+      await tx
+        .insert(employeeDepartmentsTable)
+        .values(departmentIds.map((departmentId) => ({ employeeId: employee.id, departmentId })));
+    }
+
+    const [user] = await tx
+      .insert(usersTable)
+      .values({
+        name: `${employeeData.firstName} ${employeeData.lastName}`,
+        email: employeeData.email.toLowerCase(),
+        passwordHash: hashPassword(temporaryPassword),
+        status: "active",
+        permissions: [],
+        isSystemAccount: false,
+        employeeId: employee.id,
+      })
+      .returning();
+
+    await tx
+      .insert(userRolesTable)
+      .values(userRoleIds.map((roleId) => ({ userId: user.id, roleId })));
 
     return employee;
   });
 
   const [row] = await employeeSelection().where(eq(employeesTable.id, created.id));
+  const [withDepartments] = await attachDepartments([row]);
   const phones = await getEmployeePhones(created.id);
-  res.status(201).json(CreateEmployeeResponse.parse({ ...row, phones }));
+  res.status(201).json(CreateEmployeeResponse.parse({ ...withDepartments, phones }));
 });
 
 router.get("/employees/:id", requirePermission(["view_employees", "edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
@@ -229,8 +282,9 @@ router.get("/employees/:id", requirePermission(["view_employees", "edit_employee
     return;
   }
 
+  const [withDepartments] = await attachDepartments([row]);
   const phones = await getEmployeePhones(params.data.id);
-  res.json(GetEmployeeResponse.parse({ ...row, phones }));
+  res.json(GetEmployeeResponse.parse({ ...withDepartments, phones }));
 });
 
 router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"]), async (req, res): Promise<void> => {
@@ -268,7 +322,7 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     }
   }
 
-  const { salary, startDate, leaverDate, ...rest } = parsed.data;
+  const { salary, startDate, leaverDate, departmentIds, ...rest } = parsed.data;
   const today = new Date().toISOString().slice(0, 10);
 
   // Pre-fetch current status so we can detect leaver ↔ active transitions for
@@ -309,6 +363,19 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   if (!updated) {
     res.status(404).json({ error: "Employee not found" });
     return;
+  }
+
+  if (departmentIds) {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(employeeDepartmentsTable)
+        .where(eq(employeeDepartmentsTable.employeeId, updated.id));
+      if (departmentIds.length > 0) {
+        await tx
+          .insert(employeeDepartmentsTable)
+          .values(departmentIds.map((departmentId) => ({ employeeId: updated.id, departmentId })));
+      }
+    });
   }
 
   // When marking as leaver: suspend user account, close open service period,
@@ -368,6 +435,7 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
   const [row] = await employeeSelection().where(
     eq(employeesTable.id, updated.id),
   );
+  const [withDepartments] = await attachDepartments([row]);
   const phones = await getEmployeePhones(updated.id);
 
   // Best-effort sync — keep the linked onboarding submission current.
@@ -375,7 +443,7 @@ router.patch("/employees/:id", requirePermission(["edit_employees", "sysadmin"])
     console.error("onboarding sync failed after employee update:", err);
   });
 
-  res.json(UpdateEmployeeResponse.parse({ ...row, phones }));
+  res.json(UpdateEmployeeResponse.parse({ ...withDepartments, phones }));
 });
 
 router.delete("/employees/:id", requirePermission("sysadmin"), async (req, res): Promise<void> => {

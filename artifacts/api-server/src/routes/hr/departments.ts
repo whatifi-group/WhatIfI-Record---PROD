@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, departmentsTable, employeesTable } from "@workspace/db";
+import { db, departmentsTable, employeeDepartmentsTable } from "@workspace/db";
 import { requirePermission } from "../../middlewares/requirePermission";
 import {
   CreateDepartmentBody,
@@ -27,12 +27,12 @@ async function withEmployeeCount() {
       description: departmentsTable.description,
       headEmployeeId: departmentsTable.headEmployeeId,
       createdAt: departmentsTable.createdAt,
-      employeeCount: sql<number>`count(${employeesTable.id})::int`,
+      employeeCount: sql<number>`count(distinct ${employeeDepartmentsTable.employeeId})::int`,
     })
     .from(departmentsTable)
     .leftJoin(
-      employeesTable,
-      eq(employeesTable.departmentId, departmentsTable.id),
+      employeeDepartmentsTable,
+      eq(employeeDepartmentsTable.departmentId, departmentsTable.id),
     )
     .groupBy(departmentsTable.id)
     .orderBy(departmentsTable.name);
@@ -106,8 +106,8 @@ router.patch("/departments/:id", requirePermission(EDIT), async (req, res): Prom
 
   const [{ employeeCount }] = await db
     .select({ employeeCount: sql<number>`count(*)::int` })
-    .from(employeesTable)
-    .where(eq(employeesTable.departmentId, updated.id));
+    .from(employeeDepartmentsTable)
+    .where(eq(employeeDepartmentsTable.departmentId, updated.id));
 
   res.json(UpdateDepartmentResponse.parse({ ...updated, employeeCount }));
 });
@@ -121,8 +121,8 @@ router.delete("/departments/:id", requirePermission(EDIT), async (req, res): Pro
 
   const [{ employeeCount }] = await db
     .select({ employeeCount: sql<number>`count(*)::int` })
-    .from(employeesTable)
-    .where(eq(employeesTable.departmentId, params.data.id));
+    .from(employeeDepartmentsTable)
+    .where(eq(employeeDepartmentsTable.departmentId, params.data.id));
 
   if (employeeCount > 0) {
     res.status(409).json({

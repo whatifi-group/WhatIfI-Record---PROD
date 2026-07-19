@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
-import { db, employeeWorkRecordsTable, employeesTable, departmentsTable } from "@workspace/db";
+import { and, eq, gte, ilike, inArray, lte, or, sql, type SQL } from "drizzle-orm";
+import { db, employeeWorkRecordsTable, employeesTable, departmentsTable, employeeDepartmentsTable } from "@workspace/db";
 import { z } from "zod";
 import { requirePermission } from "../../middlewares/requirePermission";
 
@@ -85,7 +85,15 @@ router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<v
     conditions.push(eq(employeeWorkRecordsTable.shiftType, shiftType));
   }
   if (departmentId != null) {
-    conditions.push(eq(employeesTable.departmentId, departmentId));
+    conditions.push(
+      inArray(
+        employeesTable.id,
+        db
+          .select({ id: employeeDepartmentsTable.employeeId })
+          .from(employeeDepartmentsTable)
+          .where(eq(employeeDepartmentsTable.departmentId, departmentId)),
+      ),
+    );
   }
   if (employeeStatus) {
     conditions.push(
@@ -117,10 +125,6 @@ router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<v
         employeesTable,
         eq(employeeWorkRecordsTable.employeeId, employeesTable.id),
       )
-      .leftJoin(
-        departmentsTable,
-        eq(employeesTable.departmentId, departmentsTable.id),
-      )
       .where(whereClause),
     db
       .select({
@@ -138,8 +142,6 @@ router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<v
         employeeLastName: employeesTable.lastName,
         employeeEmail: employeesTable.email,
         employeeStatus: employeesTable.status,
-        employeeDepartmentId: employeesTable.departmentId,
-        employeeDepartmentName: departmentsTable.name,
         employeeAvatarUrl: employeesTable.avatarUrl,
         employeeLeaverDate: employeesTable.leaverDate,
         employeeLeaverReason: employeesTable.leaverReason,
@@ -148,10 +150,6 @@ router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<v
       .innerJoin(
         employeesTable,
         eq(employeeWorkRecordsTable.employeeId, employeesTable.id),
-      )
-      .leftJoin(
-        departmentsTable,
-        eq(employeesTable.departmentId, departmentsTable.id),
       )
       .where(whereClause)
       .orderBy(
@@ -166,7 +164,32 @@ router.get("/work-records", requirePermission(EDIT), async (req, res): Promise<v
   const total = countResult[0]?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
-  res.json({ rows, total, page, pageSize, totalPages });
+  // Attach each row's employee's departments (an employee may have zero, one, or many).
+  const employeeIds = [...new Set(rows.map((r) => r.employeeId))];
+  const deptLinks = employeeIds.length > 0
+    ? await db
+        .select({
+          employeeId: employeeDepartmentsTable.employeeId,
+          id: departmentsTable.id,
+          name: departmentsTable.name,
+        })
+        .from(employeeDepartmentsTable)
+        .innerJoin(departmentsTable, eq(employeeDepartmentsTable.departmentId, departmentsTable.id))
+        .where(inArray(employeeDepartmentsTable.employeeId, employeeIds))
+    : [];
+  const deptsByEmployee = new Map<number, { id: number; name: string }[]>();
+  for (const link of deptLinks) {
+    deptsByEmployee.set(link.employeeId, [
+      ...(deptsByEmployee.get(link.employeeId) ?? []),
+      { id: link.id, name: link.name },
+    ]);
+  }
+  const rowsWithDepartments = rows.map((row) => ({
+    ...row,
+    employeeDepartments: deptsByEmployee.get(row.employeeId) ?? [],
+  }));
+
+  res.json({ rows: rowsWithDepartments, total, page, pageSize, totalPages });
 });
 
 router.get(

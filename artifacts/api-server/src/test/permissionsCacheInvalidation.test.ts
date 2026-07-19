@@ -20,7 +20,7 @@ import {
   createTestUser,
   cleanupUser,
 } from "./helpers";
-import { db, rolesTable, usersTable, employeesTable } from "@workspace/db";
+import { db, rolesTable, usersTable, userRolesTable, employeesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "../lib/password";
 import {
@@ -94,7 +94,7 @@ describe("Permission cache — user role update", () => {
       // Change the user's role via the sysadmin API.
       const res = await buildApp(sysadminRouter, sysadminUserId)
         .patch(`/api/sysadmin/users/${userId}`)
-        .send({ roleId: roleWithEdit });
+        .send({ roleIds: [roleWithEdit] });
       expect(res.status).toBe(200);
 
       // After the update, the cache entry is evicted; the next lookup must
@@ -198,12 +198,12 @@ describe("Permission cache — employee deletion cascades to linked user", () =>
         name: "Linked User",
         email: `linked-${unique}@example-test.invalid`,
         passwordHash: "not-a-real-hash",
-        roleId,
         permissions: [],
         employeeId: linkedEmpId,
       })
       .returning({ id: usersTable.id });
     const linkedUserId = linkedUserRow.id;
+    await db.insert(userRolesTable).values({ userId: linkedUserId, roleId });
 
     try {
       // Prime the cache.

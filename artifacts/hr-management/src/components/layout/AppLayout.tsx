@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList, History } from "lucide-react";
+import { Home, Users, Building2, LayoutDashboard, ChevronRight, ShieldCheck, UserCog, Lock, LogOut, ListOrdered, GraduationCap, ClipboardList, AlertTriangle, BookOpen, LifeBuoy, ClipboardCheck, LayoutList, History, IdCard } from "lucide-react";
 import { GlobalSearch } from "./GlobalSearch";
 import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
@@ -81,6 +81,7 @@ const modules: Module[] = [
     hrOnly: true,
     pages: [
       { name: "Course Management", href: "/course-management", icon: BookOpen },
+      { name: "Student Register", href: "/course-management/students", icon: IdCard },
     ],
   },
   {
@@ -125,24 +126,66 @@ function AppSidebar() {
   useEffect(() => {
     if (!canReviewOnboarding) return;
     let cancelled = false;
-    fetch('/api/onboarding/submissions?status=pending&page=1&pageSize=1', {
-      credentials: 'include',
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled && typeof data?.total === 'number') {
-          setPendingCount(data.total);
-        }
+    const fetchPendingCount = () => {
+      fetch('/api/onboarding/submissions?status=pending&page=1&pageSize=1', {
+        credentials: 'include',
       })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [canReviewOnboarding, location]);
+        .then((r) => r.json())
+        .then((data) => {
+          if (!cancelled && typeof data?.total === 'number') {
+            setPendingCount(data.total);
+          }
+        })
+        .catch(() => {});
+    };
+    // Poll on an interval rather than on every navigation — this badge is
+    // background-refreshed sidebar chrome, not a page view, and refetching
+    // it on every route change was hitting the API (and cluttering the
+    // SysAdmin audit trail with a "Listed submissions" entry) on every
+    // single click anywhere in the app.
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [canReviewOnboarding]);
 
   const isModuleActive = (mod: Module) =>
     mod.pages.some((page) => location === page.href || location.startsWith(page.href)) ||
     (mod.subSections ?? []).some((ss) =>
       ss.pages.some((page) => location === page.href || location.startsWith(page.href)),
     );
+
+  const isSubSectionActive = (ss: ModuleSubSection) =>
+    ss.pages.some((page) => location === page.href || location.startsWith(page.href));
+
+  // Which module/sub-section collapsibles are open. Initialized so the
+  // section containing the current page starts expanded, then kept in sync
+  // on every navigation (below) while still letting the user manually
+  // toggle other sections without them snapping shut.
+  const [openModules, setOpenModules] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(modules.map((mod) => [mod.name, isModuleActive(mod)])),
+  );
+  const [openSubSections, setOpenSubSections] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      modules.flatMap((mod) => (mod.subSections ?? []).map((ss) => [ss.name, isSubSectionActive(ss)])),
+    ),
+  );
+
+  useEffect(() => {
+    const activeModule = modules.find((mod) => isModuleActive(mod));
+    if (activeModule) {
+      setOpenModules((prev) => (prev[activeModule.name] ? prev : { ...prev, [activeModule.name]: true }));
+    }
+    for (const mod of modules) {
+      for (const ss of mod.subSections ?? []) {
+        if (isSubSectionActive(ss)) {
+          setOpenSubSections((prev) => (prev[ss.name] ? prev : { ...prev, [ss.name]: true }));
+        }
+      }
+    }
+  }, [location]);
 
   return (
     <Sidebar variant="sidebar" collapsible="icon" className="border-r border-border bg-sidebar">
@@ -194,7 +237,12 @@ function AppSidebar() {
               return true;
             })
             .map((mod) => (
-            <Collapsible key={mod.name} defaultOpen={isModuleActive(mod)} className="group/collapsible">
+            <Collapsible
+              key={mod.name}
+              open={openModules[mod.name] ?? false}
+              onOpenChange={(open) => setOpenModules((prev) => ({ ...prev, [mod.name]: open }))}
+              className="group/collapsible"
+            >
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton isActive={isModuleActive(mod)} tooltip={mod.name}>
@@ -236,7 +284,12 @@ function AppSidebar() {
                         (p) => location === p.href || location.startsWith(p.href),
                       );
                       return (
-                        <Collapsible key={ss.name} defaultOpen={isModuleActive(mod)} className="group/subsection">
+                        <Collapsible
+                          key={ss.name}
+                          open={openSubSections[ss.name] ?? false}
+                          onOpenChange={(open) => setOpenSubSections((prev) => ({ ...prev, [ss.name]: open }))}
+                          className="group/subsection"
+                        >
                           <SidebarMenuSubItem>
                             <CollapsibleTrigger asChild>
                               <SidebarMenuSubButton isActive={ssActive} className="gap-2 cursor-pointer">
@@ -326,7 +379,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-3 shrink-0">
                 <div className="flex flex-col items-end leading-tight">
                   <span className="text-sm font-semibold text-foreground truncate max-w-[180px]">{user.name}</span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[180px]">{user.roleName}</span>
+                  <span className="text-xs text-muted-foreground truncate max-w-[180px]">{user.roles.map((r) => r.name).join(", ")}</span>
                 </div>
                 <Button
                   variant="ghost"

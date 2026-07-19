@@ -26,6 +26,8 @@ tags:
     description: Object storage upload and serving endpoints.
   - name: search
     description: Global permission-aware search
+  - name: course-management
+    description: Course management operations
 
 paths:
   # ── Storage ───────────────────────────────────────────────────────────────
@@ -270,11 +272,12 @@ paths:
           required: false
           schema:
             type: string
-        - name: departmentId
+        - name: departmentIds
           in: query
           required: false
           schema:
-            type: integer
+            type: string
+          description: Comma-separated department ids; matches employees in any of them
         - name: status
           in: query
           required: false
@@ -2285,11 +2288,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/UserStatus"
-        - name: roleId
+        - name: roleIds
           in: query
           required: false
           schema:
-            type: integer
+            type: string
+          description: Comma-separated role ids; matches users holding any of them
       responses:
         "200":
           description: List of users
@@ -2566,6 +2570,114 @@ paths:
         "404":
           description: Not found
 
+  # ── Course management ────────────────────────────────────────────────────
+
+  /course-management/students:
+    get:
+      operationId: listStudents
+      tags: [course-management]
+      summary: List all registered students
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Student"
+    post:
+      operationId: createStudent
+      tags: [course-management]
+      summary: Register a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentInput"
+      responses:
+        "201":
+          description: Created student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /course-management/students/{studentId}:
+    get:
+      operationId: getStudent
+      tags: [course-management]
+      summary: Get a registered student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateStudent
+      tags: [course-management]
+      summary: Update a registered student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+      responses:
+        "200":
+          description: Updated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+
+  # ── Audit trail (view-duration reporting) ───────────────────────────────
+
+  /audit-log/view-duration:
+    post:
+      operationId: reportViewDuration
+      tags: [audit-log]
+      summary: >-
+        Record how long a record detail page (Employee Profile, LOV category
+        detail, an onboarding submission, ...) stayed open. Sent via
+        navigator.sendBeacon when the page unmounts. Available to any
+        authenticated user — not gated behind the sysadmin permission, since
+        any user who could view the record may report having viewed it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewDurationReport"
+      responses:
+        "204":
+          description: Recorded
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   # ── Search ────────────────────────────────────────────────────────────────
 
   /search:
@@ -2701,8 +2813,7 @@ components:
         - lastName
         - email
         - jobTitle
-        - departmentId
-        - departmentName
+        - departments
         - employmentType
         - status
         - startDate
@@ -2727,10 +2838,10 @@ components:
           description: Phone numbers for this employee (only present on single-record responses)
         jobTitle:
           type: string
-        departmentId:
-          type: ["integer", "null"]
-        departmentName:
-          type: ["string", "null"]
+        departments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentSummary"
         employmentType:
           $ref: "#/components/schemas/EmploymentType"
         status:
@@ -2761,7 +2872,7 @@ components:
 
     EmployeeInput:
       type: object
-      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate, userRole, temporaryPassword]
+      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate, userRoleIds, temporaryPassword]
       properties:
         firstName:
           type: string
@@ -2775,8 +2886,11 @@ components:
         jobTitle:
           type: string
           minLength: 1
-        departmentId:
-          type: ["integer", "null"]
+        departmentIds:
+          type: array
+          items:
+            type: integer
+          default: []
         employmentType:
           $ref: "#/components/schemas/EmploymentType"
         status:
@@ -2788,9 +2902,12 @@ components:
           type: ["number", "null"]
         avatarUrl:
           type: ["string", "null"]
-        userRole:
-          type: integer
-          description: Role ID to assign to the automatically created user account
+        userRoleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          description: Role IDs to assign to the automatically created user account
         temporaryPassword:
           type: string
           minLength: 8
@@ -2811,8 +2928,10 @@ components:
         jobTitle:
           type: string
           minLength: 1
-        departmentId:
-          type: ["integer", "null"]
+        departmentIds:
+          type: array
+          items:
+            type: integer
         employmentType:
           $ref: "#/components/schemas/EmploymentType"
         status:
@@ -3063,9 +3182,27 @@ components:
         status:
           $ref: "#/components/schemas/EmployeeStatus"
 
+    RoleSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    DepartmentSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
     User:
       type: object
-      required: [id, name, email, status, roleId, roleName, permissions, isSystemAccount, createdAt]
+      required: [id, name, email, status, roles, permissions, isSystemAccount, createdAt]
       properties:
         id:
           type: integer
@@ -3075,10 +3212,10 @@ components:
           type: string
         status:
           $ref: "#/components/schemas/UserStatus"
-        roleId:
-          type: integer
-        roleName:
-          type: string
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleSummary"
         permissions:
           type: array
           items:
@@ -3100,7 +3237,7 @@ components:
 
     UserInput:
       type: object
-      required: [name, email, password, roleId]
+      required: [name, email, password, roleIds]
       properties:
         name:
           type: string
@@ -3111,8 +3248,11 @@ components:
         password:
           type: string
           minLength: 8
-        roleId:
-          type: integer
+        roleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
         isSystemAccount:
           type: boolean
           default: true
@@ -3141,8 +3281,11 @@ components:
           minLength: 1
         status:
           $ref: "#/components/schemas/UserStatus"
-        roleId:
-          type: integer
+        roleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
         permissions:
           type: array
           items:
@@ -3180,7 +3323,13 @@ components:
           description: The system module the request belongs to, e.g. "sysadmin", "hr".
         action:
           type: string
-          description: Human-readable action, e.g. "Created role", "Listed employees".
+          maxLength: 5000
+          description: >-
+            Detailed, human-readable description of what was done or viewed —
+            includes the specific record id, query filters, and a redacted
+            summary of the submitted data where applicable, e.g.
+            'Updated role 12 (data: {"permissions":["sysadmin"]})'.
+            Capped at 5000 characters.
         userId:
           type: ["integer", "null"]
         userName:
@@ -3194,6 +3343,31 @@ components:
           type: integer
         ipAddress:
           type: ["string", "null"]
+        durationMs:
+          type: ["integer", "null"]
+          description: >-
+            Set only for client-reported "record view" events (method
+            "VIEW") — how long the record detail page stayed open.
+
+    ViewDurationReport:
+      type: object
+      required: [module, path, durationMs]
+      properties:
+        module:
+          type: string
+          description: The module the viewed record belongs to, e.g. "hr", "sysadmin".
+        path:
+          type: string
+          description: The record's page path, e.g. "/employees/2585".
+        durationMs:
+          type: integer
+          minimum: 0
+        recordLabel:
+          type: ["string", "null"]
+          description: >-
+            Human-readable name for the record, e.g. "James Thompson", if the
+            page already has it loaded — substituted for the bare record id
+            in the resulting audit action.
 
     AuditLogPage:
       type: object
@@ -3659,6 +3833,58 @@ components:
         isActive:
           type: boolean
 
+    Student:
+      type: object
+      required: [studentId, firstName, lastName]
+      properties:
+        studentId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        homeAddress:
+          type: ["string", "null"]
+        phoneNumber:
+          type: ["string", "null"]
+        emailAddress:
+          type: ["string", "null"]
+
+    StudentInput:
+      type: object
+      required: [firstName, lastName]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        homeAddress:
+          type: string
+        phoneNumber:
+          type: string
+        emailAddress:
+          type: string
+          description: Must be a valid email address — validated server-side.
+
+    StudentUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        homeAddress:
+          type: ["string", "null"]
+        phoneNumber:
+          type: ["string", "null"]
+        emailAddress:
+          type: ["string", "null"]
+          description: Must be a valid email address — validated server-side.
+
     EmployeeServicePeriod:
       type: object
       required: [id, employeeId, startDate, createdAt, updatedAt]
@@ -3860,10 +4086,10 @@ components:
           type: string
         employeeStatus:
           $ref: "#/components/schemas/EmployeeStatus"
-        employeeDepartmentId:
-          type: ["integer", "null"]
-        employeeDepartmentName:
-          type: ["string", "null"]
+        employeeDepartments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentSummary"
         employeeAvatarUrl:
           type: ["string", "null"]
         employeeLeaverDate:

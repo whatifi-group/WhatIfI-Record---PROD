@@ -34,12 +34,29 @@ audit-specific code:
 - `artifacts/api-server/src/routes/index.ts` tags each top-level router mount
   with `tagAuditModule("<name>")`; a router mounted without a tag still gets
   audited, falling back to its first URL path segment as the module name.
-- `artifacts/api-server/src/middlewares/auditLog.ts` derives a generic action
-  (e.g. "Created role", "Listed employees") from the HTTP method + path, and
-  writes one row per request after the response is sent (fire-and-forget, so
-  it never adds latency or can fail a request).
+- `artifacts/api-server/src/middlewares/auditLog.ts` derives a detailed action
+  from the HTTP method, path (incl. record id), query filters, request body,
+  and — for successful creates/updates — the resulting record returned by the
+  route, e.g. `Updated role 12 (data: {"permissions":[...]}; result:
+  {"id":12,...})`. This is "committed changes": automatic for every route
+  with no per-route wiring, showing full before-intent/after-state rather
+  than a minimal diff. Credential-like fields (password, token, ...) are
+  redacted; action strings are capped at 5000 characters. Writes happen
+  fire-and-forget after the response is sent, so logging never adds latency
+  or can fail a request.
 - `/healthz` liveness probes are excluded — everything else, including reads,
   is logged.
+- **View duration** ("how long was this record open"): a stateless
+  request/response can't capture this on its own, so record detail pages
+  (Employee Profile, LOV category detail, an onboarding submission dialog)
+  use the `useViewDuration` hook (`artifacts/hr-management/src/hooks/
+  use-view-duration.ts`), which reports elapsed time via
+  `navigator.sendBeacon` to `POST /audit-log/view-duration` when the page
+  unmounts. The backend writes a `method: "VIEW"` row reusing the same
+  action-phrasing as a normal GET, e.g. "Viewed employee 2585 for 3m 12s".
+  Views under 1 second are skipped as noise. To add tracking to a new detail
+  page: call `useViewDuration(module, path, active)` where `module` matches
+  the `tagAuditModule` name used for that route.
 
 ## Architecture notes
 - All request/response Zod schemas live in `lib/api-zod`; entity input/update bodies use dedicated component names (`DepartmentInput`, `EmployeeUpdate`, etc.) to avoid Orval type-name collisions.

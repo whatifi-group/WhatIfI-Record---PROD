@@ -9,7 +9,7 @@ import {
   createTestRole,
   createTestUser,
 } from "./helpers";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, userRolesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 // Payroll routes are gated behind requirePermission(["view_payroll", "sysadmin"]).
@@ -49,10 +49,10 @@ beforeAll(async () => {
       name: "IndividualPerm User",
       email: `individual-perm-${Date.now()}@example-test.invalid`,
       passwordHash: "not-a-real-hash",
-      roleId: individualPermBaseRoleId,
       permissions: ["view_payroll"] as never,
     })
     .returning({ id: usersTable.id });
+  await db.insert(userRolesTable).values({ userId: u.id, roleId: individualPermBaseRoleId });
   individualPermUserId = u.id;
 });
 

@@ -17,8 +17,7 @@ export interface EmployeeInput {
   email: string;
   /** @minLength 1 */
   jobTitle: string;
-  /** @nullable */
-  departmentId?: number | null;
+  departmentIds?: number[];
   employmentType: EmploymentType;
   status: EmployeeStatus;
   startDate: Date;
@@ -26,8 +25,11 @@ export interface EmployeeInput {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
-  /** Role ID to assign to the automatically created user account */
-  userRole: number;
+  /**
+     * Role IDs to assign to the automatically created user account
+     * @minItems 1
+     */
+  userRoleIds: number[];
   /**
      * Temporary password for the automatically created user account
      * @minLength 8

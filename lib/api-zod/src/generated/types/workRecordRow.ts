@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DepartmentSummary } from './departmentSummary';
 import type { EmployeeStatus } from './employeeStatus';
 
 export interface WorkRecordRow {
@@ -25,10 +26,7 @@ export interface WorkRecordRow {
   employeeLastName: string;
   employeeEmail: string;
   employeeStatus: EmployeeStatus;
-  /** @nullable */
-  employeeDepartmentId?: number | null;
-  /** @nullable */
-  employeeDepartmentName?: string | null;
+  employeeDepartments?: DepartmentSummary[];
   /** @nullable */
   employeeAvatarUrl?: string | null;
   /**

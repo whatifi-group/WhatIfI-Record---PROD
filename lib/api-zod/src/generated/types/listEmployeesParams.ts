@@ -9,6 +9,9 @@ import type { EmployeeStatus } from './employeeStatus';
 
 export type ListEmployeesParams = {
 search?: string;
-departmentId?: number;
+/**
+ * Comma-separated department ids; matches employees in any of them
+ */
+departmentIds?: string;
 status?: EmployeeStatus;
 };

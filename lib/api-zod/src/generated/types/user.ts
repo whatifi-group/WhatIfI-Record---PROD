@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Permission } from './permission';
+import type { RoleSummary } from './roleSummary';
 import type { UserLinkedEmployee } from './userLinkedEmployee';
 import type { UserStatus } from './userStatus';
 
@@ -14,8 +15,7 @@ export interface User {
   name: string;
   email: string;
   status: UserStatus;
-  roleId: number;
-  roleName: string;
+  roles: RoleSummary[];
   permissions: Permission[];
   isSystemAccount: boolean;
   /** @nullable */

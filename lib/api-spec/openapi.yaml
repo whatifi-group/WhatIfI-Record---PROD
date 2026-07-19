@@ -168,6 +168,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /environment:
+    get:
+      operationId: getEnvironment
+      tags: [environment]
+      summary: Get deployment environment
+      description: >-
+        Returns which deployment (development or production) is serving this
+        request, driven by the APP_ENV server env var. Public — used to theme
+        the UI so DEV/PROD are visually distinguishable, including on the
+        pre-login screen, without needing separate builds per environment.
+      responses:
+        "200":
+          description: Deployment environment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvironmentStatus"
+
   /departments:
     get:
       operationId: listDepartments
@@ -2747,6 +2765,15 @@ components:
           type: string
       required:
         - status
+
+    EnvironmentStatus:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [development, production]
+      required:
+        - environment
 
     EmploymentType:
       type: string

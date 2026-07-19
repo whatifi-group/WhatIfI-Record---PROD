@@ -64,6 +64,7 @@ import type {
   EmployeeWorkRecord,
   EmployeeWorkRecordInput,
   EmployeeWorkRecordUpdate,
+  EnvironmentStatus,
   ErrorResponse,
   ExpiringQualification,
   HealthStatus,
@@ -100,6 +101,9 @@ import type {
   RoleUpdate,
   SearchParams,
   SearchResponse,
+  Student,
+  StudentInput,
+  StudentUpdate,
   SysadminSummary,
   UploadPolicy,
   UploadUrlRequest,
@@ -107,6 +111,7 @@ import type {
   User,
   UserInput,
   UserUpdate,
+  ViewDurationReport,
   WorkRecordsPage
 } from './api.schemas';
 
@@ -651,6 +656,84 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEnvironmentUrl = () => {
+
+
+
+
+  return `/api/environment`
+}
+
+/**
+ * Returns which deployment (development or production) is serving this request, driven by the APP_ENV server env var. Public — used to theme the UI so DEV/PROD are visually distinguishable, including on the pre-login screen, without needing separate builds per environment.
+ * @summary Get deployment environment
+ */
+export const getEnvironment = async ( options?: RequestInit): Promise<EnvironmentStatus> => {
+
+  return customFetch<EnvironmentStatus>(getGetEnvironmentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEnvironmentQueryKey = () => {
+    return [
+    `/api/environment`
+    ] as const;
+    }
+
+
+export const getGetEnvironmentQueryOptions = <TData = Awaited<ReturnType<typeof getEnvironment>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnvironment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEnvironmentQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEnvironment>>> = ({ signal }) => getEnvironment({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEnvironment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEnvironmentQueryResult = NonNullable<Awaited<ReturnType<typeof getEnvironment>>>
+export type GetEnvironmentQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get deployment environment
+ */
+
+export function useGetEnvironment<TData = Awaited<ReturnType<typeof getEnvironment>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnvironment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEnvironmentQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -8087,6 +8170,374 @@ export const useDeleteQualificationType = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteQualificationTypeMutationOptions(options));
+    }
+
+export const getListStudentsUrl = () => {
+
+
+
+
+  return `/api/course-management/students`
+}
+
+/**
+ * @summary List all registered students
+ */
+export const listStudents = async ( options?: RequestInit): Promise<Student[]> => {
+
+  return customFetch<Student[]>(getListStudentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListStudentsQueryKey = () => {
+    return [
+    `/api/course-management/students`
+    ] as const;
+    }
+
+
+export const getListStudentsQueryOptions = <TData = Awaited<ReturnType<typeof listStudents>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListStudentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listStudents>>> = ({ signal }) => listStudents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listStudents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListStudentsQueryResult = NonNullable<Awaited<ReturnType<typeof listStudents>>>
+export type ListStudentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all registered students
+ */
+
+export function useListStudents<TData = Awaited<ReturnType<typeof listStudents>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listStudents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListStudentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateStudentUrl = () => {
+
+
+
+
+  return `/api/course-management/students`
+}
+
+/**
+ * @summary Register a new student
+ */
+export const createStudent = async (studentInput: StudentInput, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getCreateStudentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(studentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateStudentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<StudentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<StudentInput>}, TContext> => {
+
+const mutationKey = ['createStudent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStudent>>, {data: BodyType<StudentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStudent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStudentMutationResult = NonNullable<Awaited<ReturnType<typeof createStudent>>>
+    export type CreateStudentMutationBody = BodyType<StudentInput>
+    export type CreateStudentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register a new student
+ */
+export const useCreateStudent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudent>>, TError,{data: BodyType<StudentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStudent>>,
+        TError,
+        {data: BodyType<StudentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStudentMutationOptions(options));
+    }
+
+export const getGetStudentUrl = (studentId: number,) => {
+
+
+
+
+  return `/api/course-management/students/${studentId}`
+}
+
+/**
+ * @summary Get a registered student
+ */
+export const getStudent = async (studentId: number, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getGetStudentUrl(studentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStudentQueryKey = (studentId: number,) => {
+    return [
+    `/api/course-management/students/${studentId}`
+    ] as const;
+    }
+
+
+export const getGetStudentQueryOptions = <TData = Awaited<ReturnType<typeof getStudent>>, TError = ErrorType<void>>(studentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStudentQueryKey(studentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStudent>>> = ({ signal }) => getStudent(studentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: studentId !== null && studentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStudent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStudentQueryResult = NonNullable<Awaited<ReturnType<typeof getStudent>>>
+export type GetStudentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get a registered student
+ */
+
+export function useGetStudent<TData = Awaited<ReturnType<typeof getStudent>>, TError = ErrorType<void>>(
+ studentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStudentQueryOptions(studentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateStudentUrl = (studentId: number,) => {
+
+
+
+
+  return `/api/course-management/students/${studentId}`
+}
+
+/**
+ * @summary Update a registered student
+ */
+export const updateStudent = async (studentId: number,
+    studentUpdate: StudentUpdate, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getUpdateStudentUrl(studentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(studentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateStudentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStudent>>, TError,{studentId: number;data: BodyType<StudentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateStudent>>, TError,{studentId: number;data: BodyType<StudentUpdate>}, TContext> => {
+
+const mutationKey = ['updateStudent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateStudent>>, {studentId: number;data: BodyType<StudentUpdate>}> = (props) => {
+          const {studentId,data} = props ?? {};
+
+          return  updateStudent(studentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateStudentMutationResult = NonNullable<Awaited<ReturnType<typeof updateStudent>>>
+    export type UpdateStudentMutationBody = BodyType<StudentUpdate>
+    export type UpdateStudentMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a registered student
+ */
+export const useUpdateStudent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateStudent>>, TError,{studentId: number;data: BodyType<StudentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateStudent>>,
+        TError,
+        {studentId: number;data: BodyType<StudentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateStudentMutationOptions(options));
+    }
+
+export const getReportViewDurationUrl = () => {
+
+
+
+
+  return `/api/audit-log/view-duration`
+}
+
+/**
+ * @summary Record how long a record detail page (Employee Profile, LOV category detail, an onboarding submission, ...) stayed open. Sent via navigator.sendBeacon when the page unmounts. Available to any authenticated user — not gated behind the sysadmin permission, since any user who could view the record may report having viewed it.
+ */
+export const reportViewDuration = async (viewDurationReport: ViewDurationReport, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getReportViewDurationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(viewDurationReport)
+  }
+);}
+
+
+
+
+
+export const getReportViewDurationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportViewDuration>>, TError,{data: BodyType<ViewDurationReport>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportViewDuration>>, TError,{data: BodyType<ViewDurationReport>}, TContext> => {
+
+const mutationKey = ['reportViewDuration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportViewDuration>>, {data: BodyType<ViewDurationReport>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportViewDuration(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportViewDurationMutationResult = NonNullable<Awaited<ReturnType<typeof reportViewDuration>>>
+    export type ReportViewDurationMutationBody = BodyType<ViewDurationReport>
+    export type ReportViewDurationMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record how long a record detail page (Employee Profile, LOV category detail, an onboarding submission, ...) stayed open. Sent via navigator.sendBeacon when the page unmounts. Available to any authenticated user — not gated behind the sysadmin permission, since any user who could view the record may report having viewed it.
+ */
+export const useReportViewDuration = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportViewDuration>>, TError,{data: BodyType<ViewDurationReport>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reportViewDuration>>,
+        TError,
+        {data: BodyType<ViewDurationReport>},
+        TContext
+      > => {
+      return useMutation(getReportViewDurationMutationOptions(options));
     }
 
 export const getSearchUrl = (params: SearchParams,) => {

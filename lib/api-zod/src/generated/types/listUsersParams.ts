@@ -10,5 +10,8 @@ import type { UserStatus } from './userStatus';
 export type ListUsersParams = {
 search?: string;
 status?: UserStatus;
-roleId?: number;
+/**
+ * Comma-separated role ids; matches users holding any of them
+ */
+roleIds?: string;
 };

@@ -22,7 +22,9 @@ import type { LucideIcon } from "lucide-react";
 import logoUrl from "@assets/Main_Logo_-_Colour_on_White_1784059733026.PNG";
 import { useHealthCheck, useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 interface ModulePage {
@@ -114,6 +116,7 @@ function AppSidebar() {
   const isCollapsed = sidebarState === "collapsed";
   const { data: health } = useHealthCheck();
   const { hasPermission } = useAuth();
+  const { isDev } = useEnvironment();
 
   // Pending onboarding count — only fetched for HR/SysAdmin users
   const [pendingCount, setPendingCount] = useState(0);
@@ -203,6 +206,9 @@ function AppSidebar() {
             <span className="font-display font-bold text-sm text-foreground leading-tight">WhatIfI Record</span>
           )}
         </Link>
+        {!isCollapsed && isDev && (
+          <Badge variant="default" className="mt-2 w-fit">DEV</Badge>
+        )}
       </SidebarHeader>
       <SidebarContent className="px-4 py-2">
         <SidebarMenu>

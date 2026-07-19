@@ -226,6 +226,27 @@
   --chart-5: 200 50% 50%;
 }
 
+/* DEV-environment theme — applied to <html> via EnvironmentContext when
+   GET /api/environment reports APP_ENV=development. Swaps the brand hue
+   (navy 221 → amber 32) so DEV is unmistakable at a glance; everything else
+   (layout, text color, structural vars) is inherited from :root unchanged. */
+.theme-dev {
+  --ring: 32 80% 40%;
+
+  --sidebar-primary: 32 80% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-ring: 32 80% 40%;
+
+  --primary: 32 80% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 20 70% 32%;
+  --secondary-foreground: 0 0% 100%;
+
+  --chart-1: 32 80% 50%;
+  --chart-2: 20 70% 45%;
+}
+
 @layer base {
   * {
     @apply border-border;

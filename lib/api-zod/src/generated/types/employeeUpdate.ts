@@ -17,8 +17,7 @@ export interface EmployeeUpdate {
   email?: string;
   /** @minLength 1 */
   jobTitle?: string;
-  /** @nullable */
-  departmentId?: number | null;
+  departmentIds?: number[];
   employmentType?: EmploymentType;
   status?: EmployeeStatus;
   startDate?: Date;

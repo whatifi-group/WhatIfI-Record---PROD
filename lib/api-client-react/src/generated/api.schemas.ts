@@ -37,6 +37,18 @@ export interface HealthStatus {
   status: string;
 }
 
+export type EnvironmentStatusEnvironment = typeof EnvironmentStatusEnvironment[keyof typeof EnvironmentStatusEnvironment];
+
+
+export const EnvironmentStatusEnvironment = {
+  development: 'development',
+  production: 'production',
+} as const;
+
+export interface EnvironmentStatus {
+  environment: EnvironmentStatusEnvironment;
+}
+
 /**
  * Employment type value — managed via List of Values
  */
@@ -107,6 +119,11 @@ export interface PhoneSummary {
   isPrimary: boolean;
 }
 
+export interface DepartmentSummary {
+  id: number;
+  name: string;
+}
+
 export interface Employee {
   id: number;
   firstName: string;
@@ -115,10 +132,7 @@ export interface Employee {
   /** Phone numbers for this employee (only present on single-record responses) */
   phones?: PhoneSummary[];
   jobTitle: string;
-  /** @nullable */
-  departmentId: number | null;
-  /** @nullable */
-  departmentName: string | null;
+  departments: DepartmentSummary[];
   employmentType: EmploymentType;
   status: EmployeeStatus;
   startDate: string;
@@ -150,8 +164,7 @@ export interface EmployeeInput {
   email: string;
   /** @minLength 1 */
   jobTitle: string;
-  /** @nullable */
-  departmentId?: number | null;
+  departmentIds?: number[];
   employmentType: EmploymentType;
   status: EmployeeStatus;
   startDate: string;
@@ -159,8 +172,11 @@ export interface EmployeeInput {
   salary?: number | null;
   /** @nullable */
   avatarUrl?: string | null;
-  /** Role ID to assign to the automatically created user account */
-  userRole: number;
+  /**
+     * Role IDs to assign to the automatically created user account
+     * @minItems 1
+     */
+  userRoleIds: number[];
   /**
      * Temporary password for the automatically created user account
      * @minLength 8
@@ -177,8 +193,7 @@ export interface EmployeeUpdate {
   email?: string;
   /** @minLength 1 */
   jobTitle?: string;
-  /** @nullable */
-  departmentId?: number | null;
+  departmentIds?: number[];
   employmentType?: EmploymentType;
   status?: EmployeeStatus;
   startDate?: string;
@@ -328,13 +343,17 @@ export interface UserLinkedEmployee {
   status: EmployeeStatus;
 }
 
+export interface RoleSummary {
+  id: number;
+  name: string;
+}
+
 export interface User {
   id: number;
   name: string;
   email: string;
   status: UserStatus;
-  roleId: number;
-  roleName: string;
+  roles: RoleSummary[];
   permissions: Permission[];
   isSystemAccount: boolean;
   /** @nullable */
@@ -352,7 +371,8 @@ export interface UserInput {
   email: string;
   /** @minLength 8 */
   password: string;
-  roleId: number;
+  /** @minItems 1 */
+  roleIds: number[];
   isSystemAccount?: boolean;
   permissions?: Permission[];
 }
@@ -368,7 +388,8 @@ export interface UserUpdate {
   /** @minLength 1 */
   email?: string;
   status?: UserStatus;
-  roleId?: number;
+  /** @minItems 1 */
+  roleIds?: number[];
   permissions?: Permission[];
 }
 
@@ -386,7 +407,10 @@ export interface AuditLogEntry {
   timestamp: string;
   /** The system module the request belongs to, e.g. "sysadmin", "hr". */
   module: string;
-  /** Human-readable action, e.g. "Created role", "Listed employees". */
+  /**
+     * Detailed, human-readable description of what was done or viewed — includes the specific record id, query filters, and a redacted summary of the submitted data where applicable, e.g. 'Updated role 12 (data: {"permissions":["sysadmin"]})'. Capped at 5000 characters.
+     * @maxLength 5000
+     */
   action: string;
   /** @nullable */
   userId: number | null;
@@ -400,6 +424,25 @@ export interface AuditLogEntry {
   statusCode: number;
   /** @nullable */
   ipAddress?: string | null;
+  /**
+     * Set only for client-reported "record view" events (method "VIEW") — how long the record detail page stayed open.
+     * @nullable
+     */
+  durationMs?: number | null;
+}
+
+export interface ViewDurationReport {
+  /** The module the viewed record belongs to, e.g. "hr", "sysadmin". */
+  module: string;
+  /** The record's page path, e.g. "/employees/2585". */
+  path: string;
+  /** @minimum 0 */
+  durationMs: number;
+  /**
+     * Human-readable name for the record, e.g. "James Thompson", if the page already has it loaded — substituted for the bare record id in the resulting audit action.
+     * @nullable
+     */
+  recordLabel?: string | null;
 }
 
 export interface AuditLogPage {
@@ -703,6 +746,45 @@ export interface QualificationTypeUpdate {
   isActive?: boolean;
 }
 
+export interface Student {
+  studentId: number;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  homeAddress?: string | null;
+  /** @nullable */
+  phoneNumber?: string | null;
+  /** @nullable */
+  emailAddress?: string | null;
+}
+
+export interface StudentInput {
+  /** @minLength 1 */
+  firstName: string;
+  /** @minLength 1 */
+  lastName: string;
+  homeAddress?: string;
+  phoneNumber?: string;
+  /** Must be a valid email address — validated server-side. */
+  emailAddress?: string;
+}
+
+export interface StudentUpdate {
+  /** @minLength 1 */
+  firstName?: string;
+  /** @minLength 1 */
+  lastName?: string;
+  /** @nullable */
+  homeAddress?: string | null;
+  /** @nullable */
+  phoneNumber?: string | null;
+  /**
+     * Must be a valid email address — validated server-side.
+     * @nullable
+     */
+  emailAddress?: string | null;
+}
+
 export interface EmployeeServicePeriod {
   id: number;
   employeeId: number;
@@ -826,10 +908,7 @@ export interface WorkRecordRow {
   employeeLastName: string;
   employeeEmail: string;
   employeeStatus: EmployeeStatus;
-  /** @nullable */
-  employeeDepartmentId?: number | null;
-  /** @nullable */
-  employeeDepartmentName?: string | null;
+  employeeDepartments?: DepartmentSummary[];
   /** @nullable */
   employeeAvatarUrl?: string | null;
   /**
@@ -1149,7 +1228,10 @@ export interface UploadUrlResponse {
 
 export type ListEmployeesParams = {
 search?: string;
-departmentId?: number;
+/**
+ * Comma-separated department ids; matches employees in any of them
+ */
+departmentIds?: string;
 status?: EmployeeStatus;
 };
 
@@ -1230,7 +1312,10 @@ status?: LeaveStatus;
 export type ListUsersParams = {
 search?: string;
 status?: UserStatus;
-roleId?: number;
+/**
+ * Comma-separated role ids; matches users holding any of them
+ */
+roleIds?: string;
 };
 
 export type ListAuditLogParams = {

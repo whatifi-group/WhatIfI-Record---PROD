@@ -14,7 +14,8 @@ export interface UserInput {
   email: string;
   /** @minLength 8 */
   password: string;
-  roleId: number;
+  /** @minItems 1 */
+  roleIds: number[];
   isSystemAccount?: boolean;
   permissions?: Permission[];
 }

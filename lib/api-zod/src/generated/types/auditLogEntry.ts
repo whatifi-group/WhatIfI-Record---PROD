@@ -12,7 +12,10 @@ export interface AuditLogEntry {
   timestamp: Date;
   /** The system module the request belongs to, e.g. "sysadmin", "hr". */
   module: string;
-  /** Human-readable action, e.g. "Created role", "Listed employees". */
+  /**
+     * Detailed, human-readable description of what was done or viewed — includes the specific record id, query filters, and a redacted summary of the submitted data where applicable, e.g. 'Updated role 12 (data: {"permissions":["sysadmin"]})'. Capped at 5000 characters.
+     * @maxLength 5000
+     */
   action: string;
   /** @nullable */
   userId: number | null;
@@ -26,4 +29,9 @@ export interface AuditLogEntry {
   statusCode: number;
   /** @nullable */
   ipAddress?: string | null;
+  /**
+     * Set only for client-reported "record view" events (method "VIEW") — how long the record detail page stayed open.
+     * @nullable
+     */
+  durationMs?: number | null;
 }

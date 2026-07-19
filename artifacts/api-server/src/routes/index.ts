@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import environmentRouter from "./environment";
 import authRouter from "./auth";
 import hrRouter from "./hr";
 import sysadminRouter from "./sysadmin";
@@ -18,6 +19,7 @@ const router: IRouter = Router();
 // (see middlewares/auditLog.ts). A new module folder mounted below should be
 // tagged the same way — nothing else needs to change for it to be audited.
 router.use(healthRouter);
+router.use(environmentRouter);
 router.use(tagAuditModule("auth"), authRouter);
 router.use(tagAuditModule("onboarding"), onboardingRouter);
 router.use(tagAuditModule("directory"), directoryRouter);

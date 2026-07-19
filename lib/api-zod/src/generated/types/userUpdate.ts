@@ -14,6 +14,7 @@ export interface UserUpdate {
   /** @minLength 1 */
   email?: string;
   status?: UserStatus;
-  roleId?: number;
+  /** @minItems 1 */
+  roleIds?: number[];
   permissions?: Permission[];
 }

@@ -78,8 +78,10 @@ export const LoginResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -108,8 +110,10 @@ export const GetMeResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -130,6 +134,15 @@ export const GetMeResponse = zod.object({
  */
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
+})
+
+
+/**
+ * Returns which deployment (development or production) is serving this request, driven by the APP_ENV server env var. Public — used to theme the UI so DEV/PROD are visually distinguishable, including on the pre-login screen, without needing separate builds per environment.
+ * @summary Get deployment environment
+ */
+export const GetEnvironmentResponse = zod.object({
+  "environment": zod.enum(['development', 'production'])
 })
 
 
@@ -227,7 +240,7 @@ export const DeleteDepartmentResponse = zod.void()
  */
 export const ListEmployeesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "departmentId": zod.coerce.number().optional(),
+  "departmentIds": zod.coerce.string().optional().describe('Comma-separated department ids; matches employees in any of them'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional()
 })
 
@@ -243,8 +256,10 @@ export const ListEmployeesResponseItem = zod.object({
   "isPrimary": zod.boolean()
 })).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
-  "departmentId": zod.number().nullable(),
-  "departmentName": zod.string().nullable(),
+  "departments": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
@@ -265,6 +280,7 @@ export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
 
 
+export const createEmployeeBodyDepartmentIdsDefault = [];
 export const createEmployeeBodyTemporaryPasswordMin = 8;
 
 
@@ -274,13 +290,13 @@ export const CreateEmployeeBody = zod.object({
   "lastName": zod.string().min(1),
   "email": zod.string().min(1),
   "jobTitle": zod.string().min(1),
-  "departmentId": zod.number().nullish(),
+  "departmentIds": zod.array(zod.number()).default(createEmployeeBodyDepartmentIdsDefault),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullish(),
   "avatarUrl": zod.string().nullish(),
-  "userRole": zod.number().describe('Role ID to assign to the automatically created user account'),
+  "userRoleIds": zod.array(zod.number()).min(1).describe('Role IDs to assign to the automatically created user account'),
   "temporaryPassword": zod.string().min(createEmployeeBodyTemporaryPasswordMin).describe('Temporary password for the automatically created user account')
 })
 
@@ -296,8 +312,10 @@ export const CreateEmployeeResponse = zod.object({
   "isPrimary": zod.boolean()
 })).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
-  "departmentId": zod.number().nullable(),
-  "departmentName": zod.string().nullable(),
+  "departments": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
@@ -329,8 +347,10 @@ export const GetEmployeeResponse = zod.object({
   "isPrimary": zod.boolean()
 })).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
-  "departmentId": zod.number().nullable(),
-  "departmentName": zod.string().nullable(),
+  "departments": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
@@ -361,7 +381,7 @@ export const UpdateEmployeeBody = zod.object({
   "lastName": zod.string().min(1).optional(),
   "email": zod.string().min(1).optional(),
   "jobTitle": zod.string().min(1).optional(),
-  "departmentId": zod.number().nullish(),
+  "departmentIds": zod.array(zod.number()).optional(),
   "employmentType": zod.string().optional().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']).optional(),
   "startDate": zod.coerce.date().optional(),
@@ -383,8 +403,10 @@ export const UpdateEmployeeResponse = zod.object({
   "isPrimary": zod.boolean()
 })).optional().describe('Phone numbers for this employee (only present on single-record responses)'),
   "jobTitle": zod.string(),
-  "departmentId": zod.number().nullable(),
-  "departmentName": zod.string().nullable(),
+  "departments": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "employmentType": zod.string().describe('Employment type value — managed via List of Values'),
   "status": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
   "startDate": zod.coerce.date(),
@@ -1439,8 +1461,10 @@ export const ListWorkRecordsResponse = zod.object({
   "employeeLastName": zod.string(),
   "employeeEmail": zod.string(),
   "employeeStatus": zod.enum(['active', 'inactive', 'on_leave', 'leaver']),
-  "employeeDepartmentId": zod.number().nullish(),
-  "employeeDepartmentName": zod.string().nullish(),
+  "employeeDepartments": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional(),
   "employeeAvatarUrl": zod.string().nullish(),
   "employeeLeaverDate": zod.coerce.date().nullish().describe('Leaving date of the employee; null for active employees'),
   "employeeLeaverReason": zod.string().nullish().describe('Leaver reason LOV value; null for active employees')
@@ -2217,7 +2241,7 @@ export const DeleteRoleResponse = zod.void()
 export const ListUsersQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
-  "roleId": zod.coerce.number().optional()
+  "roleIds": zod.coerce.string().optional().describe('Comma-separated role ids; matches users holding any of them')
 })
 
 export const ListUsersResponseItem = zod.object({
@@ -2225,8 +2249,10 @@ export const ListUsersResponseItem = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -2249,6 +2275,7 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 
 export const createUserBodyPasswordMin = 8;
 
+
 export const createUserBodyIsSystemAccountDefault = true;
 export const createUserBodyPermissionsDefault = [];
 
@@ -2256,7 +2283,7 @@ export const CreateUserBody = zod.object({
   "name": zod.string().min(1),
   "email": zod.string().min(1),
   "password": zod.string().min(createUserBodyPasswordMin),
-  "roleId": zod.number(),
+  "roleIds": zod.array(zod.number()).min(1),
   "isSystemAccount": zod.boolean().default(createUserBodyIsSystemAccountDefault),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])).default(createUserBodyPermissionsDefault)
 })
@@ -2266,8 +2293,10 @@ export const CreateUserResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -2294,8 +2323,10 @@ export const GetUserResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -2321,11 +2352,12 @@ export const UpdateUserParams = zod.object({
 
 
 
+
 export const UpdateUserBody = zod.object({
   "name": zod.string().min(1).optional(),
   "email": zod.string().min(1).optional(),
   "status": zod.string().optional().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number().optional(),
+  "roleIds": zod.array(zod.number()).min(1).optional(),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])).optional()
 })
 
@@ -2334,8 +2366,10 @@ export const UpdateUserResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -2398,18 +2432,23 @@ export const ListAuditLogQueryParams = zod.object({
   "offset": zod.coerce.number().min(listAuditLogQueryOffsetMin).default(listAuditLogQueryOffsetDefault)
 })
 
+export const listAuditLogResponseItemsItemActionMax = 5000;
+
+
+
 export const ListAuditLogResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
   "timestamp": zod.coerce.date().describe('When the action occurred, in GMT\/UTC.'),
   "module": zod.string().describe('The system module the request belongs to, e.g. \"sysadmin\", \"hr\".'),
-  "action": zod.string().describe('Human-readable action, e.g. \"Created role\", \"Listed employees\".'),
+  "action": zod.string().max(listAuditLogResponseItemsItemActionMax).describe('Detailed, human-readable description of what was done or viewed — includes the specific record id, query filters, and a redacted summary of the submitted data where applicable, e.g. \'Updated role 12 (data: {\"permissions\":[\"sysadmin\"]})\'. Capped at 5000 characters.'),
   "userId": zod.number().nullable(),
   "userName": zod.string().nullable().describe('Snapshot of the acting user\'s name at the time of the action.'),
   "method": zod.string(),
   "path": zod.string(),
   "statusCode": zod.number(),
-  "ipAddress": zod.string().nullish()
+  "ipAddress": zod.string().nullish(),
+  "durationMs": zod.number().nullish().describe('Set only for client-reported \"record view\" events (method \"VIEW\") — how long the record detail page stayed open.')
 })),
   "total": zod.number()
 })
@@ -2428,8 +2467,10 @@ export const GetSysadminSummaryResponse = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "status": zod.string().describe('User account status value — managed via List of Values'),
-  "roleId": zod.number(),
-  "roleName": zod.string(),
+  "roles": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
   "permissions": zod.array(zod.enum(['sysadmin', 'hr:access', 'hr:past_employees', 'hr_admin', 'view_employees', 'edit_employees', 'delete_employees', 'view_departments', 'edit_departments', 'view_leave', 'manage_leave', 'view_reports', 'view_payroll', 'view_disclosures', 'review_disclosures', 'view_own_profile', 'upload_qualifications', 'view_employee_directory'])),
   "isSystemAccount": zod.boolean(),
   "employeeId": zod.number().nullish(),
@@ -2536,6 +2577,108 @@ export const DeleteQualificationTypeParams = zod.object({
 })
 
 export const DeleteQualificationTypeResponse = zod.void()
+
+
+/**
+ * @summary List all registered students
+ */
+export const ListStudentsResponseItem = zod.object({
+  "studentId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "homeAddress": zod.string().nullish(),
+  "phoneNumber": zod.string().nullish(),
+  "emailAddress": zod.string().nullish()
+})
+export const ListStudentsResponse = zod.array(ListStudentsResponseItem)
+
+
+/**
+ * @summary Register a new student
+ */
+
+
+
+
+export const CreateStudentBody = zod.object({
+  "firstName": zod.string().min(1),
+  "lastName": zod.string().min(1),
+  "homeAddress": zod.string().optional(),
+  "phoneNumber": zod.string().optional(),
+  "emailAddress": zod.string().optional().describe('Must be a valid email address — validated server-side.')
+})
+
+export const CreateStudentResponse = zod.object({
+  "studentId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "homeAddress": zod.string().nullish(),
+  "phoneNumber": zod.string().nullish(),
+  "emailAddress": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get a registered student
+ */
+export const GetStudentParams = zod.object({
+  "studentId": zod.coerce.number()
+})
+
+export const GetStudentResponse = zod.object({
+  "studentId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "homeAddress": zod.string().nullish(),
+  "phoneNumber": zod.string().nullish(),
+  "emailAddress": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update a registered student
+ */
+export const UpdateStudentParams = zod.object({
+  "studentId": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdateStudentBody = zod.object({
+  "firstName": zod.string().min(1).optional(),
+  "lastName": zod.string().min(1).optional(),
+  "homeAddress": zod.string().nullish(),
+  "phoneNumber": zod.string().nullish(),
+  "emailAddress": zod.string().nullish().describe('Must be a valid email address — validated server-side.')
+})
+
+export const UpdateStudentResponse = zod.object({
+  "studentId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "homeAddress": zod.string().nullish(),
+  "phoneNumber": zod.string().nullish(),
+  "emailAddress": zod.string().nullish()
+})
+
+
+/**
+ * @summary Record how long a record detail page (Employee Profile, LOV category detail, an onboarding submission, ...) stayed open. Sent via navigator.sendBeacon when the page unmounts. Available to any authenticated user — not gated behind the sysadmin permission, since any user who could view the record may report having viewed it.
+ */
+export const reportViewDurationBodyDurationMsMin = 0;
+
+
+
+export const ReportViewDurationBody = zod.object({
+  "module": zod.string().describe('The module the viewed record belongs to, e.g. \"hr\", \"sysadmin\".'),
+  "path": zod.string().describe('The record\'s page path, e.g. \"\/employees\/2585\".'),
+  "durationMs": zod.number().min(reportViewDurationBodyDurationMsMin),
+  "recordLabel": zod.string().nullish().describe('Human-readable name for the record, e.g. \"James Thompson\", if the page already has it loaded — substituted for the bare record id in the resulting audit action.')
+})
+
+export const ReportViewDurationResponse = zod.void()
 
 
 /**

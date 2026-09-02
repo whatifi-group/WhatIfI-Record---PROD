@@ -47,6 +47,8 @@ export const EnvironmentStatusEnvironment = {
 
 export interface EnvironmentStatus {
   environment: EnvironmentStatusEnvironment;
+  /** True when this deployment is configured for Microsoft Entra ID sign-in. The login page uses it to decide whether to offer the "Sign in with Microsoft" button, falling back to the break-glass password form when SSO is not configured. */
+  ssoEnabled: boolean;
 }
 
 /**
@@ -177,11 +179,6 @@ export interface EmployeeInput {
      * @minItems 1
      */
   userRoleIds: number[];
-  /**
-     * Temporary password for the automatically created user account
-     * @minLength 8
-     */
-  temporaryPassword: string;
 }
 
 export interface EmployeeUpdate {

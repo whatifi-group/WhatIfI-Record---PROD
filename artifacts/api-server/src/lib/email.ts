@@ -233,18 +233,17 @@ export async function sendOnboardingSubmittedEmail(applicantName: string): Promi
   );
 }
 
-// ── Onboarding: approved (welcome + temporary password) ─────────────────────
+// ── Onboarding: approved (welcome) ───────────────────────────────────────────
 
 export async function sendOnboardingApprovedEmail(
   to: string,
   name: string,
-  temporaryPassword: string,
 ): Promise<void> {
   const loginUrl = `${appUrl()}/login`;
   await sendTemplatedEmail(
     "onboarding_approved",
     [{ email: to, name }],
-    { name, email: to, temporaryPassword, loginUrl },
+    { name, email: to, loginUrl },
     loginUrl,
     "Log in",
   );

@@ -30,9 +30,4 @@ export interface EmployeeInput {
      * @minItems 1
      */
   userRoleIds: number[];
-  /**
-     * Temporary password for the automatically created user account
-     * @minLength 8
-     */
-  temporaryPassword: string;
 }

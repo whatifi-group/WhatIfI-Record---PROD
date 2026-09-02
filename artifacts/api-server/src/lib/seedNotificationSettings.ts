@@ -61,11 +61,10 @@ export const NOTIFICATION_TEMPLATES: SeedTemplate[] = [
       "Your onboarding application has been approved. Your WhatIfI Record account is ready.",
       "",
       "Email: {{email}}",
-      "Temporary password: {{temporaryPassword}}",
       "",
-      "Log in and change your password here: {{loginUrl}}",
+      "Sign in with your Microsoft work account here: {{loginUrl}}",
     ].join("\n"),
-    placeholders: ["name", "email", "temporaryPassword", "loginUrl"],
+    placeholders: ["name", "email", "loginUrl"],
   },
   {
     key: "onboarding_rejected",

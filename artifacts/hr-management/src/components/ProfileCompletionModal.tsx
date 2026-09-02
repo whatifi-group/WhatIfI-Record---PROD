@@ -34,8 +34,6 @@ import { useListDepartments } from "@workspace/api-client-react";
 interface Props {
   /** The newly created employee's ID. */
   employeeId: number;
-  /** Temporary password generated at approval time. */
-  tempPassword: string;
   /**
    * Called when the modal closes.
    * @param navigateToProfile  true  → caller should navigate to /employees/:id
@@ -71,10 +69,8 @@ const EMPLOYMENT_TYPES = [
 
 export default function ProfileCompletionModal({
   employeeId,
-  tempPassword,
   onClose,
 }: Props) {
-  const [copiedPassword, setCopiedPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -112,13 +108,6 @@ export default function ProfileCompletionModal({
       })
       .catch(() => {});
   }, [employeeId]);
-
-  function copyPassword() {
-    navigator.clipboard.writeText(tempPassword).then(() => {
-      setCopiedPassword(true);
-      setTimeout(() => setCopiedPassword(false), 2000);
-    });
-  }
 
   function patchEmployment(patch: Partial<EmploymentForm>) {
     setEmployment((f) => ({ ...f, ...patch }));
@@ -217,25 +206,14 @@ export default function ProfileCompletionModal({
         </DialogHeader>
 
         <div className="space-y-5 pt-1">
-          {/* ── Temporary Password ───────────────────────────────────────── */}
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
-            <p className="text-sm font-medium text-emerald-800">Temporary Password</p>
+          {/* ── Sign-in method ───────────────────────────────────────────── */}
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+            <p className="text-sm font-medium text-emerald-800">Sign-in</p>
             <p className="text-xs text-emerald-700">
-              Share this securely with the new employee. They'll be prompted to
-              change it on first login.
+              The employee signs in with their Microsoft work account — there is no
+              password to share. Their access is granted by the roles assigned to
+              their account.
             </p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 font-mono text-sm bg-white rounded px-3 py-1.5 border border-emerald-200 text-emerald-900">
-                {tempPassword}
-              </code>
-              <Button size="sm" variant="outline" onClick={copyPassword} className="shrink-0">
-                {copiedPassword ? (
-                  <Check className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
           </div>
 
           {/* ── Employment Details ───────────────────────────────────────── */}

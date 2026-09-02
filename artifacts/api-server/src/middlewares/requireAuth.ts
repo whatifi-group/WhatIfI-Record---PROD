@@ -7,6 +7,10 @@ const PUBLIC_PATHS = new Set([
   "/auth/login",
   "/auth/forgot-password",
   "/auth/reset-password",
+  // Microsoft SSO handshake — necessarily public, since the whole point is to
+  // establish a session for a caller who does not yet have one.
+  "/auth/sso/login",
+  "/auth/sso/callback",
   "/healthz",
   "/environment",
   // Onboarding public endpoints — JWT-gated internally, not session-gated

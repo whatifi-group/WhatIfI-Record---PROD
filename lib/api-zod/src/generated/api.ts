@@ -142,7 +142,8 @@ export const HealthCheckResponse = zod.object({
  * @summary Get deployment environment
  */
 export const GetEnvironmentResponse = zod.object({
-  "environment": zod.enum(['development', 'production'])
+  "environment": zod.enum(['development', 'production']),
+  "ssoEnabled": zod.boolean().describe('True when this deployment is configured for Microsoft Entra ID sign-in. The login page uses it to decide whether to offer the \"Sign in with Microsoft\" button, falling back to the break-glass password form when SSO is not configured.')
 })
 
 
@@ -281,8 +282,6 @@ export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
 
 export const createEmployeeBodyDepartmentIdsDefault = [];
-export const createEmployeeBodyTemporaryPasswordMin = 8;
-
 
 
 export const CreateEmployeeBody = zod.object({
@@ -296,8 +295,7 @@ export const CreateEmployeeBody = zod.object({
   "startDate": zod.coerce.date(),
   "salary": zod.number().nullish(),
   "avatarUrl": zod.string().nullish(),
-  "userRoleIds": zod.array(zod.number()).min(1).describe('Role IDs to assign to the automatically created user account'),
-  "temporaryPassword": zod.string().min(createEmployeeBodyTemporaryPasswordMin).describe('Temporary password for the automatically created user account')
+  "userRoleIds": zod.array(zod.number()).min(1).describe('Role IDs to assign to the automatically created user account')
 })
 
 export const CreateEmployeeResponse = zod.object({

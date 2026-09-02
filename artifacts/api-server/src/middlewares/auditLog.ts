@@ -107,6 +107,15 @@ const REDACTED_KEYS = new Set([
   "token",
   "secret",
   "apikey",
+  // OAuth/OIDC values, which arrive as query params on the SSO callback.
+  "code",
+  "state",
+  "session_state",
+  "id_token",
+  "access_token",
+  "refresh_token",
+  "code_verifier",
+  "client_secret",
 ]);
 
 function redact(value: unknown): unknown {
@@ -128,9 +137,16 @@ function redact(value: unknown): unknown {
   return value;
 }
 
-/** Renders req.query as `key="value", key2="value2"` for the action detail. */
+/**
+ * Renders req.query as `key="value", key2="value2"` for the action detail.
+ *
+ * Values go through `redact()` first: query strings are not always harmless
+ * filters — the Microsoft SSO callback arrives as `?code=…&state=…`, and an
+ * authorization code must never be written to the audit trail in plaintext.
+ */
 function summarizeQuery(query: Record<string, unknown>): string {
-  const entries = Object.entries(query).filter(
+  const redacted = redact(query) as Record<string, unknown>;
+  const entries = Object.entries(redacted).filter(
     ([, v]) => v !== undefined && v !== "",
   );
   if (entries.length === 0) return "";

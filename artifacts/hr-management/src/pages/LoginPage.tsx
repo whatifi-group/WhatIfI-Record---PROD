@@ -179,7 +179,7 @@ export default function LoginPage() {
                       onClick={() => setPasswordFormOpen(true)}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Sign in with a system account
+                      System Account?
                     </button>
                   </div>
                 )}
@@ -196,6 +196,8 @@ export default function LoginPage() {
                     </p>
                   </div>
                 )}
+                {/* Nothing above this point when SSO is off, so the password
+                    form is the whole screen rather than a hidden fallback. */}
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -266,6 +268,20 @@ export default function LoginPage() {
                         </span>
                       </Link>
                     </div>
+
+                    {/* Keep the SSO route visible — it stays the primary way
+                        in, even once the break-glass form has been opened. */}
+                    {ssoEnabled && (
+                      <div className="text-center pt-3 border-t border-border mt-5">
+                        <button
+                          type="button"
+                          onClick={() => setPasswordFormOpen(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Back to Microsoft sign-in
+                        </button>
+                      </div>
+                    )}
                   </form>
                 </Form>
               </>

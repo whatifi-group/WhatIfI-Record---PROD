@@ -37,7 +37,6 @@ const employeeSchema = z.object({
   startDate: z.string().min(1, "Start date is required"),
   // System access — required to create the linked user account
   userRoleIds: z.array(z.number()).min(1, "At least one role is required"),
-  temporaryPassword: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -73,7 +72,6 @@ export default function EmployeesList() {
       status: EmployeeStatus.active,
       startDate: new Date().toISOString().split("T")[0],
       userRoleIds: [],
-      temporaryPassword: "",
     },
   });
 
@@ -84,7 +82,6 @@ export default function EmployeesList() {
           ...data,
           status: data.status as EmployeeStatus,
           userRoleIds: data.userRoleIds,
-          temporaryPassword: data.temporaryPassword,
         },
       },
       {
@@ -226,7 +223,9 @@ export default function EmployeesList() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">System Access</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      A login account will be created automatically using the employee's email address.
+                      A login account will be created automatically using the employee's
+                      email address. They sign in with their Microsoft work account — no
+                      password is issued.
                     </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -240,15 +239,6 @@ export default function EmployeesList() {
                             onChange={field.onChange}
                             placeholder="Select roles"
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="temporaryPassword" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Temporary Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

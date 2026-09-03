@@ -58,7 +58,6 @@ import {
 import { requirePermission } from "../middlewares/requirePermission";
 import { requireOnboardingSession } from "../middlewares/requireOnboardingSession";
 import { signOnboardingToken } from "../lib/onboardingJwt";
-import { hashPassword } from "../lib/password";
 import {
   sendOnboardingSubmittedEmail,
   sendOnboardingApprovedEmail,
@@ -205,11 +204,6 @@ async function getOnboardingPassphrase(): Promise<string | null> {
     .limit(1);
   if (!row || row.label === "Onboarding Password") return null;
   return row.label;
-}
-
-/** Generate a random temporary password (12 chars, alphanumeric + special). */
-function generateTempPassword(): string {
-  return crypto.randomBytes(9).toString("base64url");
 }
 
 // Drizzle transactions satisfy the same query interface as db but lack $client.
@@ -987,7 +981,6 @@ router.post(
       roleId = selfServiceRole.id;
     }
 
-    const tempPassword = generateTempPassword();
     const today = new Date().toISOString().slice(0, 10);
     const reviewerId = (req as any).session?.userId ?? null;
     const ipAddress =
@@ -1062,7 +1055,9 @@ router.post(
         .values({
           name: `${submission.firstName} ${submission.lastName}`,
           email: submission.email,
-          passwordHash: hashPassword(tempPassword),
+          // No password: the new hire signs in through Microsoft SSO, which
+          // links this row on their first sign-in via the matching email.
+          passwordHash: null,
           status: "active",
           permissions: [],
           isSystemAccount: false,
@@ -1119,11 +1114,10 @@ router.post(
       return;
     }
 
-    await sendOnboardingApprovedEmail(result.email, result.name, tempPassword);
+    await sendOnboardingApprovedEmail(result.email, result.name);
 
     res.status(201).json({
       employeeId: result.employeeId,
-      temporaryPassword: tempPassword,
     });
   },
 );

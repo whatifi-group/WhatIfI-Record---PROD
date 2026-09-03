@@ -24,6 +24,47 @@ The system is organized into self-contained modules so new HR modules can be add
 
 Deliberately out of scope for v1: payroll, attendance/time tracking.
 
+## Authentication
+
+Authentication is delegated to **Microsoft Entra ID (Azure AD)**; authorization
+stays entirely in RECORD. Entra answers "who is this?", and the existing roles /
+`permissions` model answers "what may they do?" — unchanged.
+
+- **Flow**: server-side OIDC authorization-code grant with PKCE
+  (`artifacts/api-server/src/lib/entra.ts`, using `openid-client`). The browser
+  is redirected to `GET /api/auth/sso/login` and comes back to
+  `GET /api/auth/sso/callback`; the outcome is the same `connect.sid`
+  session cookie password login has always produced, so every downstream guard
+  (`requireAuth`, `requirePermission`) is untouched. Neither route is in the
+  OpenAPI spec — they are browser redirects, not JSON endpoints.
+- **Identity matching** (`artifacts/api-server/src/lib/ssoUser.ts`): by
+  `users.ms_entra_object_id` (the immutable `oid` claim), else by lowercased
+  email — backfilling the `oid` so a later rename in Entra can't orphan the
+  account — else by auto-provisioning from a matching employee record.
+- **Auto-provisioning**: exactly one `employees` row matching the address
+  (case-insensitively), with status `active` or `on_leave` and no user already
+  linked, creates an active user linked to that employee with the role named by
+  `SSO_DEFAULT_ROLE_NAME` (default `Employee Self-Service`). Zero matches,
+  several matches, or a leaver refuses sign-in — RECORD never creates an
+  unlinked account from a bare tenant identity.
+- **Break-glass password login**: `POST /api/auth/login` still works, but only
+  for system accounts (`is_system_account = true`) that hold a password, so an
+  Entra or tenant outage can't lock administrators out. Forgot/reset password is
+  restricted the same way. Every rejection is the same generic 401.
+  `users.password_hash` is therefore nullable — employee-linked accounts created
+  via HR or onboarding get `null` and no temporary password is issued.
+- **Logout** is local only. We deliberately do not call Entra's
+  `end_session_endpoint`, which would sign the user out of Outlook and every
+  other Microsoft app in the browser. The login page offers "use a different
+  account" (`?prompt=select_account`) for that case.
+- **Configuration**: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`,
+  `AZURE_CLIENT_SECRET`, `AZURE_REDIRECT_URI` (see `.env.example`). DEV and PROD
+  share one Entra app registration and differ only by the redirect URI; both
+  must be registered on that app. When any variable is missing, SSO is off:
+  `GET /api/environment` reports `ssoEnabled: false`, the SSO routes return 503,
+  and the login page shows the password form. The change is inert until Entra is
+  configured.
+
 ## Audit trail
 
 Every API request is recorded to the `audit_log` table (SysAdmin → Audit

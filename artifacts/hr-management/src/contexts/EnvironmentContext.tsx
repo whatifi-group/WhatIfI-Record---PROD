@@ -4,6 +4,8 @@ import { useGetEnvironment, getGetEnvironmentQueryKey, EnvironmentStatusEnvironm
 interface EnvironmentContextType {
   environment: EnvironmentStatusEnvironment | undefined;
   isDev: boolean;
+  /** True when this deployment is configured for Microsoft SSO. */
+  ssoEnabled: boolean;
 }
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
@@ -20,7 +22,13 @@ export function EnvironmentProvider({ children }: { children: ReactNode }) {
   }, [isDev]);
 
   return (
-    <EnvironmentContext.Provider value={{ environment: data?.environment, isDev }}>
+    <EnvironmentContext.Provider
+      value={{
+        environment: data?.environment,
+        isDev,
+        ssoEnabled: data?.ssoEnabled ?? false,
+      }}
+    >
       {children}
     </EnvironmentContext.Provider>
   );

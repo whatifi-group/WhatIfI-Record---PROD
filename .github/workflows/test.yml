@@ -45,5 +45,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The tests talk to a real database, but the postgres service starts
+      # empty and nothing else creates the schema — the app only migrates at
+      # boot, which the tests never do. Without this every DB-backed test
+      # fails with `relation "employees" does not exist`.
+      # Uses the same runner as scripts/post-merge.sh: applies each SQL file
+      # in order and stamps the journal, never dropping anything.
+      - name: Apply database migrations
+        run: pnpm --filter @workspace/db run migrate
+
       - name: Run tests
         run: pnpm test

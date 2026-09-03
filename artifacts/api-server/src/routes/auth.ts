@@ -1,12 +1,21 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and, gt } from "drizzle-orm";
 import crypto from "crypto";
 import { db, employeesTable, rolesTable, usersTable, userRolesTable, passwordResetTokensTable } from "@workspace/db";
 import { verifyPassword, hashPassword } from "../lib/password";
 import { LoginBody } from "@workspace/api-zod";
 import { sendPasswordResetEmail } from "../lib/email";
+import { ssoEnabled, buildAuthRequest, exchangeCode, redirectUri } from "../lib/entra";
+import { resolveSsoUser } from "../lib/ssoUser";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+function appUrl(): string {
+  return (
+    process.env.APP_URL?.replace(/\/$/, "") ?? "https://record.whatifigroup.co.uk"
+  );
+}
 
 function userRow(row: {
   id: number;
@@ -86,6 +95,10 @@ async function fetchUser(id: number) {
 }
 
 // POST /api/auth/login
+//
+// Break-glass only. Normal users authenticate through Microsoft SSO; this path
+// exists so a tenant or Entra outage can't lock administrators out of RECORD.
+// Only system accounts that actually hold a password may use it.
 router.post("/auth/login", async (req, res): Promise<void> => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
@@ -99,7 +112,15 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     .where(eq(usersTable.email, parsed.data.email.toLowerCase()))
     .limit(1);
 
-  if (!user || !verifyPassword(parsed.data.password, user.passwordHash)) {
+  // One indistinguishable rejection for "no such user", "wrong password",
+  // "SSO-only account" and "no password set" — the response must not reveal
+  // which accounts can sign in this way.
+  if (
+    !user ||
+    !user.isSystemAccount ||
+    !user.passwordHash ||
+    !verifyPassword(parsed.data.password, user.passwordHash)
+  ) {
     res.status(401).json({ error: "Invalid email or password" });
     return;
   }
@@ -121,7 +142,140 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   res.json(userRow(row!));
 });
 
+// ── Microsoft Entra ID SSO ───────────────────────────────────────────────────
+//
+// These two endpoints are browser redirects, not JSON APIs, so they are
+// deliberately absent from the OpenAPI spec — the SPA navigates to
+// /auth/sso/login with window.location rather than fetching it.
+
+/** Persist the session before redirecting, so the store write can't race. */
+function saveSession(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+/** Send the browser back to the login screen with a machine-readable reason. */
+function failToLogin(res: Response, code: string): void {
+  res.redirect(`${appUrl()}/login?error=${encodeURIComponent(code)}`);
+}
+
+// GET /api/auth/sso/login
+router.get("/auth/sso/login", async (req, res): Promise<void> => {
+  if (!ssoEnabled()) {
+    res.status(503).json({ error: "Microsoft sign-in is not configured" });
+    return;
+  }
+
+  try {
+    // No `prompt` by default — that is what makes this single sign-on: a user
+    // with a live Microsoft session returns without seeing a sign-in screen.
+    // "select_account" is offered for the explicit "use a different account".
+    const prompt =
+      req.query.prompt === "select_account" ? "select_account" : undefined;
+
+    const auth = await buildAuthRequest(prompt);
+
+    req.session.sso = {
+      codeVerifier: auth.codeVerifier,
+      state: auth.state,
+      nonce: auth.nonce,
+    };
+    await saveSession(req);
+
+    res.redirect(auth.url);
+  } catch (err) {
+    logger.error({ err }, "SSO: failed to build authorization request");
+    failToLogin(res, "sso_failed");
+  }
+});
+
+// GET /api/auth/sso/callback
+router.get("/auth/sso/callback", async (req, res): Promise<void> => {
+  if (!ssoEnabled()) {
+    res.status(503).json({ error: "Microsoft sign-in is not configured" });
+    return;
+  }
+
+  const pending = req.session.sso;
+  // Single-use: clear the handshake immediately so a replayed callback can't
+  // be validated against it a second time.
+  delete req.session.sso;
+
+  if (!pending) {
+    logger.warn("SSO: callback with no pending handshake in session");
+    failToLogin(res, "sso_failed");
+    return;
+  }
+
+  // Entra reports user-facing problems (consent declined, account disabled)
+  // as query params rather than a failed exchange.
+  if (typeof req.query.error === "string") {
+    logger.warn({ error: req.query.error }, "SSO: provider returned an error");
+    failToLogin(res, "sso_failed");
+    return;
+  }
+
+  let claims;
+  try {
+    // Rebuild the callback URL from the registered redirect URI rather than
+    // the inbound Host header, which is attacker-influenced behind a proxy.
+    const currentUrl = new URL(redirectUri());
+    currentUrl.search = new URL(
+      req.originalUrl,
+      "http://placeholder.invalid",
+    ).search;
+
+    claims = await exchangeCode(currentUrl, {
+      codeVerifier: pending.codeVerifier,
+      state: pending.state,
+      nonce: pending.nonce,
+    });
+  } catch (err) {
+    // Covers a bad/replayed code, a state or nonce mismatch, and any ID token
+    // that fails signature, issuer or audience validation.
+    logger.warn({ err }, "SSO: authorization code exchange failed");
+    failToLogin(res, "sso_failed");
+    return;
+  }
+
+  // Defence in depth: the tenant-specific authority already pins the issuer,
+  // but assert the tenant explicitly too.
+  if (claims.tenantId !== process.env.AZURE_TENANT_ID) {
+    logger.warn({ tid: claims.tenantId }, "SSO: token from an unexpected tenant");
+    failToLogin(res, "wrong_tenant");
+    return;
+  }
+
+  const resolution = await resolveSsoUser(claims);
+  if (!resolution.ok) {
+    failToLogin(res, resolution.reason);
+    return;
+  }
+
+  await db
+    .update(usersTable)
+    .set({ lastLoginAt: new Date() })
+    .where(eq(usersTable.id, resolution.userId));
+
+  // Regenerate before storing the identity so a session id an attacker may
+  // have planted pre-login cannot become an authenticated one.
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+
+  req.session.userId = resolution.userId;
+  await saveSession(req);
+
+  res.redirect(`${appUrl()}/`);
+});
+
 // POST /api/auth/logout
+//
+// Local sign-out only. We deliberately do not hit Entra's end_session_endpoint:
+// that would sign the user out of Outlook and every other Microsoft app in the
+// browser, which is not what "log out of RECORD" should mean. The login page
+// offers "use a different account" for the case where that is actually wanted.
 router.post("/auth/logout", (req, res): void => {
   req.session.destroy(() => {
     res.clearCookie("connect.sid");
@@ -161,13 +315,21 @@ router.post("/auth/forgot-password", async (req, res): Promise<void> => {
   }
 
   const [user] = await db
-    .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, status: usersTable.status })
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      name: usersTable.name,
+      status: usersTable.status,
+      isSystemAccount: usersTable.isSystemAccount,
+    })
     .from(usersTable)
     .where(eq(usersTable.email, email.toLowerCase().trim()))
     .limit(1);
 
-  // Always respond the same way to prevent email enumeration
-  if (!user || user.status !== "active") {
+  // Always respond the same way to prevent email enumeration.
+  // Passwords only exist for break-glass system accounts, so there is nothing
+  // to reset for anyone else — they sign in through Microsoft.
+  if (!user || user.status !== "active" || !user.isSystemAccount) {
     res.json({ message: "If that email is registered, a reset link has been sent." });
     return;
   }

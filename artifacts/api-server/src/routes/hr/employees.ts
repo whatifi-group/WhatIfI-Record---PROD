@@ -6,7 +6,6 @@ import {
   invalidatePermissionsCache,
   getEffectivePermissions,
 } from "../../middlewares/requirePermission";
-import { hashPassword } from "../../lib/password";
 import { syncOnboardingSubmission } from "../../lib/onboardingSync";
 import {
   CreateEmployeeBody,
@@ -221,7 +220,7 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
     return;
   }
 
-  const { userRoleIds, temporaryPassword, departmentIds, ...employeeData } = parsed.data;
+  const { userRoleIds, departmentIds, ...employeeData } = parsed.data;
 
   // Create employee + linked user (+ department/role assignments) in a single transaction
   const created = await db.transaction(async (tx) => {
@@ -245,7 +244,9 @@ router.post("/employees", requirePermission(["edit_employees", "sysadmin"]), asy
       .values({
         name: `${employeeData.firstName} ${employeeData.lastName}`,
         email: employeeData.email.toLowerCase(),
-        passwordHash: hashPassword(temporaryPassword),
+        // No password: employee accounts sign in through Microsoft SSO, which
+        // links this row on their first sign-in via the matching email.
+        passwordHash: null,
         status: "active",
         permissions: [],
         isSystemAccount: false,

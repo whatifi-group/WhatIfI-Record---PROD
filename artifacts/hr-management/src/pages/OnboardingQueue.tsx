@@ -161,7 +161,6 @@ export default function OnboardingQueue() {
   const [approveNotes, setApproveNotes] = useState("");
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveError, setApproveError] = useState("");
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [approvedEmployeeId, setApprovedEmployeeId] = useState<number | null>(null);
 
   // Reject dialog
@@ -280,7 +279,6 @@ export default function OnboardingQueue() {
     setApproveId(id);
     setApproveNotes("");
     setApproveError("");
-    setTempPassword(null);
     setApprovedEmployeeId(null);
   }
 
@@ -307,7 +305,6 @@ export default function OnboardingQueue() {
       // Close the approve dialog and open the profile completion modal
       setApproveId(null);
       setApprovedEmployeeId(result.employeeId);
-      setTempPassword(result.temporaryPassword);
       fetchSubmissions();
     } catch {
       setApproveError("Could not reach the server.");
@@ -318,7 +315,6 @@ export default function OnboardingQueue() {
 
   function closeApprove() {
     setApproveId(null);
-    setTempPassword(null);
     setApprovedEmployeeId(null);
   }
 
@@ -935,10 +931,9 @@ export default function OnboardingQueue() {
       </Dialog>
 
       {/* ── Profile Completion Modal (post-approval) ─────────────────────── */}
-      {approvedEmployeeId !== null && tempPassword !== null && (
+      {approvedEmployeeId !== null && (
         <ProfileCompletionModal
           employeeId={approvedEmployeeId}
-          tempPassword={tempPassword}
           onClose={handleProfileModalClose}
         />
       )}

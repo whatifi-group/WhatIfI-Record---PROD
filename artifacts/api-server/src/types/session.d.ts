@@ -3,6 +3,16 @@ import "express-session";
 declare module "express-session" {
   interface SessionData {
     userId: number;
+    /**
+     * In-flight Microsoft SSO handshake. Written by `GET /auth/sso/login`
+     * before redirecting to Entra and consumed by `GET /auth/sso/callback`;
+     * cleared as soon as the callback completes, successfully or not.
+     */
+    sso?: {
+      codeVerifier: string;
+      state: string;
+      nonce: string;
+    };
   }
 }
 

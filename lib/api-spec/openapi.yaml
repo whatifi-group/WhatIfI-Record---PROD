@@ -2772,8 +2772,16 @@ components:
         environment:
           type: string
           enum: [development, production]
+        ssoEnabled:
+          type: boolean
+          description: >-
+            True when this deployment is configured for Microsoft Entra ID
+            sign-in. The login page uses it to decide whether to offer the
+            "Sign in with Microsoft" button, falling back to the break-glass
+            password form when SSO is not configured.
       required:
         - environment
+        - ssoEnabled
 
     EmploymentType:
       type: string
@@ -2899,7 +2907,7 @@ components:
 
     EmployeeInput:
       type: object
-      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate, userRoleIds, temporaryPassword]
+      required: [firstName, lastName, email, jobTitle, employmentType, status, startDate, userRoleIds]
       properties:
         firstName:
           type: string
@@ -2935,10 +2943,6 @@ components:
             type: integer
           minItems: 1
           description: Role IDs to assign to the automatically created user account
-        temporaryPassword:
-          type: string
-          minLength: 8
-          description: Temporary password for the automatically created user account
 
     EmployeeUpdate:
       type: object

@@ -110,13 +110,14 @@ describe("GET /api/employees — pendingDisclosureReview permission gating", () 
     expect(allFalse).toBe(true);
   });
 
-  it("does not 500 when called without any session (unauthenticated request)", async () => {
-    // buildApp without userId → no session → badge skipped, returns false
+  it("rejects an unauthenticated request rather than 500ing", async () => {
+    // The badge is derived from the caller's permissions, so the original risk
+    // here was a crash when there is no session. GET /employees now requires
+    // view_employees|edit_employees|sysadmin, so an anonymous caller is turned
+    // away before the badge is computed — no disclosure state is exposed.
     const res = await buildApp(router).get("/api/employees");
-    expect(res.status).toBe(200);
-    const emp = res.body.find((e: { id: number }) => e.id === empId);
-    expect(emp).toBeDefined();
-    expect(emp.pendingDisclosureReview).toBe(false);
+    expect(res.status).toBe(401);
+    expect(res.status).not.toBe(500);
   });
 });
 

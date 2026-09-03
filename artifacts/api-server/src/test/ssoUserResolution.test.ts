@@ -241,10 +241,23 @@ describe("resolveSsoUser", () => {
 
     it("creates nothing when it refuses", async () => {
       const c = claims();
-      const before = await db.select({ id: usersTable.id }).from(usersTable);
       expect(await resolveSsoUser(c)).toEqual({ ok: false, reason: "no_account" });
-      const after = await db.select({ id: usersTable.id }).from(usersTable);
-      expect(after.length).toBe(before.length);
+
+      // Scoped to this identity rather than comparing a global row count:
+      // test files run in parallel forks against one shared database, so a
+      // user created by another fork between two counts would fail this
+      // spuriously. Checking both lookup keys is also the stronger assertion.
+      const byEmail = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.email, c.email.toLowerCase()));
+      expect(byEmail).toHaveLength(0);
+
+      const byObjectId = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.msEntraObjectId, c.objectId));
+      expect(byObjectId).toHaveLength(0);
     });
   });
 });

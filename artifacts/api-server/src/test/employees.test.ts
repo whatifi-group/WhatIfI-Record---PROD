@@ -75,8 +75,12 @@ describe("DELETE /api/employees/:id — permission enforcement", () => {
     const res = await api.delete(`/api/employees/${empId}`);
     expect(res.status).toBe(204);
 
-    // Confirm the record is gone
-    const get = await buildApp(router).get(`/api/employees/${empId}`);
+    // Confirm the record is gone. This read needs its own authorised caller —
+    // GET /employees/:id is permission-guarded, so an anonymous request would
+    // 401 and tell us nothing about whether the delete worked.
+    const get = await buildApp(router, sysadminUserId).get(
+      `/api/employees/${empId}`,
+    );
     expect(get.status).toBe(404);
   });
 

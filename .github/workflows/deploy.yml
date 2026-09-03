@@ -1,0 +1,109 @@
+name: Deploy
+
+# Manual, one environment at a time.
+#
+# Until this existed, every deploy meant a human SSHing into the box and
+# running deploy.sh by hand. This runs the same script over SSH, so the
+# deployment procedure itself is unchanged — deploy.sh remains the single
+# source of truth for what a deploy does.
+#
+# ── Required setup (per environment) ────────────────────────────────────────
+# Create GitHub Environments named `dev` and `prod`
+# (Settings → Environments), and give each these secrets:
+#
+#   DEPLOY_SSH_HOST         hostname or IP of that box
+#   DEPLOY_SSH_USER         user that owns the checkout and can run pm2/nginx
+#   DEPLOY_SSH_KEY          private key (OpenSSH format) whose public half is
+#                           in that user's ~/.ssh/authorized_keys
+#   DEPLOY_SSH_KNOWN_HOSTS  output of `ssh-keyscan <host>` — pins the host key
+#                           so a hijacked DNS record cannot receive the key
+#   DEPLOY_PATH             absolute path to the repo checkout on that box
+#
+# Put required reviewers on the `prod` environment so a click cannot take
+# production down without a second pair of eyes.
+#
+# Without those secrets the job fails fast with a clear message and touches
+# nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which deployment to update
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+concurrency:
+  # Never let two deploys to the same box overlap — deploy.sh builds in place.
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Check required secrets are present
+        env:
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          missing=""
+          for v in DEPLOY_SSH_HOST DEPLOY_SSH_USER DEPLOY_SSH_KEY \
+                   DEPLOY_SSH_KNOWN_HOSTS DEPLOY_PATH; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secret(s) on the '${{ inputs.environment }}' environment:$missing"
+            echo "See the setup notes at the top of .github/workflows/deploy.yml"
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pinned host key: StrictHostKeyChecking stays on, so an unexpected
+          # host key aborts rather than silently trusting a new machine.
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run deploy.sh on the target
+        env:
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=yes \
+              -o BatchMode=yes \
+              "$DEPLOY_SSH_USER@$DEPLOY_SSH_HOST" \
+              "set -euo pipefail; cd '$DEPLOY_PATH' && ./deploy.sh"
+
+      - name: Verify the deployment answers
+        env:
+          DEPLOY_APP_URL: ${{ secrets.DEPLOY_APP_URL }}
+          DEPLOY_SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+        run: |
+          # deploy.sh already health-checks locally on the box; this confirms
+          # the same build is reachable from outside and reports whether
+          # Microsoft SSO is configured on this environment.
+          url="${DEPLOY_APP_URL:-https://$DEPLOY_SSH_HOST}"
+          echo "Checking $url/api/environment"
+          body=$(curl -fsS --max-time 20 "$url/api/environment")
+          echo "$body"
+          echo "$body" | grep -q '"ssoEnabled":true' \
+            && echo "::notice::Microsoft SSO is enabled on ${{ inputs.environment }}" \
+            || echo "::warning::ssoEnabled is false — the AZURE_* vars are not set in ecosystem.config.cjs on this box, so the login page will show the break-glass password form"

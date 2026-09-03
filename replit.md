@@ -119,6 +119,31 @@ Schema changes are applied via `lib/db/scripts/safe-push.mjs`, a thin wrapper ar
 
 Never leave one-off raw-SQL migration scripts in the repo.
 
+## Deployment
+
+Production and development each run on their own VPS (nginx serving the built
+frontend, pm2 running the API server). `deploy.sh` on the box is the single
+source of truth for what a deploy does: pull `main`, install, build both
+packages, restart pm2 **via the ecosystem file** (an app-name restart does not
+re-read env vars), rsync the frontend into the nginx root, reload nginx, then
+health-check. DB migrations run automatically at app boot.
+
+Two ways to run it:
+
+- **From GitHub** — the `Deploy` workflow (`.github/workflows/deploy.yml`),
+  Actions → Deploy → Run workflow, choosing `dev` or `prod`. It SSHes in and
+  runs the same `deploy.sh`, then checks `/api/environment` from outside and
+  reports whether SSO is configured. Setup notes are at the top of that file;
+  it needs five secrets per GitHub Environment and fails fast without them.
+  Put required reviewers on the `prod` environment so a click alone cannot
+  reach production.
+- **By hand** — SSH to the box and run `./deploy.sh`.
+
+Per-deployment configuration (`APP_ENV`, `APP_URL`, the `AZURE_*` SSO vars,
+Brevo keys, storage secrets) lives in `artifacts/api-server/ecosystem.config.cjs`
+on each box. That file is deliberately untracked, so it survives `git pull` and
+never reaches the repo — see `.env.example` for the full list.
+
 ## Pre-commit hook
 
 A git pre-commit hook at `scripts/git-hooks/pre-commit` (tracked in the repo) blocks commits that accidentally include generated build artefacts:

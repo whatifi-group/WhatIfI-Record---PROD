@@ -102,6 +102,11 @@ export async function createTestQualification(
 /**
  * Insert a role with the given permissions and return its id.
  * Used by tests that exercise permission-gated routes.
+ *
+ * `name` is only a readability label — it is always suffixed with a UUID.
+ * `roles.name` is UNIQUE and test files run in parallel forks against one
+ * shared database, so a fixed name would collide both across files (two files
+ * used "Payroll Only") and with rows left behind by a crashed earlier run.
  */
 export async function createTestRole(
   permissions: string[],
@@ -111,7 +116,7 @@ export async function createTestRole(
   const [role] = await db
     .insert(rolesTable)
     .values({
-      name: name ?? `Test Role ${unique}`,
+      name: `${name ?? "Test Role"} ${unique}`,
       permissions: permissions as never,
     })
     .returning({ id: rolesTable.id });
@@ -161,4 +166,39 @@ export async function safeCleanup(fn: () => Promise<void>): Promise<void> {
   } catch {
     // intentionally swallowed — cleanup is best-effort
   }
+}
+
+/**
+ * Build a supertest agent authenticated as a throwaway user holding exactly
+ * `permissions`.
+ *
+ * HR sub-resource routes each call `requirePermission(...)` themselves (see the
+ * note in routes/hr/index.ts — there is deliberately no blanket gate), and
+ * `requirePermission` rejects a request with no `req.session.userId` before the
+ * handler runs. A test that wants to exercise a handler must therefore supply a
+ * user whose role carries the permission that route asks for.
+ *
+ * Returns the agent plus a `cleanup` to call from `afterAll`; the role and user
+ * are per-run rows, so tests stay independent.
+ */
+export async function createAuthedApp(
+  router: IRouter,
+  permissions: string[],
+): Promise<{
+  api: ReturnType<typeof buildApp>;
+  userId: number;
+  roleId: number;
+  cleanup: () => Promise<void>;
+}> {
+  const roleId = await createTestRole(permissions);
+  const userId = await createTestUser(roleId);
+  return {
+    api: buildApp(router, userId),
+    userId,
+    roleId,
+    cleanup: async () => {
+      await safeCleanup(() => cleanupUser(userId));
+      await safeCleanup(() => cleanupRole(roleId));
+    },
+  };
 }

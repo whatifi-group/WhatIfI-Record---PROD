@@ -216,14 +216,17 @@ describe("POST /api/onboarding/submissions/:id/approve — pay rate guard", () =
     }
   });
 
-  it("approves the submission and returns 200 with a temporaryPassword", async () => {
+  it("approves the submission and returns 201 with the new employee id", async () => {
     const api = buildApp(onboardingRouter, hrUserId);
     const res = await api
       .post(`/api/onboarding/submissions/${testSubmissionId}/approve`)
       .send({});
     expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty("temporaryPassword");
     expect(res.body).toHaveProperty("employeeId");
+    // No temporary password is issued any more: the account is employee-linked
+    // and therefore signs in through Microsoft SSO, so a password would be
+    // unusable. See lib/ssoUser.ts for how that account gets claimed.
+    expect(res.body).not.toHaveProperty("temporaryPassword");
     createdEmployeeId = res.body.employeeId;
   });
 

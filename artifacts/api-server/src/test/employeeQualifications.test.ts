@@ -1,16 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import router, { objectStorageService } from "../routes/hr/employeeQualifications";
 import {
-  buildApp,
   cleanupEmployee,
   cleanupQualType,
+  createAuthedApp,
   createTestEmployee,
-  createTestQualification,
   createTestQualType,
+  createTestQualification,
 } from "./helpers";
 import { ObjectNotFoundError } from "../lib/objectStorage";
 
-const api = buildApp(router);
+let api: Awaited<ReturnType<typeof createAuthedApp>>["api"];
+let cleanupAuth: () => Promise<void>;
+
+// These routes each call requirePermission(...) themselves — routes/hr has no
+// blanket gate — so the suite needs a user actually holding that permission.
+beforeAll(async () => {
+  ({ api, cleanup: cleanupAuth } = await createAuthedApp(router, ["hr:access"]));
+});
+
+afterAll(async () => {
+  await cleanupAuth();
+});
 
 describe("Employee Qualifications", () => {
   let empId: number;
@@ -122,15 +133,22 @@ describe("Employee Qualifications", () => {
 
     it("returns 404 when qualification belongs to a different employee", async () => {
       const otherId = await createTestEmployee();
-      // Insert directly so we have a valid record without going through the API
-      const qualId = await createTestQualification(otherId, qtId, null);
+      try {
+        // Insert directly so we have a valid record without going through the API
+        const qualId = await createTestQualification(otherId, qtId, null);
 
-      const res = await api
-        .patch(`/api/employees/${empId}/qualifications/${qualId}`)
-        .send({ notes: "x" });
-      expect(res.status).toBe(404);
-
-      await cleanupEmployee(otherId);
+        const res = await api
+          .patch(`/api/employees/${empId}/qualifications/${qualId}`)
+          .send({ notes: "x" });
+        expect(res.status).toBe(404);
+      } finally {
+        // Must run even when the assertion fails: this employee owns a
+        // qualification row, and employee_qualifications.qualification_type_id
+        // is ON DELETE NO ACTION, so leaving it behind makes the afterEach
+        // cleanupQualType(qtId) fail with a foreign-key violation — turning one
+        // failed assertion into a second, misleading error.
+        await cleanupEmployee(otherId);
+      }
     });
   });
 

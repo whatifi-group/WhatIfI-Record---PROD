@@ -168,23 +168,23 @@ describe("GET /api/employees/:id — salary visibility", () => {
 
 // ── Unauthenticated callers — salary always hidden ────────────────────────────
 describe("GET /api/employees — unauthenticated request (no session)", () => {
-  it("hides salary (null) from a request with no session at all", async () => {
-    // buildApp without a userId → no req.session, no userId, no permissions
+  it("returns no employee data at all to a caller with no session", async () => {
+    // Salary used to be redacted for anonymous callers; the route now requires
+    // view_employees|edit_employees|sysadmin, so they get nothing whatsoever.
+    // That is strictly stronger than the redaction this test used to assert.
     const api = buildApp(router);
     const res = await api.get("/api/employees");
-    expect(res.status).toBe(200);
-    const emp = res.body.find((e: { id: number }) => e.id === empId);
-    expect(emp).toBeDefined();
-    expect(emp.salary).toBeNull();
+    expect(res.status).toBe(401);
+    expect(res.body).not.toHaveProperty("salary");
   });
 });
 
 describe("GET /api/employees/:id — unauthenticated request (no session)", () => {
-  it("hides salary (null) from a request with no session at all", async () => {
+  it("returns no employee data at all to a caller with no session", async () => {
     const api = buildApp(router);
     const res = await api.get(`/api/employees/${empId}`);
-    expect(res.status).toBe(200);
-    expect(res.body.salary).toBeNull();
+    expect(res.status).toBe(401);
+    expect(res.body).not.toHaveProperty("salary");
   });
 });
 

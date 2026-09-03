@@ -1,8 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import router from "../routes/hr/employeeMedical";
-import { buildApp, cleanupEmployee, createTestEmployee } from "./helpers";
+import {
+  cleanupEmployee,
+  createAuthedApp,
+  createTestEmployee,
+} from "./helpers";
 
-const api = buildApp(router);
+let api: Awaited<ReturnType<typeof createAuthedApp>>["api"];
+let cleanupAuth: () => Promise<void>;
+
+// These routes each call requirePermission(...) themselves — routes/hr has no
+// blanket gate — so the suite needs a user actually holding that permission.
+beforeAll(async () => {
+  ({ api, cleanup: cleanupAuth } = await createAuthedApp(router, ["hr:access"]));
+});
+
+afterAll(async () => {
+  await cleanupAuth();
+});
 
 describe("Employee Medical", () => {
   let empId: number;

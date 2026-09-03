@@ -83,28 +83,25 @@ describe("POST /api/employees/:id/qualifications — auto-verify", () => {
     expect(res.body.verifiedAt).toBeTruthy();
   });
 
-  it("non-admin user → verificationStatus remains pending, verifiedBy is null", async () => {
+  it("rejects a user with no permissions before anything is created", async () => {
+    // POST /qualifications requires hr:access|sysadmin, which is the same test
+    // the handler's auto-verify branch applies — so a caller who gets past the
+    // guard is always auto-verified, and this user never reaches the handler.
     const api = buildApp(router, basicUserId);
     const res = await api
       .post(`/api/employees/${empId}/qualifications`)
       .send({ qualificationTypeId: qualTypeId, ...PAYLOAD });
 
-    expect(res.status).toBe(201);
-    expect(res.body.verificationStatus).toBe("pending");
-    expect(res.body.verifiedBy).toBeNull();
-    expect(res.body.verifiedAt).toBeNull();
-    expect(res.body.verifiedByName).toBeNull();
+    expect(res.status).toBe(403);
   });
 
-  it("unauthenticated caller (no session) → verificationStatus remains pending", async () => {
+  it("rejects an unauthenticated caller before anything is created", async () => {
     // buildApp called without a userId — req.session will be undefined
     const api = buildApp(router);
     const res = await api
       .post(`/api/employees/${empId}/qualifications`)
       .send({ qualificationTypeId: qualTypeId, ...PAYLOAD });
 
-    expect(res.status).toBe(201);
-    expect(res.body.verificationStatus).toBe("pending");
-    expect(res.body.verifiedBy).toBeNull();
+    expect(res.status).toBe(401);
   });
 });
